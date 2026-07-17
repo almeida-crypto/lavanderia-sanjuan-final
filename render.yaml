@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: lavanderia-san-juan-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: Supabase__Enabled
+        value: "true"
+      - key: Supabase__Url
+        sync: false
+      - key: Supabase__AnonKey
+        sync: false
+      - key: Supabase__ServiceRoleKey
+        sync: false

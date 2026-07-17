@@ -1,0 +1,29 @@
+# Este archivo configura el analizador, que revisa estáticamente el código
+# Dart en busca de errores, warnings y lints.
+#
+# Los problemas que detecta el analizador se muestran en la UI de los IDEs
+# compatibles con Dart (https://dart.dev/tools#ides-and-editors). También se
+# puede invocar desde la línea de comandos corriendo `flutter analyze`.
+
+# La siguiente línea activa un set de lints recomendados para apps, paquetes
+# y plugins de Flutter, pensados para fomentar buenas prácticas de código.
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  # Las reglas de lint de este proyecto se pueden personalizar en la sección
+  # de abajo, ya sea para desactivar reglas del set incluido arriba
+  # (`package:flutter_lints/flutter.yaml`) o para activar reglas adicionales.
+  # La lista completa de lints disponibles y su documentación está en
+  # https://dart.dev/lints.
+  #
+  # En vez de desactivar una regla de lint para todo el proyecto en la
+  # sección de abajo, también se puede suprimir para una sola línea de
+  # código o un archivo específico usando la sintaxis `// ignore: nombre_del_lint`
+  # o `// ignore_for_file: nombre_del_lint` en la línea o el archivo que
+  # produce el lint.
+  rules:
+    # avoid_print: false  # Descomenta para desactivar la regla `avoid_print`
+    # prefer_single_quotes: true  # Descomenta para activar la regla `prefer_single_quotes`
+
+# Más información sobre este archivo en:
+# https://dart.dev/guides/language/analysis-options
