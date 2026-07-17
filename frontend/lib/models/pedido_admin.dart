@@ -147,10 +147,14 @@ class PedidoAdmin {
     this.repartidorNombre,
     this.detallesAdicionales,
     this.opcionAcabado,
+    this.creadoEn,
   });
 
   final String id;
   final int numeroOrden;
+  /// Cuándo se creó el pedido (distinto de [fecha], que es la fecha de
+  /// recolección que eligió el cliente). Null si el backend no lo mandó.
+  final DateTime? creadoEn;
   final String clienteNombre;
   final String clienteEmail;
   final String clienteTelefono;

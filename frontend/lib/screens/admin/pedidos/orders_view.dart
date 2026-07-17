@@ -53,6 +53,8 @@ class _OrdersViewState extends State<OrdersView> {
           return pedido.estado == PedidoEstado.entregado;
         case 'Atención':
           return pedido.estado == PedidoEstado.atencion;
+        case 'Cancelados':
+          return pedido.estado == PedidoEstado.cancelado;
         case 'Todos':
         default:
           return true;
@@ -124,6 +126,7 @@ class _OrdersViewState extends State<OrdersView> {
                     'Listo',
                     'Entregados',
                     'Atención',
+                    'Cancelados',
                   ].map((filter) {
                     final isSelected = _selectedFilter == filter;
                     return Padding(

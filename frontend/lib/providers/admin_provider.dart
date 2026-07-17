@@ -72,6 +72,7 @@ class AdminProvider extends ChangeNotifier {
     final resena = json['resena']?.toString();
     final opcionAcabado = json['opcionAcabado']?.toString();
     final precioAcabado = double.tryParse(json['precioAcabado']?.toString() ?? '');
+    final creadoEn = DateTime.tryParse(json['createdAt']?.toString() ?? '');
 
     final notas = [NotaPedido(fecha: fecha, texto: 'Pedido recibido')];
     if (estado == PedidoEstado.cancelado && (razonCancelacion?.isNotEmpty ?? false)) {
@@ -131,6 +132,7 @@ class AdminProvider extends ChangeNotifier {
       repartidorNombre: (repartidor == null || repartidor.isEmpty) ? null : repartidor,
       warningMessage: warningMessage,
       opcionAcabado: opcionAcabado,
+      creadoEn: creadoEn,
     );
   }
 

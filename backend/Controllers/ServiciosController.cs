@@ -11,6 +11,18 @@ public class ServiciosController : ControllerBase
     private readonly SupabaseDataService _data;
     public ServiciosController(SupabaseDataService data) => _data = data;
 
+    // JsonSerializer.SerializeToNode/Deserialize<T> (a diferencia del pipeline
+    // de ASP.NET Core que sirve las respuestas HTTP) NO usan camelCase por
+    // default: usan los nombres de las propiedades de C# tal cual (PascalCase).
+    // Sin esto, lo que se guarda en el jsonb de "beneficios"/"opciones_acabado"
+    // queda en PascalCase pero se lee de vuelta comparando contra minúsculas,
+    // así que icono/titulo/descripcion nunca hacían match y salían vacíos.
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+
     [HttpGet]
     public async Task<IActionResult> Listar()
     {
@@ -56,9 +68,9 @@ public class ServiciosController : ControllerBase
         ["activo"] = request.Activo,
         ["como_funciona"] = request.ComoFunciona ?? string.Empty,
         ["tiempo_estimado"] = request.TiempoEstimado ?? string.Empty,
-        ["items_sugeridos"] = JsonSerializer.SerializeToNode(request.ItemsSugeridos ?? []),
-        ["beneficios"] = JsonSerializer.SerializeToNode(request.Beneficios ?? []),
-        ["opciones_acabado"] = JsonSerializer.SerializeToNode(request.OpcionesAcabado ?? [])
+        ["items_sugeridos"] = JsonSerializer.SerializeToNode(request.ItemsSugeridos ?? [], JsonOptions),
+        ["beneficios"] = JsonSerializer.SerializeToNode(request.Beneficios ?? [], JsonOptions),
+        ["opciones_acabado"] = JsonSerializer.SerializeToNode(request.OpcionesAcabado ?? [], JsonOptions)
     };
 
     private static ServicioDto Map(JsonObject row) => new()
@@ -72,9 +84,9 @@ public class ServiciosController : ControllerBase
         Activo = row["activo"]?.GetValue<bool>() ?? true,
         ComoFunciona = row["como_funciona"]?.ToString() ?? string.Empty,
         TiempoEstimado = row["tiempo_estimado"]?.ToString() ?? string.Empty,
-        ItemsSugeridos = row["items_sugeridos"]?.Deserialize<List<string>>() ?? [],
-        Beneficios = row["beneficios"]?.Deserialize<List<BeneficioServicioDto>>() ?? [],
-        OpcionesAcabado = row["opciones_acabado"]?.Deserialize<List<OpcionAcabadoDto>>() ?? []
+        ItemsSugeridos = row["items_sugeridos"]?.Deserialize<List<string>>(JsonOptions) ?? [],
+        Beneficios = row["beneficios"]?.Deserialize<List<BeneficioServicioDto>>(JsonOptions) ?? [],
+        OpcionesAcabado = row["opciones_acabado"]?.Deserialize<List<OpcionAcabadoDto>>(JsonOptions) ?? []
     };
 
     private ObjectResult Error(SupabaseDataException ex) =>
