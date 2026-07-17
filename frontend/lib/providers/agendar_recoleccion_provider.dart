@@ -3,26 +3,42 @@ import 'package:flutter/material.dart';
 import '../models/direccion.dart';
 import '../models/franja_horaria.dart';
 import '../models/pedido.dart';
+import '../models/promocion.dart';
+import '../models/servicio.dart';
 import '../models/servicio_lavanderia.dart';
 import '../models/tarjeta.dart';
 import '../services/pedido_service.dart';
-
-const _codigoPromoCorrecto = 'FRESH20';
-const _tasaDescuentoPromo = 0.20;
+import '../services/promocion_service.dart';
 
 class AgendarRecoleccionProvider extends ChangeNotifier {
+  final _promocionService = PromocionService();
+
   AgendarRecoleccionProvider({
     TipoServicio? servicioInicial,
+    this.servicioReal,
+    OpcionAcabado? opcionAcabadoInicial,
     bool ecoFriendlyInicial = false,
     String fraganciaInicial = 'Lavanda',
     int cantidadInicial = 1,
   }) : fechasDisponibles = _generarFechas(),
        _servicio = servicioInicial ?? TipoServicio.lavadoYPlegado,
+       _opcionAcabado = opcionAcabadoInicial,
        _ecoFriendly = ecoFriendlyInicial,
        _fragancia = fraganciaInicial,
        _cantidad = cantidadInicial < 1 ? 1 : cantidadInicial {
     _fechaSeleccionada = fechasDisponibles.first;
   }
+
+  /// Opción de acabado/entrega que el cliente eligió antes de llegar aquí
+  /// (ej. en "Opciones de Doblado" o el modo de entrega de Planchado). Antes
+  /// esa elección se perdía por completo; ahora sí llega al pedido creado.
+  OpcionAcabado? _opcionAcabado;
+  OpcionAcabado? get opcionAcabado => _opcionAcabado;
+
+  /// Precio/nombre/unidad reales tal como los configuró el administrador
+  /// (via ServiciosProvider). Si no llegaron (backend caído o servicio sin
+  /// coincidencia), se cae al valor de referencia estático [servicioInfo].
+  final Servicio? servicioReal;
 
   /// Cantidad aproximada (kg o piezas, según el servicio) que el cliente
   /// eligió como referencia. Es solo una estimación: el total real se
@@ -83,21 +99,53 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
   }
 
   final codigoPromoController = TextEditingController();
-  bool _codigoPromoValido = false;
+  Promocion? _promoAplicada;
   String? _mensajePromo;
+  bool _validandoPromo = false;
   String? get mensajePromo => _mensajePromo;
+  bool get validandoPromo => _validandoPromo;
 
-  /// Fracción de descuento a aplicar sobre el total (0 si no hay código válido).
-  double get tasaDescuento => _codigoPromoValido ? _tasaDescuentoPromo : 0;
+  /// Fracción de descuento a aplicar sobre el total (0 si no hay código
+  /// vigente aplicado). El % y la vigencia los define el admin en el panel;
+  /// aquí solo se valida contra lo que el backend realmente tiene guardado.
+  double get tasaDescuento => (_promoAplicada?.descuentoPorcentaje ?? 0) / 100;
 
-  void aplicarCodigoPromocional() {
+  Future<void> aplicarCodigoPromocional() async {
     final codigo = codigoPromoController.text.trim().toUpperCase();
     if (codigo.isEmpty) return;
-    _codigoPromoValido = codigo == _codigoPromoCorrecto;
-    _mensajePromo = _codigoPromoValido
-        ? '¡Código aplicado! ${(_tasaDescuentoPromo * 100).round()}% de descuento.'
-        : 'Código promocional no válido.';
+
+    _validandoPromo = true;
     notifyListeners();
+    try {
+      final promociones = await _promocionService.listar();
+      Promocion? encontrada;
+      for (final promocion in promociones) {
+        if (promocion.codigo.toUpperCase() == codigo) {
+          encontrada = promocion;
+          break;
+        }
+      }
+
+      if (encontrada == null) {
+        _promoAplicada = null;
+        _mensajePromo = 'Código promocional no válido.';
+      } else if (!encontrada.vigente) {
+        _promoAplicada = null;
+        _mensajePromo = 'Ese código ya no está vigente.';
+      } else if (!encontrada.aplicaAServicio(nombreServicio)) {
+        _promoAplicada = null;
+        _mensajePromo = 'Ese código no aplica para "$nombreServicio".';
+      } else {
+        _promoAplicada = encontrada;
+        _mensajePromo = '¡Código aplicado! ${encontrada.descuentoPorcentaje.round()}% de descuento.';
+      }
+    } catch (_) {
+      _promoAplicada = null;
+      _mensajePromo = 'No se pudo validar el código, intenta de nuevo.';
+    } finally {
+      _validandoPromo = false;
+      notifyListeners();
+    }
   }
 
   bool _isLoading = false;
@@ -106,7 +154,20 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
   ServicioLavanderiaInfo get servicioInfo =>
       serviciosDisponibles.firstWhere((s) => s.tipo == _servicio);
 
-  double get totalEstimado => servicioInfo.totalEstimado * _cantidad;
+  /// Nombre real del servicio (el que administra el admin) para mandar al
+  /// backend; si no hay coincidencia real, usa el nombre de referencia.
+  String get nombreServicio => servicioReal?.nombre ?? servicioInfo.nombre;
+
+  String get unidad => servicioReal?.unidad ?? servicioInfo.unidad;
+
+  double get _precioUnitario =>
+      (servicioReal?.precio ?? servicioInfo.totalEstimado) + (_opcionAcabado?.precioAdicional ?? 0);
+
+  double get totalEstimado => _precioUnitario * _cantidad;
+
+  /// Cuánto del total corresponde a la opción de acabado elegida (para
+  /// desglosarlo igual que lo hace el panel admin al mostrar el pedido).
+  double get montoOpcionAcabado => (_opcionAcabado?.precioAdicional ?? 0) * _cantidad;
 
   double get descuento => totalEstimado * tasaDescuento;
 
@@ -115,6 +176,11 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
 
   void seleccionarServicio(TipoServicio tipo) {
     _servicio = tipo;
+    notifyListeners();
+  }
+
+  void seleccionarOpcionAcabado(OpcionAcabado? opcion) {
+    _opcionAcabado = opcion;
     notifyListeners();
   }
 
@@ -155,7 +221,7 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
         'clienteNombre': clienteNombre ?? 'Cliente Demo',
         'clienteEmail': clienteEmail,
         'clienteTelefono': clienteTelefono,
-        'servicio': servicioInfo.nombre,
+        'servicio': nombreServicio,
         'fecha': _fechaSeleccionada.toIso8601String(),
         'franjaHoraria': franjaEtiqueta,
         'direccion': direccionSeleccionada?.titulo ?? 'Dirección no definida',
@@ -164,6 +230,8 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
         'fragancia': _fragancia,
         'cantidadAproximada': _cantidad,
         'metodoPago': metodoPago,
+        'opcionAcabado': _opcionAcabado?.nombre,
+        'precioAcabado': _opcionAcabado == null ? null : montoOpcionAcabado,
         'total': totalConDescuento,
       });
       return Pedido.fromJson(creado);

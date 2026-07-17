@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import '../../../models/servicio.dart';
+import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
+import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../agendar_recoleccion/agendar_recoleccion_screen.dart';
@@ -9,69 +13,6 @@ import '../home_cliente/home_cliente_screen.dart';
 import '../mi_perfil/mi_perfil_screen.dart';
 import '../mis_pedidos/mis_pedidos_screen.dart';
 import 'servicios_screen.dart';
-
-class _PasoProceso {
-  const _PasoProceso({required this.titulo, required this.descripcion});
-
-  final String titulo;
-  final String descripcion;
-}
-
-const _pasos = [
-  _PasoProceso(
-    titulo: 'Revisión',
-    descripcion:
-        'Inspección minuciosa de cada prenda para identificar manchas y áreas de cuidado especial.',
-  ),
-  _PasoProceso(
-    titulo: 'Tratamiento',
-    descripcion: 'Aplicación de solventes biodegradables y técnicas de desmanchado artesanal.',
-  ),
-  _PasoProceso(
-    titulo: 'Acabado Final',
-    descripcion: 'Planchado profesional al vapor y empaque en fundas protectoras transpirables.',
-  ),
-];
-
-const _prendasSugeridas = [
-  (icon: Icons.dry_cleaning_rounded, label: 'Trajes'),
-  (icon: Icons.checkroom_rounded, label: 'Abrigos'),
-  (icon: Icons.spa_rounded, label: 'Vestidos Seda'),
-  (icon: Icons.diamond_rounded, label: 'Diseñador'),
-];
-
-class _TarifaTier {
-  const _TarifaTier({
-    required this.nombre,
-    required this.precio,
-    required this.incluye,
-    this.destacado = false,
-  });
-
-  final String nombre;
-  final String precio;
-  final List<String> incluye;
-  final bool destacado;
-}
-
-const _tarifas = [
-  _TarifaTier(
-    nombre: 'Básica',
-    precio: '\$12',
-    incluye: ['Limpieza estándar', 'Planchado básico'],
-  ),
-  _TarifaTier(
-    nombre: 'Premium',
-    precio: '\$25',
-    incluye: ['Desmanchado profundo', 'Vaporizado manual', 'Seguro de prenda'],
-    destacado: true,
-  ),
-  _TarifaTier(
-    nombre: 'Luxury',
-    precio: '\$45',
-    incluye: ['Cuidado de pedrería', 'Entrega en percha premium'],
-  ),
-];
 
 class TintoreriaScreen extends StatefulWidget {
   const TintoreriaScreen({super.key});
@@ -81,7 +22,7 @@ class TintoreriaScreen extends StatefulWidget {
 }
 
 class _TintoreriaScreenState extends State<TintoreriaScreen> {
-  int _tierSeleccionado = 1;
+  int _tierSeleccionado = 0;
 
   void _onTabSelected(AppBottomTab tab) {
     switch (tab) {
@@ -104,14 +45,27 @@ class _TintoreriaScreenState extends State<TintoreriaScreen> {
     }
   }
 
-  void _contratarAhora() {
+  void _contratarAhora(List<OpcionAcabado> opciones) {
+    final tier = opciones.isEmpty ? null : opciones[_tierSeleccionado.clamp(0, opciones.length - 1)];
     Navigator.of(context).push(
-      AgendarRecoleccionScreen.route(servicioInicial: TipoServicio.tintoreria),
+      AgendarRecoleccionScreen.route(
+        servicioInicial: TipoServicio.tintoreria,
+        opcionAcabadoInicial: tier,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final servicio = context.watch<ServiciosProvider>().paraTipo(TipoServicio.tintoreria);
+    final estatica = infoEstaticaParaTipo(TipoServicio.tintoreria);
+    final comoFunciona = (servicio?.comoFunciona.isNotEmpty ?? false) ? servicio!.comoFunciona : estatica.descripcion;
+    final sugeridos = servicio?.itemsSugeridos ?? [];
+    final opciones = servicio?.opcionesAcabado ?? [];
+    final tierIndex = opciones.isEmpty ? 0 : _tierSeleccionado.clamp(0, opciones.length - 1);
+    final precioBase = servicio?.precio ?? estatica.totalEstimado;
+    final unidad = servicio?.unidad ?? estatica.unidad;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -143,56 +97,57 @@ class _TintoreriaScreenState extends State<TintoreriaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _HeaderCard(),
+                    _HeaderCard(precioBase: precioBase, unidad: unidad),
                     const SizedBox(height: 32),
                     _SectionHeader(icon: Icons.analytics_outlined, title: '¿Cómo funciona?'),
-                    const SizedBox(height: 16),
-                    for (var i = 0; i < _pasos.length; i++) ...[
-                      _PasoTile(numero: i + 1, paso: _pasos[i]),
-                      if (i != _pasos.length - 1) const SizedBox(height: 12),
+                    const SizedBox(height: 12),
+                    Text(
+                      comoFunciona,
+                      style: GoogleFonts.inter(fontSize: 14, height: 1.5, color: AppColors.onSurfaceVariant),
+                    ),
+                    if (sugeridos.isNotEmpty) ...[
+                      const SizedBox(height: 32),
+                      _SectionHeader(icon: Icons.checkroom_outlined, title: 'Prendas sugeridas'),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          for (final prenda in sugeridos) _PrendaTile(label: prenda),
+                        ],
+                      ),
                     ],
                     const SizedBox(height: 32),
-                    _SectionHeader(icon: Icons.checkroom_outlined, title: 'Prendas sugeridas'),
-                    const SizedBox(height: 16),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _prendasSugeridas.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 1.6,
-                      ),
-                      itemBuilder: (context, index) {
-                        final prenda = _prendasSugeridas[index];
-                        return _PrendaTile(icon: prenda.icon, label: prenda.label);
-                      },
-                    ),
-                    const SizedBox(height: 32),
                     const _InstruccionesEspecialesCard(),
-                    const SizedBox(height: 32),
-                    _SectionHeader(icon: Icons.sell_outlined, title: 'Tarifas'),
+                    if (opciones.isNotEmpty) ...[
+                      const SizedBox(height: 32),
+                      _SectionHeader(icon: Icons.sell_outlined, title: 'Tarifas'),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 240,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: _tarifas.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    return _TarifaCard(
-                      tarifa: _tarifas[index],
-                      seleccionada: _tierSeleccionado == index,
-                      onTap: () => setState(() => _tierSeleccionado = index),
-                    );
-                  },
+              if (opciones.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 240,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: opciones.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      return _TarifaCard(
+                        opcion: opciones[index],
+                        precioBase: precioBase,
+                        unidad: unidad,
+                        destacada: opciones.length > 1 && index == 1,
+                        seleccionada: tierIndex == index,
+                        onTap: () => setState(() => _tierSeleccionado = index),
+                      );
+                    },
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -205,7 +160,7 @@ class _TintoreriaScreenState extends State<TintoreriaScreen> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
             color: AppColors.surface,
             child: ElevatedButton.icon(
-              onPressed: _contratarAhora,
+              onPressed: () => _contratarAhora(opciones),
               icon: const Icon(Icons.shopping_basket_rounded, size: 20),
               label: Text(
                 'Contratar Ahora',
@@ -253,7 +208,10 @@ class _HeroBanner extends StatelessWidget {
 }
 
 class _HeaderCard extends StatelessWidget {
-  const _HeaderCard();
+  const _HeaderCard({required this.precioBase, required this.unidad});
+
+  final double precioBase;
+  final String unidad;
 
   @override
   Widget build(BuildContext context) {
@@ -281,7 +239,7 @@ class _HeaderCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Cuidado experto para tus prendas más delicadas. Utilizamos procesos de limpieza en seco ecológicos que eliminan manchas difíciles sin dañar las fibras.',
+            'Desde \$${precioBase.toStringAsFixed(2)}/$unidad. Cuidado experto para tus prendas más delicadas.',
             style: GoogleFonts.inter(
               fontSize: 14,
               height: 1.4,
@@ -355,91 +313,28 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _PasoTile extends StatelessWidget {
-  const _PasoTile({required this.numero, required this.paso});
-
-  final int numero;
-  final _PasoProceso paso;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-            child: Center(
-              child: Text(
-                '$numero',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  paso.titulo,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  paso.descripcion,
-                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurfaceVariant),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _PrendaTile extends StatelessWidget {
-  const _PrendaTile({required this.icon, required this.label});
+  const _PrendaTile({required this.label});
 
-  final IconData icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.secondaryContainer),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.primary, size: 28),
-          const SizedBox(height: 8),
+          const Icon(Icons.checkroom_rounded, color: AppColors.primary, size: 18),
+          const SizedBox(width: 8),
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.onSurface,
-            ),
+            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.onSurface),
           ),
         ],
       ),
@@ -494,21 +389,27 @@ class _InstruccionesEspecialesCard extends StatelessWidget {
 
 class _TarifaCard extends StatelessWidget {
   const _TarifaCard({
-    required this.tarifa,
+    required this.opcion,
+    required this.precioBase,
+    required this.unidad,
+    required this.destacada,
     required this.seleccionada,
     required this.onTap,
   });
 
-  final _TarifaTier tarifa;
+  final OpcionAcabado opcion;
+  final double precioBase;
+  final String unidad;
+  final bool destacada;
   final bool seleccionada;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final destacado = tarifa.destacado;
-    final bgColor = destacado ? AppColors.primary : AppColors.surfaceContainerLowest;
-    final textColor = destacado ? Colors.white : AppColors.onSurface;
-    final mutedColor = destacado ? Colors.white70 : AppColors.onSurfaceVariant;
+    final bgColor = destacada ? AppColors.primary : AppColors.surfaceContainerLowest;
+    final textColor = destacada ? Colors.white : AppColors.onSurface;
+    final mutedColor = destacada ? Colors.white70 : AppColors.onSurfaceVariant;
+    final precioTotal = precioBase + opcion.precioAdicional;
 
     return InkWell(
       onTap: onTap,
@@ -523,7 +424,7 @@ class _TarifaCard extends StatelessWidget {
             color: seleccionada ? AppColors.primary : AppColors.outlineVariant,
             width: seleccionada ? 2 : 1,
           ),
-          boxShadow: destacado
+          boxShadow: destacada
               ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16)]
               : null,
         ),
@@ -531,7 +432,7 @@ class _TarifaCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              tarifa.nombre.toUpperCase(),
+              opcion.nombre.toUpperCase(),
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -545,7 +446,7 @@ class _TarifaCard extends StatelessWidget {
               textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(
-                  tarifa.precio,
+                  '\$${precioTotal.toStringAsFixed(0)}',
                   style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
@@ -554,28 +455,23 @@ class _TarifaCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '/ prenda',
+                  '/ $unidad',
                   style: GoogleFonts.inter(fontSize: 13, color: mutedColor),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            for (final item in tarifa.incluye)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.check_circle_rounded, size: 16, color: textColor),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        item,
-                        style: GoogleFonts.inter(fontSize: 13, color: textColor),
-                      ),
-                    ),
-                  ],
-                ),
+            if (opcion.descripcion.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                opcion.descripcion,
+                style: GoogleFonts.inter(fontSize: 13, color: textColor),
+              ),
+            ],
+            const Spacer(),
+            if (seleccionada)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Icon(Icons.check_circle_rounded, size: 20, color: textColor),
               ),
           ],
         ),

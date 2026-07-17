@@ -124,6 +124,7 @@ class NotaPedido {
 class PedidoAdmin {
   PedidoAdmin({
     required this.id,
+    this.numeroOrden = 0,
     required this.clienteNombre,
     required this.clienteEmail,
     required this.clienteTelefono,
@@ -145,9 +146,11 @@ class PedidoAdmin {
     this.warningMessage,
     this.repartidorNombre,
     this.detallesAdicionales,
+    this.opcionAcabado,
   });
 
   final String id;
+  final int numeroOrden;
   final String clienteNombre;
   final String clienteEmail;
   final String clienteTelefono;
@@ -169,6 +172,12 @@ class PedidoAdmin {
   String? warningMessage;
   String? repartidorNombre;
   String? detallesAdicionales;
+  String? opcionAcabado;
+
+  /// Folio corto y legible en vez del uuid interno.
+  String get numero => numeroOrden > 0
+      ? '#FC-${numeroOrden.toString().padLeft(5, '0')}'
+      : '#FC-${id.substring(0, id.length < 8 ? id.length : 8)}';
 
   double get subtotal => items.fold(0, (suma, item) => suma + item.precio);
   double get total => subtotal;

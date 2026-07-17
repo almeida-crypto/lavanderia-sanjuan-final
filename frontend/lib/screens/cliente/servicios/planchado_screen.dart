@@ -1,33 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import '../../../models/servicio.dart';
+import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
+import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/quantity_selector.dart';
 import '../agendar_recoleccion/agendar_recoleccion_screen.dart';
-
-class _Beneficio {
-  const _Beneficio({required this.icon, required this.titulo, required this.descripcion});
-
-  final IconData icon;
-  final String titulo;
-  final String descripcion;
-}
-
-const _beneficios = [
-  _Beneficio(
-    icon: Icons.eco_rounded,
-    titulo: 'Cuidado de Telas',
-    descripcion:
-        'Ajustamos la temperatura y nivel de vapor según la composición específica de cada prenda, evitando brillos indeseados o daños en fibras delicadas.',
-  ),
-  _Beneficio(
-    icon: Icons.checkroom_rounded,
-    titulo: 'Entrega en Gancho',
-    descripcion:
-        'Tus prendas se entregan listas para colgar en tu clóset. Utilizamos ganchos protectores para mantener la forma perfecta de hombros y cuellos.',
-  ),
-];
 
 class PlanchadoScreen extends StatefulWidget {
   const PlanchadoScreen({super.key});
@@ -38,6 +19,8 @@ class PlanchadoScreen extends StatefulWidget {
 
 class _PlanchadoScreenState extends State<PlanchadoScreen> {
   int _piezas = 1;
+  OpcionAcabado? _entregaSeleccionada;
+  bool _entregaInicializada = false;
 
   void _incrementarPiezas() => setState(() => _piezas++);
 
@@ -50,12 +33,33 @@ class _PlanchadoScreenState extends State<PlanchadoScreen> {
       AgendarRecoleccionScreen.route(
         servicioInicial: TipoServicio.planchado,
         cantidadInicial: _piezas,
+        opcionAcabadoInicial: _entregaSeleccionada,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final servicio = context.watch<ServiciosProvider>().paraTipo(TipoServicio.planchado);
+    final estatica = infoEstaticaParaTipo(TipoServicio.planchado);
+    final precioTexto = servicio == null
+        ? estatica.precioTexto.replaceFirst('/${estatica.unidad}', '')
+        : 'Desde \$${servicio.precio.toStringAsFixed(0)}';
+    final tiempoEstimado = (servicio?.tiempoEstimado.isNotEmpty ?? false) ? servicio!.tiempoEstimado : '12-24 horas';
+    final beneficios = servicio?.beneficios ?? [];
+    final opcionesEntrega = servicio?.opcionesAcabado ?? [];
+
+    if (opcionesEntrega.isNotEmpty && !_entregaInicializada) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_entregaInicializada) {
+          setState(() {
+            _entregaSeleccionada = opcionesEntrega.first;
+            _entregaInicializada = true;
+          });
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -89,38 +93,54 @@ class _PlanchadoScreenState extends State<PlanchadoScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: const [
+                      children: [
                         Expanded(
                           child: _InfoCard(
                             icon: Icons.payments_rounded,
                             iconBg: AppColors.primaryFixed,
                             titulo: 'Precio',
-                            valor: 'Desde \$15',
-                            unidad: '/ pza',
+                            valor: precioTexto,
+                            unidad: '/ ${servicio?.unidad ?? 'pza'}',
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: _InfoCard(
                             icon: Icons.schedule_rounded,
                             iconBg: AppColors.secondaryFixed,
                             titulo: 'Tiempo Estimado',
-                            valor: '12-24',
-                            unidad: 'horas',
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: _InfoCard(
-                            icon: Icons.local_shipping_rounded,
-                            iconBg: AppColors.surfaceVariant,
-                            titulo: 'Entrega',
-                            valor: '',
-                            unidad: 'En gancho o doblado',
+                            valor: tiempoEstimado,
+                            unidad: '',
                           ),
                         ),
                       ],
                     ),
+                    if (opcionesEntrega.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        'Modo de Entrega',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Elige cómo prefieres recibir tus prendas.',
+                        style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 12),
+                      for (var i = 0; i < opcionesEntrega.length; i++) ...[
+                        _OpcionEntregaTile(
+                          opcion: opcionesEntrega[i],
+                          unidad: servicio?.unidad ?? 'pza',
+                          seleccionada: _entregaSeleccionada?.nombre == opcionesEntrega[i].nombre,
+                          onTap: () => setState(() => _entregaSeleccionada = opcionesEntrega[i]),
+                        ),
+                        if (i != opcionesEntrega.length - 1) const SizedBox(height: 12),
+                      ],
+                    ],
                     const SizedBox(height: 24),
                     Text(
                       'Piezas Aproximadas',
@@ -142,19 +162,21 @@ class _PlanchadoScreenState extends State<PlanchadoScreen> {
                       onIncrementar: _incrementarPiezas,
                       onDecrementar: _decrementarPiezas,
                     ),
-                    const SizedBox(height: 32),
-                    Text(
-                      'Beneficios del Servicio',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.onSurface,
+                    if (beneficios.isNotEmpty) ...[
+                      const SizedBox(height: 32),
+                      Text(
+                        'Beneficios del Servicio',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onSurface,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    for (var i = 0; i < _beneficios.length; i++) ...[
-                      _BeneficioTile(beneficio: _beneficios[i]),
-                      if (i != _beneficios.length - 1) const SizedBox(height: 12),
+                      const SizedBox(height: 16),
+                    ],
+                    for (var i = 0; i < beneficios.length; i++) ...[
+                      _BeneficioTile(beneficio: beneficios[i]),
+                      if (i != beneficios.length - 1) const SizedBox(height: 12),
                     ],
                   ],
                 ),
@@ -358,7 +380,7 @@ class _InfoCard extends StatelessWidget {
 class _BeneficioTile extends StatelessWidget {
   const _BeneficioTile({required this.beneficio});
 
-  final _Beneficio beneficio;
+  final BeneficioServicio beneficio;
 
   @override
   Widget build(BuildContext context) {
@@ -378,7 +400,7 @@ class _BeneficioTile extends StatelessWidget {
               color: AppColors.primaryFixedDim,
               shape: BoxShape.circle,
             ),
-            child: Icon(beneficio.icon, color: AppColors.primary, size: 20),
+            child: Icon(iconoDeBeneficio(beneficio.icono), color: AppColors.primary, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -402,6 +424,69 @@ class _BeneficioTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OpcionEntregaTile extends StatelessWidget {
+  const _OpcionEntregaTile({
+    required this.opcion,
+    required this.unidad,
+    required this.seleccionada,
+    required this.onTap,
+  });
+
+  final OpcionAcabado opcion;
+  final String unidad;
+  final bool seleccionada;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: seleccionada ? AppColors.surfaceContainerLow : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: seleccionada ? AppColors.primary : AppColors.surfaceVariant,
+            width: seleccionada ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              seleccionada ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+              color: seleccionada ? AppColors.primary : AppColors.outlineVariant,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    opcion.nombre,
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.onSurface),
+                  ),
+                  if (opcion.descripcion.isNotEmpty)
+                    Text(
+                      opcion.descripcion,
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
+                    ),
+                ],
+              ),
+            ),
+            if (opcion.precioAdicional != 0)
+              Text(
+                '+\$${opcion.precioAdicional.toStringAsFixed(2)}/$unidad',
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary),
+              ),
+          ],
+        ),
       ),
     );
   }

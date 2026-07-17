@@ -32,8 +32,10 @@ public class DireccionesController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.UsuarioId))
             return BadRequest(new { message = "El usuario es obligatorio" });
-        if (request.Lineas is null || request.Lineas.Count == 0)
-            return BadRequest(new { message = "La dirección es obligatoria" });
+        if (string.IsNullOrWhiteSpace(request.Calle) || string.IsNullOrWhiteSpace(request.Colonia) ||
+            string.IsNullOrWhiteSpace(request.Ciudad) || string.IsNullOrWhiteSpace(request.Estado) ||
+            string.IsNullOrWhiteSpace(request.CodigoPostal))
+            return BadRequest(new { message = "Calle, colonia, ciudad, estado y código postal son obligatorios" });
 
         try
         {
@@ -95,8 +97,13 @@ public class DireccionesController : ControllerBase
     {
         ["usuario_id"] = request.UsuarioId,
         ["titulo"] = string.IsNullOrWhiteSpace(request.Titulo) ? "Nueva dirección" : request.Titulo.Trim(),
-        ["lineas"] = new JsonArray(
-            (request.Lineas ?? []).Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+        ["calle"] = request.Calle?.Trim() ?? string.Empty,
+        ["depto"] = request.Depto,
+        ["colonia"] = request.Colonia?.Trim() ?? string.Empty,
+        ["entre_calles"] = request.EntreCalles,
+        ["ciudad"] = request.Ciudad?.Trim() ?? string.Empty,
+        ["estado"] = request.Estado?.Trim() ?? string.Empty,
+        ["codigo_postal"] = request.CodigoPostal?.Trim() ?? string.Empty,
         ["telefono"] = request.Telefono,
         ["nota"] = request.Nota,
         ["predeterminada"] = request.Predeterminada
@@ -106,7 +113,13 @@ public class DireccionesController : ControllerBase
     {
         Id = row["id"]?.ToString(),
         Titulo = row["titulo"]?.ToString(),
-        Lineas = row["lineas"] is JsonArray lines ? lines.Select(x => x?.ToString() ?? "").ToList() : [],
+        Calle = row["calle"]?.ToString() ?? string.Empty,
+        Depto = row["depto"]?.ToString(),
+        Colonia = row["colonia"]?.ToString() ?? string.Empty,
+        EntreCalles = row["entre_calles"]?.ToString(),
+        Ciudad = row["ciudad"]?.ToString() ?? string.Empty,
+        Estado = row["estado"]?.ToString() ?? string.Empty,
+        CodigoPostal = row["codigo_postal"]?.ToString() ?? string.Empty,
         Telefono = row["telefono"]?.ToString(),
         Nota = row["nota"]?.ToString(),
         Predeterminada = row["predeterminada"]?.GetValue<bool>() ?? false
@@ -122,7 +135,13 @@ public class CrearDireccionRequest
 {
     public string? UsuarioId { get; set; }
     public string? Titulo { get; set; }
-    public List<string>? Lineas { get; set; }
+    public string? Calle { get; set; }
+    public string? Depto { get; set; }
+    public string? Colonia { get; set; }
+    public string? EntreCalles { get; set; }
+    public string? Ciudad { get; set; }
+    public string? Estado { get; set; }
+    public string? CodigoPostal { get; set; }
     public string? Telefono { get; set; }
     public string? Nota { get; set; }
     public bool Predeterminada { get; set; }
@@ -132,7 +151,13 @@ public class DireccionDto
 {
     public string? Id { get; set; }
     public string? Titulo { get; set; }
-    public List<string>? Lineas { get; set; }
+    public string Calle { get; set; } = string.Empty;
+    public string? Depto { get; set; }
+    public string Colonia { get; set; } = string.Empty;
+    public string? EntreCalles { get; set; }
+    public string Ciudad { get; set; } = string.Empty;
+    public string Estado { get; set; } = string.Empty;
+    public string CodigoPostal { get; set; } = string.Empty;
     public string? Telefono { get; set; }
     public string? Nota { get; set; }
     public bool Predeterminada { get; set; }

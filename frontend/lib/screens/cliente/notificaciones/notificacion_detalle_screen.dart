@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../utils/app_colors.dart';
-import '../home_cliente/detalle_oferta_screen.dart';
+import '../home_cliente/home_cliente_screen.dart';
 import '../mis_pedidos/mis_pedidos_screen.dart';
 import 'notificaciones_screen.dart';
 
@@ -23,7 +23,10 @@ class NotificacionDetalleScreen extends StatelessWidget {
         return (
           texto: 'Ver Oferta',
           icon: Icons.sell_rounded,
-          builder: (_) => const DetalleOfertaScreen(),
+          // La oferta vigente se muestra en Inicio (viene del backend, no de
+          // esta notificación), así que redirige ahí en vez de una pantalla
+          // de detalle sin promoción real que mostrar.
+          builder: (_) => const HomeClienteScreen(),
         );
       case TipoNotificacion.pedidoEntregado:
         return (

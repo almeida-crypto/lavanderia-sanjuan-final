@@ -20,7 +20,10 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
   final _etiquetaController = TextEditingController();
   final _calleController = TextEditingController();
   final _deptoController = TextEditingController();
+  final _coloniaController = TextEditingController();
+  final _entreCallesController = TextEditingController();
   final _ciudadController = TextEditingController();
+  final _estadoController = TextEditingController();
   final _cpController = TextEditingController();
 
   bool get _esEdicion => widget.direccionExistente != null;
@@ -31,11 +34,13 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
     final existente = widget.direccionExistente;
     if (existente != null) {
       _etiquetaController.text = existente.titulo;
-      _calleController.text = existente.lineas.isNotEmpty ? existente.lineas[0] : '';
-      final segundaLinea = existente.lineas.length > 1 ? existente.lineas[1] : '';
-      final partes = segundaLinea.split(', CP ');
-      _ciudadController.text = partes.isNotEmpty ? partes[0] : '';
-      _cpController.text = partes.length > 1 ? partes[1] : '';
+      _calleController.text = existente.calle;
+      _deptoController.text = existente.depto ?? '';
+      _coloniaController.text = existente.colonia;
+      _entreCallesController.text = existente.entreCalles ?? '';
+      _ciudadController.text = existente.ciudad;
+      _estadoController.text = existente.estado;
+      _cpController.text = existente.codigoPostal;
     }
   }
 
@@ -44,7 +49,10 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
     _etiquetaController.dispose();
     _calleController.dispose();
     _deptoController.dispose();
+    _coloniaController.dispose();
+    _entreCallesController.dispose();
     _ciudadController.dispose();
+    _estadoController.dispose();
     _cpController.dispose();
     super.dispose();
   }
@@ -57,19 +65,17 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
   void _guardar() {
     if (!_formKey.currentState!.validate()) return;
 
-    final calle = _calleController.text.trim();
-    final depto = _deptoController.text.trim();
-    final ciudad = _ciudadController.text.trim();
-    final cp = _cpController.text.trim();
-
     final direccion = Direccion(
       id: widget.direccionExistente?.id,
       icon: iconoParaEtiqueta(_etiquetaController.text.trim()),
       titulo: _etiquetaController.text.trim(),
-      lineas: [
-        depto.isEmpty ? calle : '$calle, $depto',
-        '$ciudad, CP $cp',
-      ],
+      calle: _calleController.text.trim(),
+      depto: _deptoController.text.trim(),
+      colonia: _coloniaController.text.trim(),
+      entreCalles: _entreCallesController.text.trim(),
+      ciudad: _ciudadController.text.trim(),
+      estado: _estadoController.text.trim(),
+      codigoPostal: _cpController.text.trim(),
       telefono: widget.direccionExistente?.telefono,
       nota: widget.direccionExistente?.nota,
       predeterminada: widget.direccionExistente?.predeterminada ?? false,
@@ -145,15 +151,28 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
                         icon: Icons.signpost_outlined,
                         validator: _requerido,
                       ),
-                      if (!_esEdicion) ...[
-                        const SizedBox(height: 16),
-                        _CampoDireccion(
-                          label: 'Departamento, Piso, etc. (Opcional)',
-                          controller: _deptoController,
-                          hintText: 'Depto 4B',
-                          icon: Icons.apartment_rounded,
-                        ),
-                      ],
+                      const SizedBox(height: 16),
+                      _CampoDireccion(
+                        label: 'Departamento, Piso, etc. (Opcional)',
+                        controller: _deptoController,
+                        hintText: 'Depto 4B',
+                        icon: Icons.apartment_rounded,
+                      ),
+                      const SizedBox(height: 16),
+                      _CampoDireccion(
+                        label: 'Colonia',
+                        controller: _coloniaController,
+                        hintText: 'Ej. Centro',
+                        icon: Icons.holiday_village_outlined,
+                        validator: _requerido,
+                      ),
+                      const SizedBox(height: 16),
+                      _CampoDireccion(
+                        label: 'Entre calles / Referencias (Opcional)',
+                        controller: _entreCallesController,
+                        hintText: 'Ej. entre Av. Juárez y Calle 5, casa azul',
+                        icon: Icons.explore_outlined,
+                      ),
                       const SizedBox(height: 16),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,7 +180,7 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
                           Expanded(
                             flex: 2,
                             child: _CampoDireccion(
-                              label: 'Ciudad',
+                              label: 'Ciudad / Municipio',
                               controller: _ciudadController,
                               hintText: 'Tu ciudad',
                               icon: Icons.location_city_rounded,
@@ -179,6 +198,14 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 16),
+                      _CampoDireccion(
+                        label: 'Estado',
+                        controller: _estadoController,
+                        hintText: 'Ej. Jalisco',
+                        icon: Icons.map_outlined,
+                        validator: _requerido,
                       ),
                     ],
                   ),

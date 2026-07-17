@@ -34,7 +34,7 @@ class OrderDetailScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Pedido ${currentPedido.id}',
+          'Pedido ${currentPedido.numero}',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             color: AppColors.onSurface,
@@ -397,7 +397,7 @@ class OrderDetailScreen extends StatelessWidget {
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           await Clipboard.setData(ClipboardData(
-                            text: 'Pedido ${currentPedido.id}\n'
+                            text: 'Pedido ${currentPedido.numero}\n'
                                 'Cliente: ${currentPedido.clienteNombre}\n'
                                 'Servicio: ${currentPedido.servicioNombre}\n'
                                 'Total: \$${currentPedido.precioFinal.toStringAsFixed(2)}',

@@ -187,6 +187,12 @@ class _ResumenCard extends StatelessWidget {
         Icons.local_laundry_service_rounded,
         'En proceso',
       ),
+      EstadoPedido.atencion => (
+        AppColors.errorContainer,
+        AppColors.onErrorContainer,
+        Icons.warning_amber_rounded,
+        'Atención requerida',
+      ),
     };
     return Container(
       width: double.infinity,
@@ -414,6 +420,19 @@ class _PreferenciasCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   'Cantidad aproximada: ${pedido.cantidadAproximada}',
+                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurface),
+                ),
+              ],
+            ),
+          ],
+          if (pedido.opcionAcabado != null && pedido.opcionAcabado!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.checkroom_outlined, color: AppColors.primary, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  'Acabado elegido: ${pedido.opcionAcabado}',
                   style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurface),
                 ),
               ],

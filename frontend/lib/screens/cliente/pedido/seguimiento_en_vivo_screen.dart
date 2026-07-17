@@ -12,9 +12,10 @@ import '../mis_pedidos/mis_pedidos_screen.dart';
 import '../servicios/servicios_screen.dart';
 
 class SeguimientoEnVivoScreen extends StatelessWidget {
-  const SeguimientoEnVivoScreen({super.key, required this.numeroPedido});
+  const SeguimientoEnVivoScreen({super.key, required this.numeroPedido, this.repartidorNombre});
 
   final String numeroPedido;
+  final String? repartidorNombre;
 
   Future<void> _copiarContacto(BuildContext context, String numero) async {
     await Clipboard.setData(ClipboardData(text: numero));
@@ -83,7 +84,7 @@ class SeguimientoEnVivoScreen extends StatelessWidget {
             right: 20,
             bottom: 16,
             child: _OverlayCard(
-              onLlamar: () => _copiarContacto(context, '+52 555 010 2026'),
+              repartidorNombre: repartidorNombre,
               onSoporte: () => _copiarContacto(context, '+52 555 010 1010'),
             ),
           ),
@@ -262,13 +263,14 @@ class _MarcadorVan extends StatelessWidget {
 }
 
 class _OverlayCard extends StatelessWidget {
-  const _OverlayCard({required this.onLlamar, required this.onSoporte});
+  const _OverlayCard({required this.repartidorNombre, required this.onSoporte});
 
-  final VoidCallback onLlamar;
+  final String? repartidorNombre;
   final VoidCallback onSoporte;
 
   @override
   Widget build(BuildContext context) {
+    final asignado = repartidorNombre != null;
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -292,7 +294,7 @@ class _OverlayCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Llega en 12 min',
+                        asignado ? 'Repartidor en camino' : 'Buscando repartidor disponible',
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -301,20 +303,14 @@ class _OverlayCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'En camino a tu domicilio',
+                        'No contamos aún con ubicación GPS en tiempo real; esta pantalla refleja el estado real de tu pedido.',
                         style: GoogleFonts.inter(
-                          fontSize: 14,
+                          fontSize: 13,
                           color: AppColors.onPrimaryFixedVariant,
                         ),
                       ),
                     ],
                   ),
-                ),
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-                  child: const Icon(Icons.timer_rounded, color: AppColors.primary),
                 ),
               ],
             ),
@@ -338,7 +334,7 @@ class _OverlayCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Carlos Mendoza',
+                        repartidorNombre ?? 'Repartidor por asignar',
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -346,15 +342,9 @@ class _OverlayCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                          const SizedBox(width: 2),
-                          Text(
-                            '4.9 • FreshVan #042',
-                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.secondary),
-                          ),
-                        ],
+                      Text(
+                        asignado ? 'Asignado a tu pedido' : 'El admin aún no asigna repartidor',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.secondary),
                       ),
                     ],
                   ),
@@ -365,41 +355,22 @@ class _OverlayCard extends StatelessWidget {
           const Divider(height: 1, color: AppColors.outlineVariant),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: onLlamar,
-                    icon: const Icon(Icons.call_rounded, size: 20),
-                    label: Text(
-                      'Llamar al repartidor',
-                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(56),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                  ),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onSoporte,
+                icon: const Icon(Icons.support_agent_rounded, size: 20),
+                label: Text(
+                  'Contactar Soporte',
+                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: OutlinedButton(
-                    onPressed: onSoporte,
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: AppColors.secondaryContainer,
-                      foregroundColor: AppColors.onSecondaryContainer,
-                      side: BorderSide.none,
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: const Icon(Icons.support_agent_rounded, size: 22),
-                  ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(56),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-              ],
+              ),
             ),
           ),
         ],

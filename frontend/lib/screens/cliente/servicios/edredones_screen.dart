@@ -1,38 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import '../../../models/servicio.dart';
+import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
+import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../agendar_recoleccion/agendar_recoleccion_screen.dart';
-
-class _Beneficio {
-  const _Beneficio({required this.icon, required this.titulo, required this.descripcion});
-
-  final IconData icon;
-  final String titulo;
-  final String descripcion;
-}
-
-const _beneficios = [
-  _Beneficio(
-    icon: Icons.sanitizer_rounded,
-    titulo: 'Sanitizado Profundo',
-    descripcion:
-        'Proceso de lavado especializado que elimina ácaros, alérgenos y bacterias atrapadas en el relleno.',
-  ),
-  _Beneficio(
-    icon: Icons.inventory_2_rounded,
-    titulo: 'Empaque Especial',
-    descripcion:
-        'Se entrega en empaque protector transpirable, ideal para guardarlo durante la temporada fuera de uso.',
-  ),
-  _Beneficio(
-    icon: Icons.waves_rounded,
-    titulo: 'Secado Delicado',
-    descripcion:
-        'Ciclos de secado a temperatura controlada para evitar que el relleno se apelmace, manteniendo la textura esponjosa y suave original de su edredón.',
-  ),
-];
 
 class EdredonesScreen extends StatefulWidget {
   const EdredonesScreen({super.key});
@@ -61,6 +36,15 @@ class _EdredonesScreenState extends State<EdredonesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final servicio = context.watch<ServiciosProvider>().paraTipo(TipoServicio.edredones);
+    final estatica = infoEstaticaParaTipo(TipoServicio.edredones);
+    final tiempoEstimado = (servicio?.tiempoEstimado.isNotEmpty ?? false) ? servicio!.tiempoEstimado : '48 horas';
+    final precioTexto = servicio == null
+        ? estatica.precioTexto
+        : 'Desde \$${servicio.precio.toStringAsFixed(0)}/${servicio.unidad}';
+    final comoFunciona = servicio?.comoFunciona ?? '';
+    final beneficios = servicio?.beneficios ?? [];
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -94,37 +78,46 @@ class _EdredonesScreenState extends State<EdredonesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: const [
+                      children: [
                         Expanded(
                           child: _InfoCard(
                             icon: Icons.schedule_rounded,
                             label: 'Tiempo estimado',
-                            valor: '48 horas',
+                            valor: tiempoEstimado,
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: _InfoCard(
                             icon: Icons.payments_rounded,
                             label: 'Precio desde',
-                            valor: '\$120/pza',
+                            valor: precioTexto,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
-                    Text(
-                      'Beneficios del Servicio',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
+                    if (comoFunciona.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        comoFunciona,
+                        style: GoogleFonts.inter(fontSize: 14, height: 1.4, color: AppColors.onSurfaceVariant),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    for (final beneficio in _beneficios) ...[
-                      _BeneficioCard(beneficio: beneficio),
-                      const SizedBox(height: 12),
+                    ],
+                    if (beneficios.isNotEmpty) ...[
+                      const SizedBox(height: 28),
+                      Text(
+                        'Beneficios del Servicio',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      for (final beneficio in beneficios) ...[
+                        _BeneficioCard(beneficio: beneficio),
+                        const SizedBox(height: 12),
+                      ],
                     ],
                     const SizedBox(height: 16),
                     _SolicitarServicioCard(
@@ -275,7 +268,7 @@ class _InfoCard extends StatelessWidget {
 class _BeneficioCard extends StatelessWidget {
   const _BeneficioCard({required this.beneficio});
 
-  final _Beneficio beneficio;
+  final BeneficioServicio beneficio;
 
   @override
   Widget build(BuildContext context) {
@@ -290,7 +283,7 @@ class _BeneficioCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(beneficio.icon, color: AppColors.primary, size: 28),
+          Icon(iconoDeBeneficio(beneficio.icono), color: AppColors.primary, size: 28),
           const SizedBox(height: 12),
           Text(
             beneficio.titulo,

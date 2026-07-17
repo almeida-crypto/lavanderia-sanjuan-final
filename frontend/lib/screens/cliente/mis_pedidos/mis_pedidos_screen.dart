@@ -191,7 +191,7 @@ class _PedidoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enProceso = pedido.estado == EstadoPedido.enProceso;
+    final enProceso = pedido.estado == EstadoPedido.enProceso || pedido.estado == EstadoPedido.atencion;
     final cancelado = pedido.estado == EstadoPedido.cancelado;
 
     return Container(
@@ -351,14 +351,15 @@ class _EstadoBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (color, icon, texto) = switch (estado) {
       EstadoPedido.enProceso => (AppColors.primaryContainer, Icons.local_laundry_service_rounded, 'En proceso'),
+      EstadoPedido.atencion => (AppColors.errorContainer, Icons.warning_amber_rounded, 'Atención requerida'),
       EstadoPedido.entregado => (AppColors.surfaceContainer, Icons.check_circle_rounded, 'Entregado'),
       EstadoPedido.cancelado => (AppColors.errorContainer, Icons.cancel_rounded, 'Cancelado'),
     };
-    final iconColor = estado == EstadoPedido.enProceso
-        ? Colors.white
-        : estado == EstadoPedido.cancelado
-        ? AppColors.onErrorContainer
-        : AppColors.primary;
+    final iconColor = switch (estado) {
+      EstadoPedido.enProceso => Colors.white,
+      EstadoPedido.atencion || EstadoPedido.cancelado => AppColors.onErrorContainer,
+      EstadoPedido.entregado => AppColors.primary,
+    };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
