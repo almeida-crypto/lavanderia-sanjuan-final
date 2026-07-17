@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../models/servicio.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../opciones/opciones_catalogo_screen.dart';
 import '../promociones/promociones_view.dart';
 import 'add_service_screen.dart';
 
@@ -81,6 +82,24 @@ class ServicesView extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.sell_outlined, size: 20),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const OpcionesCatalogoScreen(),
+                    ),
+                  );
+                },
+                tooltip: 'Opciones (Doblado, etc.)',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.secondaryContainer,
+                  foregroundColor: AppColors.primary,
+                  padding: const EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.checkroom_outlined, size: 20),
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(

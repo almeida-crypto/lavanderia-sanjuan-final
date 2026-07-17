@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/servicio.dart';
+import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
+import '../../../providers/opciones_catalogo_provider.dart';
 import '../../../providers/preferencias_provider.dart';
 import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
@@ -82,7 +84,8 @@ class _OpcionesDobladoScreenState extends State<OpcionesDobladoScreen> {
   @override
   Widget build(BuildContext context) {
     final servicio = context.watch<ServiciosProvider>().paraTipo(TipoServicio.lavadoYPlegado);
-    final opciones = servicio?.opcionesAcabado ?? [];
+    final catalogo = context.watch<OpcionesCatalogoProvider>().opciones;
+    final opciones = resolverOpcionesAcabado(servicio?.opcionesAcabado ?? [], catalogo);
     final unidad = servicio?.unidad ?? 'kg';
 
     return Scaffold(

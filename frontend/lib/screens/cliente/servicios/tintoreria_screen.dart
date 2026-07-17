@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../models/servicio.dart';
 import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
+import '../../../providers/opciones_catalogo_provider.dart';
 import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
@@ -61,7 +62,8 @@ class _TintoreriaScreenState extends State<TintoreriaScreen> {
     final estatica = infoEstaticaParaTipo(TipoServicio.tintoreria);
     final comoFunciona = (servicio?.comoFunciona.isNotEmpty ?? false) ? servicio!.comoFunciona : estatica.descripcion;
     final sugeridos = servicio?.itemsSugeridos ?? [];
-    final opciones = servicio?.opcionesAcabado ?? [];
+    final catalogo = context.watch<OpcionesCatalogoProvider>().opciones;
+    final opciones = resolverOpcionesAcabado(servicio?.opcionesAcabado ?? [], catalogo);
     final tierIndex = opciones.isEmpty ? 0 : _tierSeleccionado.clamp(0, opciones.length - 1);
     final precioBase = servicio?.precio ?? estatica.totalEstimado;
     final unidad = servicio?.unidad ?? estatica.unidad;
