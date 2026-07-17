@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../models/servicio.dart';
 import '../../../models/servicio_lavanderia.dart';
 import '../../../providers/preferencias_provider.dart';
+import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../../../widgets/quantity_selector.dart';
@@ -13,41 +15,6 @@ import '../mi_perfil/mi_perfil_screen.dart';
 import '../mis_pedidos/mis_pedidos_screen.dart';
 import '../notificaciones/notificaciones_screen.dart';
 import 'servicios_screen.dart';
-
-class _OpcionDoblado {
-  const _OpcionDoblado({
-    required this.icon,
-    required this.titulo,
-    required this.precio,
-    required this.descripcion,
-  });
-
-  final IconData icon;
-  final String titulo;
-  final String precio;
-  final String descripcion;
-}
-
-const _opciones = [
-  _OpcionDoblado(
-    icon: Icons.inventory_2_rounded,
-    titulo: 'Doblado Estándar',
-    precio: '\$2.00 / kg',
-    descripcion: 'Perfecto para el uso diario, doblado y apilado con cuidado.',
-  ),
-  _OpcionDoblado(
-    icon: Icons.checkroom_rounded,
-    titulo: 'Doblado en Gancho',
-    precio: '\$1.50 / prenda',
-    descripcion: 'Ideal para camisas y vestidos, evita las arrugas.',
-  ),
-  _OpcionDoblado(
-    icon: Icons.auto_awesome_rounded,
-    titulo: 'Doblado Especial',
-    precio: '\$5.00 / prenda',
-    descripcion: 'Manejo delicado para telas de lujo o piezas grandes.',
-  ),
-];
 
 const _preferencias = ['Sin aroma', 'Jabón ecológico', 'Acabado con almidón', 'Envoltura de regalo'];
 const _preferenciaEcoFriendly = 'Jabón ecológico';
@@ -101,17 +68,23 @@ class _OpcionesDobladoScreenState extends State<OpcionesDobladoScreen> {
     }
   }
 
-  void _confirmarSeleccion() {
+  void _confirmarSeleccion(List<OpcionAcabado> opciones) {
+    final opcion = opciones.isEmpty ? null : opciones[_seleccionado.clamp(0, opciones.length - 1)];
     Navigator.of(context).push(
       AgendarRecoleccionScreen.route(
         servicioInicial: TipoServicio.lavadoYPlegado,
         cantidadInicial: _kilos,
+        opcionAcabadoInicial: opcion,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final servicio = context.watch<ServiciosProvider>().paraTipo(TipoServicio.lavadoYPlegado);
+    final opciones = servicio?.opcionesAcabado ?? [];
+    final unidad = servicio?.unidad ?? 'kg';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -147,14 +120,21 @@ class _OpcionesDobladoScreenState extends State<OpcionesDobladoScreen> {
             children: [
               const _HeroBanner(),
               const SizedBox(height: 24),
-              for (var i = 0; i < _opciones.length; i++) ...[
-                _OpcionCard(
-                  opcion: _opciones[i],
-                  seleccionada: _seleccionado == i,
-                  onTap: () => setState(() => _seleccionado = i),
-                ),
-                if (i != _opciones.length - 1) const SizedBox(height: 16),
-              ],
+              if (opciones.isEmpty)
+                Text(
+                  'El admin todavía no configuró opciones de acabado para este servicio.',
+                  style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
+                )
+              else
+                for (var i = 0; i < opciones.length; i++) ...[
+                  _OpcionCard(
+                    opcion: opciones[i],
+                    unidad: unidad,
+                    seleccionada: _seleccionado.clamp(0, opciones.length - 1) == i,
+                    onTap: () => setState(() => _seleccionado = i),
+                  ),
+                  if (i != opciones.length - 1) const SizedBox(height: 16),
+                ],
               const SizedBox(height: 32),
               Text(
                 'Kilos Aproximados',
@@ -214,7 +194,7 @@ class _OpcionesDobladoScreenState extends State<OpcionesDobladoScreen> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
             color: AppColors.surface,
             child: ElevatedButton(
-              onPressed: _confirmarSeleccion,
+              onPressed: () => _confirmarSeleccion(opciones),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -297,11 +277,13 @@ class _HeroBanner extends StatelessWidget {
 class _OpcionCard extends StatelessWidget {
   const _OpcionCard({
     required this.opcion,
+    required this.unidad,
     required this.seleccionada,
     required this.onTap,
   });
 
-  final _OpcionDoblado opcion;
+  final OpcionAcabado opcion;
+  final String unidad;
   final bool seleccionada;
   final VoidCallback onTap;
 
@@ -332,7 +314,7 @@ class _OpcionCard extends StatelessWidget {
                     color: AppColors.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(opcion.icon, color: AppColors.primary, size: 26),
+                  child: const Icon(Icons.inventory_2_rounded, color: AppColors.primary, size: 26),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -346,7 +328,7 @@ class _OpcionCard extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                opcion.titulo,
+                                opcion.nombre,
                                 style: GoogleFonts.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -361,7 +343,9 @@ class _OpcionCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                opcion.precio,
+                                opcion.precioAdicional == 0
+                                    ? 'Sin costo extra'
+                                    : '+\$${opcion.precioAdicional.toStringAsFixed(2)} / $unidad',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,

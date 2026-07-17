@@ -3,9 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/pedido.dart';
+import '../../../models/promocion.dart';
+import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/servicios_provider.dart';
 import '../../../services/pedido_service.dart';
+import '../../../services/promocion_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../mi_perfil/mi_perfil_screen.dart';
@@ -28,13 +32,33 @@ class HomeClienteScreen extends StatefulWidget {
 }
 class _HomeClienteScreenState extends State<HomeClienteScreen> {
   final _pedidoService = PedidoService();
+  final _promocionService = PromocionService();
   bool _isLoading = true;
   Pedido? _pedidoActivo;
+  Promocion? _promocionVigente;
 
   @override
   void initState() {
     super.initState();
     _cargarPedidoActivo();
+    _cargarPromocionVigente();
+    context.read<ServiciosProvider>().cargar();
+  }
+
+  Future<void> _cargarPromocionVigente() async {
+    try {
+      final promociones = await _promocionService.listar();
+      Promocion? vigente;
+      for (final promocion in promociones) {
+        if (promocion.vigente) {
+          vigente = promocion;
+          break;
+        }
+      }
+      if (mounted) setState(() => _promocionVigente = vigente);
+    } catch (_) {
+      // Sin oferta si el backend no responde; el banner simplemente no aparece.
+    }
   }
 
   Future<void> _cargarPedidoActivo() async {
@@ -45,7 +69,7 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
       final pedidos = data.map(Pedido.fromJson);
       Pedido? activo;
       for (final pedido in pedidos) {
-        if (pedido.estado == EstadoPedido.enProceso) {
+        if (pedido.estado == EstadoPedido.enProceso || pedido.estado == EstadoPedido.atencion) {
           activo = pedido;
           break;
         }
@@ -58,8 +82,8 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
     }
   }
 
-  void _onServicioTap(BuildContext context, ServicioLavanderiaInfo servicio) {
-    switch (servicio.tipo) {
+  void _onServicioTap(BuildContext context, TipoServicio tipo) {
+    switch (tipo) {
       case TipoServicio.tintoreria:
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const TintoreriaScreen()),
@@ -190,12 +214,15 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
               _ServicesSection(
                 onServicioTap: (servicio) => _onServicioTap(context, servicio),
               ),
-              const SizedBox(height: 24),
-              _WeeklyOfferBanner(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const DetalleOfertaScreen()),
+              if (_promocionVigente != null) ...[
+                const SizedBox(height: 24),
+                _WeeklyOfferBanner(
+                  promocion: _promocionVigente!,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => DetalleOfertaScreen(promocion: _promocionVigente!)),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -330,6 +357,7 @@ class _ActiveOrderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final necesitaAtencion = pedido.estado == EstadoPedido.atencion;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -442,14 +470,17 @@ class _ActiveOrderSection extends StatelessWidget {
                   children: [
                     Text(
                       'Estado',
-                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: necesitaAtencion ? AppColors.error : AppColors.primary,
+                      ),
                     ),
                     Text(
-                      'En proceso',
+                      necesitaAtencion ? 'Atención requerida' : 'En proceso',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
+                        color: necesitaAtencion ? AppColors.error : AppColors.primary,
                       ),
                     ),
                   ],
@@ -461,7 +492,9 @@ class _ActiveOrderSection extends StatelessWidget {
                     value: 0.5,
                     minHeight: 8,
                     backgroundColor: AppColors.surfaceVariant,
-                    valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                    valueColor: AlwaysStoppedAnimation(
+                      necesitaAtencion ? AppColors.error : AppColors.primary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -549,10 +582,12 @@ class _SinPedidoActivoCard extends StatelessWidget {
 class _ServicesSection extends StatelessWidget {
   const _ServicesSection({required this.onServicioTap});
 
-  final ValueChanged<ServicioLavanderiaInfo> onServicioTap;
+  final ValueChanged<TipoServicio> onServicioTap;
 
   @override
   Widget build(BuildContext context) {
+    final reales = context.watch<ServiciosProvider>().activos;
+    final servicios = catalogoParaMostrar(reales);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -568,7 +603,7 @@ class _ServicesSection extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: serviciosDisponibles.length,
+          itemCount: servicios.length,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: 16,
@@ -576,12 +611,12 @@ class _ServicesSection extends StatelessWidget {
             childAspectRatio: 1.05,
           ),
           itemBuilder: (context, index) {
-            final servicio = serviciosDisponibles[index];
+            final servicio = servicios[index];
             return _ServiceCard(
               icon: servicio.icon,
               title: servicio.nombre,
               subtitle: servicio.precioTexto,
-              onTap: () => onServicioTap(servicio),
+              onTap: () => onServicioTap(servicio.tipo),
             );
           },
         ),
@@ -649,8 +684,9 @@ class _ServiceCard extends StatelessWidget {
 }
 
 class _WeeklyOfferBanner extends StatelessWidget {
-  const _WeeklyOfferBanner({required this.onTap});
+  const _WeeklyOfferBanner({required this.promocion, required this.onTap});
 
+  final Promocion promocion;
   final VoidCallback onTap;
 
   @override
@@ -672,7 +708,7 @@ class _WeeklyOfferBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'OFERTA SEMANAL',
+                    'OFERTA',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -682,7 +718,7 @@ class _WeeklyOfferBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '20% OFF en Tintorería',
+                    promocion.titulo,
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -696,7 +732,7 @@ class _WeeklyOfferBanner extends StatelessWidget {
                       style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurfaceVariant),
                       children: [
                         TextSpan(
-                          text: 'FRESH20',
+                          text: promocion.codigo,
                           style: GoogleFonts.inter(
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary,

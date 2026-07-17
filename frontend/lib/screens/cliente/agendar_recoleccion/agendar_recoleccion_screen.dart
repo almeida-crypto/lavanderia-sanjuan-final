@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../models/direccion.dart';
 import '../../../models/fragancia.dart';
 import '../../../models/franja_horaria.dart';
+import '../../../models/servicio.dart';
 import '../../../models/servicio_lavanderia.dart';
 import '../../../models/tarjeta.dart';
 import '../../../providers/agendar_recoleccion_provider.dart';
@@ -12,6 +13,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/direcciones_provider.dart';
 import '../../../providers/metodos_pago_provider.dart';
 import '../../../providers/preferencias_provider.dart';
+import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../home_cliente/home_cliente_screen.dart';
@@ -34,13 +36,22 @@ String _etiquetaChip(int index, DateTime fecha) {
 class AgendarRecoleccionScreen extends StatelessWidget {
   const AgendarRecoleccionScreen({super.key});
 
-  static Route<void> route({TipoServicio? servicioInicial, int cantidadInicial = 1}) {
+  static Route<void> route({
+    TipoServicio? servicioInicial,
+    int cantidadInicial = 1,
+    OpcionAcabado? opcionAcabadoInicial,
+  }) {
     return MaterialPageRoute(
       builder: (context) {
         final preferencias = context.read<PreferenciasProvider>();
+        final servicioReal = servicioInicial == null
+            ? null
+            : context.read<ServiciosProvider>().paraTipo(servicioInicial);
         return ChangeNotifierProvider(
           create: (_) => AgendarRecoleccionProvider(
             servicioInicial: servicioInicial,
+            servicioReal: servicioReal,
+            opcionAcabadoInicial: opcionAcabadoInicial,
             ecoFriendlyInicial: preferencias.ecoFriendly,
             fraganciaInicial: preferencias.fragancia,
             cantidadInicial: cantidadInicial,
@@ -168,11 +179,12 @@ class AgendarRecoleccionScreen extends StatelessWidget {
     }
   }
 
-  void _aplicarCodigoPromocional(
+  Future<void> _aplicarCodigoPromocional(
     BuildContext context,
     AgendarRecoleccionProvider provider,
-  ) {
-    provider.aplicarCodigoPromocional();
+  ) async {
+    await provider.aplicarCodigoPromocional();
+    if (!context.mounted) return;
     final mensaje = provider.mensajePromo;
     if (mensaje != null) {
       ScaffoldMessenger.of(
@@ -265,6 +277,7 @@ class AgendarRecoleccionScreen extends StatelessWidget {
         children: [
           _ConfirmarPedidoBar(
             isLoading: provider.isLoading,
+            validandoPromo: provider.validandoPromo,
             codigoPromoController: provider.codigoPromoController,
             onAplicarCodigo: () => _aplicarCodigoPromocional(context, provider),
             onConfirmar: () => _submit(context, provider, direccionActual),
@@ -573,7 +586,7 @@ class _ResumenEstimadoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unidad = provider.servicioInfo.unidad;
+    final unidad = provider.unidad;
     final unidadPlural = provider.cantidad == 1 ? unidad : '${unidad}s';
     return Container(
       padding: const EdgeInsets.all(16),
@@ -605,6 +618,28 @@ class _ResumenEstimadoCard extends StatelessWidget {
               ),
             ],
           ),
+          if (provider.opcionAcabado != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  provider.opcionAcabado!.nombre,
+                  style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurfaceVariant),
+                ),
+                Text(
+                  provider.opcionAcabado!.precioAdicional == 0
+                      ? 'Sin costo extra'
+                      : '+\$${provider.opcionAcabado!.precioAdicional.toStringAsFixed(2)}/$unidad',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -845,12 +880,14 @@ class _InstructionsField extends StatelessWidget {
 class _ConfirmarPedidoBar extends StatelessWidget {
   const _ConfirmarPedidoBar({
     required this.isLoading,
+    required this.validandoPromo,
     required this.codigoPromoController,
     required this.onAplicarCodigo,
     required this.onConfirmar,
   });
 
   final bool isLoading;
+  final bool validandoPromo;
   final TextEditingController codigoPromoController;
   final VoidCallback onAplicarCodigo;
   final VoidCallback onConfirmar;
@@ -903,7 +940,7 @@ class _ConfirmarPedidoBar extends StatelessWidget {
               SizedBox(
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: onAplicarCodigo,
+                  onPressed: validandoPromo ? null : onAplicarCodigo,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.secondaryContainer,
                     foregroundColor: AppColors.primary,
@@ -913,13 +950,19 @@ class _ConfirmarPedidoBar extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: Text(
-                    'Aplicar',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: validandoPromo
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        )
+                      : Text(
+                          'Aplicar',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
             ],

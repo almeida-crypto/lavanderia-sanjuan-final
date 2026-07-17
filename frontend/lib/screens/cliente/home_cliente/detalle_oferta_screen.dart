@@ -2,14 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../models/promocion.dart';
+import '../../../models/servicio_display.dart';
 import '../../../utils/app_colors.dart';
 import '../../auth/terminos_condiciones/terminos_condiciones_screen.dart';
-import '../servicios/tintoreria_screen.dart';
+import '../agendar_recoleccion/agendar_recoleccion_screen.dart';
 
-const _codigoPromo = 'FRESH20';
+const _meses = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
 
 class DetalleOfertaScreen extends StatefulWidget {
-  const DetalleOfertaScreen({super.key});
+  const DetalleOfertaScreen({super.key, required this.promocion});
+
+  final Promocion promocion;
 
   @override
   State<DetalleOfertaScreen> createState() => _DetalleOfertaScreenState();
@@ -19,13 +26,15 @@ class _DetalleOfertaScreenState extends State<DetalleOfertaScreen> {
   bool _codigoCopiado = false;
 
   Future<void> _copiarCodigo() async {
-    await Clipboard.setData(const ClipboardData(text: _codigoPromo));
+    await Clipboard.setData(ClipboardData(text: widget.promocion.codigo));
     if (!mounted) return;
     setState(() => _codigoCopiado = true);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _codigoCopiado = false);
     });
   }
+
+  String _formatoFecha(DateTime fecha) => '${fecha.day} de ${_meses[fecha.month - 1]}';
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +71,7 @@ class _DetalleOfertaScreenState extends State<DetalleOfertaScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '20% OFF en Tintorería',
+                      widget.promocion.titulo,
                       style: GoogleFonts.inter(
                         fontSize: 32,
                         fontWeight: FontWeight.w700,
@@ -72,7 +81,7 @@ class _DetalleOfertaScreenState extends State<DetalleOfertaScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Aprovecha nuestra oferta semanal en todas tus prendas delicadas.',
+                      widget.promocion.descripcion,
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         color: AppColors.onSurfaceVariant,
@@ -92,18 +101,23 @@ class _DetalleOfertaScreenState extends State<DetalleOfertaScreen> {
                         children: [
                           _DetalleItem(
                             icon: Icons.event_rounded,
-                            texto: 'Válido hasta el 30 de Octubre',
+                            texto: widget.promocion.fechaFin == null
+                                ? 'Sin fecha límite'
+                                : 'Válido hasta el ${_formatoFecha(widget.promocion.fechaFin!)}',
                           ),
                           const SizedBox(height: 12),
                           _DetalleItem(
                             icon: Icons.checkroom_rounded,
-                            texto: 'Aplica para trajes, vestidos y abrigos',
+                            texto: (widget.promocion.servicioAplicable?.isNotEmpty ?? false)
+                                ? 'Aplica solo para ${widget.promocion.servicioAplicable}'
+                                : 'Aplica para todos los servicios',
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 20),
                     _CodigoPromoCard(
+                      codigo: widget.promocion.codigo,
                       copiado: _codigoCopiado,
                       onCopiar: _copiarCodigo,
                     ),
@@ -129,9 +143,16 @@ class _DetalleOfertaScreenState extends State<DetalleOfertaScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const TintoreriaScreen()),
-                  ),
+                  onPressed: () {
+                    final servicio = widget.promocion.servicioAplicable;
+                    Navigator.of(context).push(
+                      AgendarRecoleccionScreen.route(
+                        servicioInicial: (servicio == null || servicio.isEmpty)
+                            ? null
+                            : tipoServicioDeNombre(servicio),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -245,8 +266,9 @@ class _DetalleItem extends StatelessWidget {
 }
 
 class _CodigoPromoCard extends StatelessWidget {
-  const _CodigoPromoCard({required this.copiado, required this.onCopiar});
+  const _CodigoPromoCard({required this.codigo, required this.copiado, required this.onCopiar});
 
+  final String codigo;
   final bool copiado;
   final VoidCallback onCopiar;
 
@@ -285,7 +307,7 @@ class _CodigoPromoCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  _codigoPromo,
+                  codigo,
                   style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,

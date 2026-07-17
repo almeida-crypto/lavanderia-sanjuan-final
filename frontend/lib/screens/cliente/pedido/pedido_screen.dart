@@ -72,10 +72,14 @@ class PedidoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enProceso = pedido.estado == EstadoPedido.enProceso;
+    final necesitaAtencion = pedido.estado == EstadoPedido.atencion;
+    final activo = pedido.estado == EstadoPedido.enProceso || necesitaAtencion;
     final cancelado = pedido.estado == EstadoPedido.cancelado;
+    final puedeReportar = !cancelado;
+    final puedeCancelar = activo;
     final (chipColor, chipTexto) = switch (pedido.estado) {
       EstadoPedido.enProceso => (AppColors.primary, 'En Proceso'),
+      EstadoPedido.atencion => (AppColors.error, 'Atención requerida'),
       EstadoPedido.entregado => (AppColors.primary, 'Entregado'),
       EstadoPedido.cancelado => (AppColors.error, 'Cancelado'),
     };
@@ -140,61 +144,74 @@ class PedidoScreen extends StatelessWidget {
               if (cancelado)
                 _PedidoCanceladoCard(pedido: pedido)
               else ...[
+                if (necesitaAtencion) ...[
+                  const _AtencionBanner(),
+                  const SizedBox(height: 16),
+                ],
                 _EstimacionCard(
                   pedido: pedido,
                   onVerMapa: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => SeguimientoEnVivoScreen(numeroPedido: pedido.numero),
+                      builder: (_) => SeguimientoEnVivoScreen(
+                        numeroPedido: pedido.numero,
+                        repartidorNombre: pedido.repartidorNombre,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 _TimelineCard(pedido: pedido),
-                if (enProceso) ...[
+                if (activo && pedido.repartidorNombre != null) ...[
                   const SizedBox(height: 16),
                   _RepartidorCard(
+                    nombre: pedido.repartidorNombre!,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => SeguimientoEnVivoScreen(numeroPedido: pedido.numero),
+                        builder: (_) => SeguimientoEnVivoScreen(
+                          numeroPedido: pedido.numero,
+                          repartidorNombre: pedido.repartidorNombre,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ],
-              if (enProceso) ...[
+              if (puedeReportar || puedeCancelar) ...[
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => ReportarProblemaScreen(pedido: pedido)),
+                    if (puedeReportar)
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => ReportarProblemaScreen(pedido: pedido)),
+                          ),
+                          icon: const Icon(Icons.flag_outlined, size: 18),
+                          label: Text(
+                            'Reportar un Problema',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
                         ),
-                        icon: const Icon(Icons.flag_outlined, size: 18),
-                        label: Text(
-                          'Reportar un Problema',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
                       ),
-                    ),
-                    Expanded(
-                      child: TextButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => CancelarPedidoScreen(pedidoId: pedido.id)),
+                    if (puedeCancelar)
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => CancelarPedidoScreen(pedidoId: pedido.id)),
+                          ),
+                          icon: const Icon(Icons.cancel_outlined, size: 18),
+                          label: Text(
+                            'Cancelar Pedido',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.error),
                         ),
-                        icon: const Icon(Icons.cancel_outlined, size: 18),
-                        label: Text(
-                          'Cancelar Pedido',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        style: TextButton.styleFrom(foregroundColor: AppColors.error),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -238,6 +255,49 @@ class _PedidoCanceladoCard extends StatelessWidget {
           Text(
             '${pedido.servicio} · ${pedido.fechaFormateada}',
             style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AtencionBanner extends StatelessWidget {
+  const _AtencionBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.errorContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppColors.onErrorContainer),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tu pedido necesita atención',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.onErrorContainer,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Nuestro equipo está revisando algo en tu pedido y se pondrá en contacto contigo.',
+                  style: GoogleFonts.inter(fontSize: 13, color: AppColors.onErrorContainer),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -487,8 +547,9 @@ class _TimelineStep extends StatelessWidget {
 }
 
 class _RepartidorCard extends StatelessWidget {
-  const _RepartidorCard({required this.onTap});
+  const _RepartidorCard({required this.nombre, required this.onTap});
 
+  final String nombre;
   final VoidCallback onTap;
 
   @override
@@ -530,7 +591,7 @@ class _RepartidorCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Carlos Mendoza',
+                      nombre,
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -538,19 +599,9 @@ class _RepartidorCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                        const SizedBox(width: 2),
-                        Flexible(
-                          child: Text(
-                            '4.9 (120 entregas) • FreshVan #042',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.secondary),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Repartidor asignado a tu pedido',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.secondary),
                     ),
                   ],
                 ),

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/pedido_admin.dart';
+import '../models/promocion.dart';
 import '../models/servicio.dart';
 import '../services/pedido_service.dart';
+import '../services/promocion_service.dart';
 import '../services/servicio_service.dart';
 
 class AdminProvider extends ChangeNotifier {
   final _pedidoService = PedidoService();
   final _servicioService = ServicioService();
+  final _promocionService = PromocionService();
 
   final List<PedidoAdmin> _pedidos = [];
   bool _isLoading = false;
@@ -55,9 +58,51 @@ class AdminProvider extends ChangeNotifier {
     final totalConfirmado = double.tryParse(json['totalConfirmado']?.toString() ?? '');
     final repartidor = json['repartidor']?.toString();
     final fecha = json['fecha']?.toString() ?? 'Sin fecha';
+    final estado = pedidoEstadoFromString(json['estado']?.toString());
+
+    final reporteTipo = json['reporteTipo']?.toString();
+    final reporteDetalles = json['reporteDetalles']?.toString();
+    final warningMessage = estado == PedidoEstado.atencion && (reporteTipo?.isNotEmpty ?? false)
+        ? (reporteDetalles?.isNotEmpty ?? false ? '$reporteTipo: $reporteDetalles' : reporteTipo)
+        : null;
+
+    final razonCancelacion = json['razonCancelacion']?.toString();
+    final comentariosCancelacion = json['comentariosCancelacion']?.toString();
+    final calificacion = int.tryParse(json['calificacion']?.toString() ?? '');
+    final resena = json['resena']?.toString();
+    final opcionAcabado = json['opcionAcabado']?.toString();
+    final precioAcabado = double.tryParse(json['precioAcabado']?.toString() ?? '');
+
+    final notas = [NotaPedido(fecha: fecha, texto: 'Pedido recibido')];
+    if (estado == PedidoEstado.cancelado && (razonCancelacion?.isNotEmpty ?? false)) {
+      notas.add(NotaPedido(
+        fecha: fecha,
+        texto: (comentariosCancelacion?.isNotEmpty ?? false)
+            ? 'Cliente canceló: $razonCancelacion — $comentariosCancelacion'
+            : 'Cliente canceló: $razonCancelacion',
+        autor: 'Cliente',
+      ));
+    }
+    if (reporteTipo?.isNotEmpty ?? false) {
+      notas.add(NotaPedido(
+        fecha: fecha,
+        texto: (reporteDetalles?.isNotEmpty ?? false)
+            ? 'Reporte del cliente ($reporteTipo): $reporteDetalles'
+            : 'Reporte del cliente: $reporteTipo',
+        autor: 'Cliente',
+      ));
+    }
+    if (calificacion != null) {
+      notas.add(NotaPedido(
+        fecha: fecha,
+        texto: (resena?.isNotEmpty ?? false) ? 'Calificación: $calificacion★ — $resena' : 'Calificación: $calificacion★',
+        autor: 'Cliente',
+      ));
+    }
 
     return PedidoAdmin(
       id: json['id']?.toString() ?? '',
+      numeroOrden: int.tryParse(json['numeroOrden']?.toString() ?? '') ?? 0,
       clienteNombre: json['clienteNombre']?.toString() ?? 'Cliente',
       clienteEmail: json['clienteEmail']?.toString() ?? 'No especificado',
       clienteTelefono: json['clienteTelefono']?.toString() ?? 'No especificado',
@@ -65,11 +110,18 @@ class AdminProvider extends ChangeNotifier {
       servicioNombre: servicioNombre,
       servicioIcono: _iconoParaServicio(servicioNombre),
       tipoEntrega: 'Domicilio',
-      estado: pedidoEstadoFromString(json['estado']?.toString()),
-      progreso: _progresoParaEstado(pedidoEstadoFromString(json['estado']?.toString())),
+      estado: estado,
+      progreso: _progresoParaEstado(estado),
       fecha: fecha,
-      items: [PedidoItem(nombre: servicioNombre, precio: totalConfirmado ?? total)],
-      notas: [NotaPedido(fecha: fecha, texto: 'Pedido recibido')],
+      items: [
+        // Si el cliente eligió una opción con cargo extra, se separa del
+        // precio base para que el desglose sume el mismo total que se le
+        // cobró (en vez de sumarlo dos veces).
+        PedidoItem(nombre: servicioNombre, precio: (totalConfirmado ?? total) - (precioAcabado ?? 0)),
+        if (opcionAcabado != null && opcionAcabado.isNotEmpty)
+          PedidoItem(nombre: opcionAcabado, precio: precioAcabado ?? 0, descripcion: 'Opción elegida por el cliente'),
+      ],
+      notas: notas,
       ecoFriendly: json['ecoFriendly'] == true,
       fragancia: json['fragancia']?.toString(),
       cantidadAproximada: int.tryParse(json['cantidadAproximada']?.toString() ?? ''),
@@ -77,6 +129,8 @@ class AdminProvider extends ChangeNotifier {
       totalConfirmado: totalConfirmado,
       metodoPago: json['metodoPago']?.toString(),
       repartidorNombre: (repartidor == null || repartidor.isEmpty) ? null : repartidor,
+      warningMessage: warningMessage,
+      opcionAcabado: opcionAcabado,
     );
   }
 
@@ -208,28 +262,10 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateServicio(
-    String id, {
-    String? nombre,
-    String? icono,
-    double? precio,
-    String? unidad,
-    String? descripcion,
-    bool? activo,
-  }) async {
-    final index = _servicios.indexWhere((s) => s.id == id);
+  Future<void> updateServicio(Servicio servicio) async {
+    final index = _servicios.indexWhere((s) => s.id == servicio.id);
     if (index != -1) {
-      final actual = _servicios[index];
-      final editado = Servicio(
-        id: actual.id,
-        nombre: nombre ?? actual.nombre,
-        icono: icono ?? actual.icono,
-        precio: precio ?? actual.precio,
-        unidad: unidad ?? actual.unidad,
-        descripcion: descripcion ?? actual.descripcion,
-        activo: activo ?? actual.activo,
-      );
-      _servicios[index] = await _servicioService.actualizar(editado);
+      _servicios[index] = await _servicioService.actualizar(servicio);
       notifyListeners();
     }
   }
@@ -237,18 +273,68 @@ class AdminProvider extends ChangeNotifier {
   Future<void> toggleServicioActivo(String id) async {
     final index = _servicios.indexWhere((s) => s.id == id);
     if (index != -1) {
-      final actual = _servicios[index];
-      final editado = Servicio(
-        id: actual.id,
-        nombre: actual.nombre,
-        icono: actual.icono,
-        precio: actual.precio,
-        unidad: actual.unidad,
-        descripcion: actual.descripcion,
-        activo: !actual.activo,
-      );
+      final editado = _servicios[index].copyWith(activo: !_servicios[index].activo);
       _servicios[index] = await _servicioService.actualizar(editado);
       notifyListeners();
     }
+  }
+
+  // Promociones: mismas reglas que ve/valida el cliente (código, vigencia,
+  // servicio al que aplica), pero editables solo desde aquí.
+
+  final List<Promocion> _promociones = [];
+  bool _isLoadingPromociones = false;
+
+  List<Promocion> get promociones => List.unmodifiable(_promociones);
+  bool get isLoadingPromociones => _isLoadingPromociones;
+
+  Future<void> cargarPromociones() async {
+    _isLoadingPromociones = true;
+    notifyListeners();
+    try {
+      final data = await _promocionService.listar();
+      _promociones
+        ..clear()
+        ..addAll(data);
+    } catch (_) {
+      // Conserva la lista previa para que la pantalla siga usable.
+    } finally {
+      _isLoadingPromociones = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> addPromocion(Promocion promocion) async {
+    final guardada = await _promocionService.crear(promocion);
+    _promociones.insert(0, guardada);
+    notifyListeners();
+  }
+
+  Future<void> updatePromocion(Promocion promocion) async {
+    final index = _promociones.indexWhere((p) => p.id == promocion.id);
+    final actualizada = await _promocionService.actualizar(promocion);
+    if (index != -1) {
+      _promociones[index] = actualizada;
+      notifyListeners();
+    }
+  }
+
+  Future<void> togglePromocionActiva(String id) async {
+    final index = _promociones.indexWhere((p) => p.id == id);
+    if (index == -1) return;
+    final actual = _promociones[index];
+    final editada = Promocion(
+      id: actual.id,
+      codigo: actual.codigo,
+      titulo: actual.titulo,
+      descripcion: actual.descripcion,
+      descuentoPorcentaje: actual.descuentoPorcentaje,
+      servicioAplicable: actual.servicioAplicable,
+      fechaInicio: actual.fechaInicio,
+      fechaFin: actual.fechaFin,
+      activa: !actual.activa,
+    );
+    _promociones[index] = await _promocionService.actualizar(editada);
+    notifyListeners();
   }
 }

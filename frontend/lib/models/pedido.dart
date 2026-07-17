@@ -1,6 +1,6 @@
 import 'servicio_lavanderia.dart';
 
-enum EstadoPedido { enProceso, entregado, cancelado }
+enum EstadoPedido { enProceso, atencion, entregado, cancelado }
 
 EstadoPedido estadoPedidoFromString(String? value) {
   switch (value) {
@@ -8,6 +8,8 @@ EstadoPedido estadoPedidoFromString(String? value) {
       return EstadoPedido.entregado;
     case 'Cancelado':
       return EstadoPedido.cancelado;
+    case 'Atención':
+      return EstadoPedido.atencion;
     default:
       return EstadoPedido.enProceso;
   }
@@ -18,6 +20,7 @@ EstadoPedido estadoPedidoFromString(String? value) {
 class Pedido {
   const Pedido({
     required this.id,
+    this.numeroOrden = 0,
     required this.servicio,
     required this.tipoServicio,
     required this.fecha,
@@ -31,6 +34,8 @@ class Pedido {
     this.cantidadAproximada,
     this.metodoPago,
     this.totalConfirmado,
+    this.repartidorNombre,
+    this.opcionAcabado,
   });
 
   factory Pedido.fromJson(Map<String, dynamic> json) {
@@ -45,6 +50,7 @@ class Pedido {
 
     return Pedido(
       id: json['id']?.toString() ?? '',
+      numeroOrden: int.tryParse(json['numeroOrden']?.toString() ?? '') ?? 0,
       servicio: servicioNombre,
       tipoServicio: tipoServicio,
       fecha: json['fecha']?.toString() ?? 'Sin fecha',
@@ -58,10 +64,16 @@ class Pedido {
       cantidadAproximada: int.tryParse(json['cantidadAproximada']?.toString() ?? ''),
       metodoPago: json['metodoPago']?.toString(),
       totalConfirmado: double.tryParse(json['totalConfirmado']?.toString() ?? ''),
+      repartidorNombre: _cleanRepartidor(json['repartidor']?.toString()),
+      opcionAcabado: json['opcionAcabado']?.toString(),
     );
   }
 
+  static String? _cleanRepartidor(String? value) =>
+      (value == null || value.isEmpty) ? null : value;
+
   final String id;
+  final int numeroOrden;
   final String servicio;
   final TipoServicio tipoServicio;
   final String fecha;
@@ -75,8 +87,14 @@ class Pedido {
   final int? cantidadAproximada;
   final String? metodoPago;
   final double? totalConfirmado;
+  final String? repartidorNombre;
+  final String? opcionAcabado;
 
-  String get numero => '#FC-$id';
+  /// Folio corto y legible en vez del uuid interno (que es horrible de
+  /// mostrar). Si por alguna razón el backend no lo mandó todavía (base sin
+  /// migrar), cae a los primeros caracteres del id en vez del uuid completo.
+  String get numero =>
+      numeroOrden > 0 ? '#FC-${numeroOrden.toString().padLeft(5, '0')}' : '#FC-${id.substring(0, id.length < 8 ? id.length : 8)}';
 
   /// El total mostrado en la app hasta que el admin confirma peso/precio
   /// real; después de eso, este es el monto final a cobrar.

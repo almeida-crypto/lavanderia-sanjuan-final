@@ -33,6 +33,7 @@ class _OrdersViewState extends State<OrdersView> {
       // 1. Filtrar por búsqueda
       final query = _searchController.text.toLowerCase().trim();
       final matchesSearch = query.isEmpty ||
+          pedido.numero.toLowerCase().contains(query) ||
           pedido.id.toLowerCase().contains(query) ||
           pedido.clienteNombre.toLowerCase().contains(query);
 
@@ -305,7 +306,7 @@ class _OrdersViewState extends State<OrdersView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        pedido.id,
+                        pedido.numero,
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

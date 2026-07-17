@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
+import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../home_cliente/home_cliente_screen.dart';
@@ -25,13 +28,19 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
   String _query = '';
 
   @override
+  void initState() {
+    super.initState();
+    context.read<ServiciosProvider>().cargar();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
-  void _onServicioTap(ServicioLavanderiaInfo servicio) {
-    switch (servicio.tipo) {
+  void _onServicioTap(BuildContext context, TipoServicio tipo) {
+    switch (tipo) {
       case TipoServicio.tintoreria:
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const TintoreriaScreen()),
@@ -72,9 +81,9 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final servicios = serviciosDisponibles
-        .where((s) => s.nombre.toLowerCase().contains(_query.toLowerCase()))
-        .toList();
+    final reales = context.watch<ServiciosProvider>().activos;
+    final items = catalogoParaMostrar(reales);
+    final servicios = items.where((s) => s.nombre.toLowerCase().contains(_query.toLowerCase())).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -156,7 +165,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
                 for (final servicio in servicios) ...[
                   _ServicioCard(
                     servicio: servicio,
-                    onTap: () => _onServicioTap(servicio),
+                    onTap: () => _onServicioTap(context, servicio.tipo),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -175,7 +184,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
 class _ServicioCard extends StatelessWidget {
   const _ServicioCard({required this.servicio, required this.onTap});
 
-  final ServicioLavanderiaInfo servicio;
+  final ServicioDisplay servicio;
   final VoidCallback onTap;
 
   @override

@@ -65,7 +65,7 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Pedido ${currentPedido.id} • ${currentPedido.clienteNombre}',
+                'Pedido ${currentPedido.numero} • ${currentPedido.clienteNombre}',
                 style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
               ),
               const SizedBox(height: 16),

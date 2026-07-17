@@ -61,6 +61,8 @@ public class PedidosController : ControllerBase
                 ["fragancia"] = request.Fragancia,
                 ["cantidad_aproximada"] = request.CantidadAproximada,
                 ["metodo_pago"] = request.MetodoPago,
+                ["opcion_acabado"] = request.OpcionAcabado,
+                ["precio_acabado"] = request.PrecioAcabado,
                 ["total"] = request.Total ?? 0m,
                 ["estado"] = "Recibido"
             });
@@ -142,6 +144,7 @@ public class PedidosController : ControllerBase
     private static PedidoDto Map(JsonObject row) => new()
     {
         Id = S(row, "id"),
+        NumeroOrden = long.TryParse(S(row, "numero_orden"), out var numeroOrden) ? numeroOrden : 0,
         ClienteId = S(row, "cliente_id"),
         ClienteNombre = S(row, "cliente_nombre"),
         ClienteEmail = S(row, "cliente_email"),
@@ -155,11 +158,19 @@ public class PedidosController : ControllerBase
         Fragancia = S(row, "fragancia"),
         CantidadAproximada = I(row, "cantidad_aproximada"),
         MetodoPago = S(row, "metodo_pago"),
+        OpcionAcabado = S(row, "opcion_acabado"),
+        PrecioAcabado = M(row, "precio_acabado"),
         Repartidor = S(row, "repartidor"),
         PesoConfirmado = N(row, "peso_confirmado"),
         TotalConfirmado = M(row, "total_confirmado"),
         Total = M(row, "total") ?? 0m,
-        Estado = S(row, "estado")
+        Estado = S(row, "estado"),
+        RazonCancelacion = S(row, "razon_cancelacion"),
+        ComentariosCancelacion = S(row, "comentarios_cancelacion"),
+        Calificacion = I(row, "calificacion"),
+        Resena = S(row, "resena"),
+        ReporteTipo = S(row, "reporte_tipo"),
+        ReporteDetalles = S(row, "reporte_detalles")
     };
 
     private ObjectResult DataError(SupabaseDataException ex) =>
@@ -187,6 +198,8 @@ public class CrearPedidoRequest
     public string? Fragancia { get; set; }
     public int? CantidadAproximada { get; set; }
     public string? MetodoPago { get; set; }
+    public string? OpcionAcabado { get; set; }
+    public decimal? PrecioAcabado { get; set; }
     public decimal? Total { get; set; }
 }
 
@@ -200,6 +213,10 @@ public class ReportarPedidoRequest { public string? Tipo { get; set; } public st
 public class PedidoDto
 {
     public string? Id { get; set; }
+
+    /// Folio corto y legible (1, 2, 3...) para mostrar al cliente/admin en
+    /// vez del uuid interno de [Id].
+    public long NumeroOrden { get; set; }
     public string? ClienteId { get; set; }
     public string? ClienteNombre { get; set; }
     public string? ClienteEmail { get; set; }
@@ -213,9 +230,17 @@ public class PedidoDto
     public string? Fragancia { get; set; }
     public int? CantidadAproximada { get; set; }
     public string? MetodoPago { get; set; }
+    public string? OpcionAcabado { get; set; }
+    public decimal? PrecioAcabado { get; set; }
     public string? Repartidor { get; set; }
     public double? PesoConfirmado { get; set; }
     public decimal? TotalConfirmado { get; set; }
     public decimal Total { get; set; }
     public string? Estado { get; set; }
+    public string? RazonCancelacion { get; set; }
+    public string? ComentariosCancelacion { get; set; }
+    public int? Calificacion { get; set; }
+    public string? Resena { get; set; }
+    public string? ReporteTipo { get; set; }
+    public string? ReporteDetalles { get; set; }
 }
