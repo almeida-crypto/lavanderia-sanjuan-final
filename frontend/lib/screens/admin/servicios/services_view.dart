@@ -37,90 +37,88 @@ class ServicesView extends StatelessWidget {
         // Page Header
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Servicios',
-                      style: GoogleFonts.inter(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                        color: AppColors.onSurface,
+              Text(
+                'Servicios',
+                style: GoogleFonts.inter(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                  color: AppColors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Configuración y precios del catálogo.',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PromocionesScreen(),
+                        ),
+                      );
+                    },
+                    tooltip: 'Promociones',
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.secondaryContainer,
+                      foregroundColor: AppColors.primary,
+                      padding: const EdgeInsets.all(16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.sell_outlined, size: 20),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const OpcionesCatalogoScreen(),
+                        ),
+                      );
+                    },
+                    tooltip: 'Opciones (Doblado, etc.)',
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.secondaryContainer,
+                      foregroundColor: AppColors.primary,
+                      padding: const EdgeInsets.all(16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.checkroom_outlined, size: 20),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AddServiceScreen(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.add, size: 20),
+                      label: Text(
+                        'Nuevo',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Configuración y precios del catálogo.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const PromocionesScreen(),
-                    ),
-                  );
-                },
-                tooltip: 'Promociones',
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.secondaryContainer,
-                  foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.sell_outlined, size: 20),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const OpcionesCatalogoScreen(),
-                    ),
-                  );
-                },
-                tooltip: 'Opciones (Doblado, etc.)',
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.secondaryContainer,
-                  foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.checkroom_outlined, size: 20),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const AddServiceScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.add, size: 20),
-                label: Text(
-                  'Nuevo',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                ),
+                  ),
+                ],
               ),
             ],
           ),
