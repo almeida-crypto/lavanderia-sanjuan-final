@@ -131,12 +131,13 @@ public class BeneficioServicioDto
     public string Descripcion { get; set; } = string.Empty;
 }
 
-/// Cubre tanto "opciones de doblado"/"modo de entrega" como niveles de
-/// tarifa (ej. Básica/Premium/Luxury): todas son una opción con un cargo
-/// adicional sobre el precio base que el cliente elige antes de agendar.
+/// Referencia a una fila del catálogo global de OpcionesController (ej.
+/// "Doblado en Gancho"), con el cargo adicional que le corresponde a ESTE
+/// servicio en particular (el mismo Doblado puede costar distinto según el
+/// servicio, o no costar nada en alguno). El nombre/descripción para
+/// mostrar se resuelven contra /api/opciones, no se duplican aquí.
 public class OpcionAcabadoDto
 {
-    public string Nombre { get; set; } = string.Empty;
+    public string OpcionId { get; set; } = string.Empty;
     public double PrecioAdicional { get; set; }
-    public string Descripcion { get; set; } = string.Empty;
 }

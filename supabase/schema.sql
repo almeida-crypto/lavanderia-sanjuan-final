@@ -62,6 +62,19 @@ alter table public.servicios add column if not exists items_sugeridos jsonb not 
 alter table public.servicios add column if not exists beneficios jsonb not null default '[]'::jsonb;
 alter table public.servicios add column if not exists opciones_acabado jsonb not null default '[]'::jsonb;
 
+-- Catálogo global de opciones (ej. "Doblado en Gancho"): se definen UNA vez
+-- aquí y cada servicio en "servicios.opciones_acabado" solo guarda una
+-- referencia {"opcionId": ..., "precioAdicional": ...} a estas filas, para
+-- no tener que redefinir "Doblado" por separado en cada servicio que lo
+-- ofrezca (y que el mismo Doblado pueda costar distinto según el servicio).
+create table if not exists public.opciones (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null unique,
+  descripcion text not null default '',
+  activa boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.pedidos (
   id uuid primary key default gen_random_uuid(),
   numero_orden bigserial unique,
@@ -130,6 +143,15 @@ alter table public.metodos_pago enable row level security;
 alter table public.servicios enable row level security;
 alter table public.pedidos enable row level security;
 alter table public.promociones enable row level security;
+alter table public.opciones enable row level security;
+
+insert into public.opciones (nombre, descripcion) values
+  ('Doblado Estándar', 'Perfecto para el uso diario, doblado y apilado con cuidado.'),
+  ('Doblado en Gancho', 'Ideal para camisas y vestidos, evita las arrugas.'),
+  ('Doblado Especial', 'Manejo delicado para telas de lujo o piezas grandes.'),
+  ('Tarifa Premium', 'Desmanchado profundo, vaporizado manual y seguro de prenda.'),
+  ('Tarifa Luxury', 'Cuidado de pedrería y entrega en percha premium.')
+on conflict (nombre) do update set descripcion = excluded.descripcion;
 
 insert into public.servicios
   (nombre, icono, precio, unidad, descripcion, activo, como_funciona, tiempo_estimado, items_sugeridos, beneficios, opciones_acabado)
@@ -139,7 +161,11 @@ values (
   '24 horas',
   '[]'::jsonb,
   '[{"icono":"eco","titulo":"Eco-friendly","descripcion":"Detergentes biodegradables de bajo impacto."},{"icono":"sanitizer","titulo":"Sanitizado","descripcion":"Elimina el 99.9% de bacterias y ácaros."},{"icono":"checkroom","titulo":"Protección de Tejidos","descripcion":"Ciclos suaves que prolongan la vida útil."}]'::jsonb,
-  '[{"nombre":"Doblado Estándar","precioAdicional":0,"descripcion":"Perfecto para el uso diario, doblado y apilado con cuidado."},{"nombre":"Doblado en Gancho","precioAdicional":0.5,"descripcion":"Ideal para camisas y vestidos, evita las arrugas."},{"nombre":"Doblado Especial","precioAdicional":3,"descripcion":"Manejo delicado para telas de lujo o piezas grandes."}]'::jsonb
+  jsonb_build_array(
+    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado Estándar'), 'precioAdicional', 0),
+    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado en Gancho'), 'precioAdicional', 0.5),
+    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado Especial'), 'precioAdicional', 3)
+  )
 )
 on conflict (nombre) do update set
   icono = excluded.icono, precio = excluded.precio, unidad = excluded.unidad, descripcion = excluded.descripcion,
@@ -154,7 +180,10 @@ values (
   '24-48 horas',
   '["Trajes","Abrigos","Vestidos Seda","Diseñador"]'::jsonb,
   '[{"icono":"eco","titulo":"Proceso Ecológico","descripcion":"Solventes biodegradables que cuidan tus prendas."},{"icono":"shield","titulo":"Garantía de Calidad","descripcion":"Revisamos cada prenda antes de entregarla."}]'::jsonb,
-  '[{"nombre":"Básica","precioAdicional":0,"descripcion":"Limpieza estándar y planchado básico."},{"nombre":"Premium","precioAdicional":15,"descripcion":"Desmanchado profundo, vaporizado manual y seguro de prenda."},{"nombre":"Luxury","precioAdicional":35,"descripcion":"Cuidado de pedrería y entrega en percha premium."}]'::jsonb
+  jsonb_build_array(
+    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Tarifa Premium'), 'precioAdicional', 15),
+    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Tarifa Luxury'), 'precioAdicional', 35)
+  )
 )
 on conflict (nombre) do update set
   icono = excluded.icono, precio = excluded.precio, unidad = excluded.unidad, descripcion = excluded.descripcion,
@@ -169,7 +198,10 @@ values (
   '12-24 horas',
   '[]'::jsonb,
   '[{"icono":"eco","titulo":"Cuidado de Telas","descripcion":"Ajustamos temperatura y vapor según cada prenda."},{"icono":"checkroom","titulo":"Entrega en Gancho","descripcion":"Listas para colgar directo en tu clóset."}]'::jsonb,
-  '[{"nombre":"En gancho","precioAdicional":0,"descripcion":"Listas para colgar directo en tu clóset."},{"nombre":"Doblado","precioAdicional":0,"descripcion":"Dobladas y apiladas con cuidado."}]'::jsonb
+  jsonb_build_array(
+    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado en Gancho'), 'precioAdicional', 0),
+    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado Estándar'), 'precioAdicional', 0)
+  )
 )
 on conflict (nombre) do update set
   icono = excluded.icono, precio = excluded.precio, unidad = excluded.unidad, descripcion = excluded.descripcion,

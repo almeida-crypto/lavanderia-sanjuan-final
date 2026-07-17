@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../models/opcion_catalogo.dart';
 import '../../../models/servicio.dart';
 import '../../../models/servicio_display.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../opciones/opciones_catalogo_screen.dart';
 
 class _BeneficioFormItem {
   _BeneficioFormItem({this.icono = 'star', String titulo = '', String descripcion = ''})
@@ -31,35 +33,26 @@ class _BeneficioFormItem {
 }
 
 class _OpcionFormItem {
-  _OpcionFormItem({String nombre = '', double precioAdicional = 0, String descripcion = ''})
-    : nombreController = TextEditingController(text: nombre),
-      precioController = TextEditingController(text: precioAdicional == 0 ? '0' : precioAdicional.toString()),
-      descripcionController = TextEditingController(text: descripcion);
+  _OpcionFormItem({this.opcionId, double precioAdicional = 0})
+    : precioController = TextEditingController(text: precioAdicional == 0 ? '0' : precioAdicional.toString());
 
-  factory _OpcionFormItem.fromModelo(OpcionAcabado o) => _OpcionFormItem(
-    nombre: o.nombre,
-    precioAdicional: o.precioAdicional,
-    descripcion: o.descripcion,
-  );
+  factory _OpcionFormItem.fromModelo(OpcionAcabadoRef ref) =>
+      _OpcionFormItem(opcionId: ref.opcionId, precioAdicional: ref.precioAdicional);
 
-  final TextEditingController nombreController;
+  String? opcionId;
   final TextEditingController precioController;
-  final TextEditingController descripcionController;
 
-  OpcionAcabado? toModelo() {
-    final nombre = nombreController.text.trim();
-    if (nombre.isEmpty) return null;
-    return OpcionAcabado(
-      nombre: nombre,
+  OpcionAcabadoRef? toModelo() {
+    final id = opcionId;
+    if (id == null || id.isEmpty) return null;
+    return OpcionAcabadoRef(
+      opcionId: id,
       precioAdicional: double.tryParse(precioController.text.trim()) ?? 0,
-      descripcion: descripcionController.text.trim(),
     );
   }
 
   void dispose() {
-    nombreController.dispose();
     precioController.dispose();
-    descripcionController.dispose();
   }
 }
 
@@ -112,6 +105,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
       _beneficios.addAll(s.beneficios.map(_BeneficioFormItem.fromModelo));
       _opciones.addAll(s.opcionesAcabado.map(_OpcionFormItem.fromModelo));
     }
+    context.read<AdminProvider>().cargarOpcionesCatalogo();
   }
 
   @override
@@ -204,6 +198,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.servicio != null;
+    final catalogo = context.watch<AdminProvider>().opcionesCatalogo;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -407,7 +402,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
                   children: [
                     Expanded(child: _SeccionTitulo('Opciones de acabado / tarifas')),
                     TextButton.icon(
-                      onPressed: _agregarOpcion,
+                      onPressed: catalogo.isEmpty ? null : _agregarOpcion,
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('Agregar'),
                     ),
@@ -415,22 +410,44 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Variantes que el cliente puede elegir con un cargo extra sobre el precio '
-                  'base (ej. "Doblado en Gancho", modo de entrega, o niveles de tarifa como '
-                  '"Premium"/"Luxury"). Deja precio 0 si no cuesta extra.',
+                  'Variantes reutilizables (ej. "Doblado en Gancho") que el cliente puede '
+                  'elegir con un cargo extra sobre el precio base. Se definen una sola vez en '
+                  '"Opciones" y aquí solo eliges cuáles ofrece este servicio y a qué precio '
+                  '—la misma opción puede costar distinto en cada servicio.',
                   style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),
-                if (_opciones.isEmpty)
+                TextButton.icon(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const OpcionesCatalogoScreen()),
+                    );
+                    if (context.mounted) {
+                      context.read<AdminProvider>().cargarOpcionesCatalogo();
+                    }
+                  },
+                  icon: const Icon(Icons.tune, size: 16),
+                  label: const Text('Gestionar catálogo de opciones'),
+                ),
+                const SizedBox(height: 8),
+                if (catalogo.isEmpty)
                   Text(
-                    'Sin opciones agregadas: el cliente no verá ningún selector para este servicio.',
+                    'Todavía no hay opciones en el catálogo. Crea una (ej. "Doblado en Gancho") '
+                    'desde "Gestionar catálogo de opciones" para poder ofrecerla aquí.',
+                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
+                  )
+                else if (_opciones.isEmpty)
+                  Text(
+                    'Sin opciones activadas: el cliente no verá ningún selector para este servicio.',
                     style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
                   ),
                 for (var i = 0; i < _opciones.length; i++) ...[
                   _OpcionCard(
                     item: _opciones[i],
                     unidad: _selectedUnit,
+                    catalogo: catalogo,
                     onEliminar: () => _quitarOpcion(i),
+                    onOpcionChanged: (valor) => setState(() => _opciones[i].opcionId = valor),
                     decoration: _decoration,
                   ),
                   const SizedBox(height: 12),
@@ -547,17 +564,22 @@ class _OpcionCard extends StatelessWidget {
   const _OpcionCard({
     required this.item,
     required this.unidad,
+    required this.catalogo,
     required this.onEliminar,
+    required this.onOpcionChanged,
     required this.decoration,
   });
 
   final _OpcionFormItem item;
   final String unidad;
+  final List<OpcionCatalogo> catalogo;
   final VoidCallback onEliminar;
+  final ValueChanged<String?> onOpcionChanged;
   final InputDecoration Function(String, {String? hint}) decoration;
 
   @override
   Widget build(BuildContext context) {
+    final seleccionValida = catalogo.any((o) => o.id == item.opcionId);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -565,34 +587,36 @@ class _OpcionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.surfaceVariant),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextFormField(controller: item.nombreController, decoration: decoration('Nombre')),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: item.precioController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: decoration('+\$ / $unidad'),
-                ),
-              ),
-              IconButton(
-                onPressed: onEliminar,
-                icon: const Icon(Icons.delete_outline, color: AppColors.error),
-              ),
-            ],
+          Expanded(
+            flex: 2,
+            child: DropdownButtonFormField<String>(
+              // Se reconstruye si cambia el catálogo para que, al editar,
+              // el valor ya guardado se re-aplique en cuanto la opción
+              // exista entre los items (ver mismo patrón en promociones).
+              key: ValueKey('opcion-dropdown-${catalogo.length}'),
+              initialValue: seleccionValida ? item.opcionId : null,
+              isExpanded: true,
+              decoration: decoration('Opción'),
+              hint: const Text('Elige una opción'),
+              items: catalogo
+                  .map((o) => DropdownMenuItem<String>(value: o.id, child: Text(o.nombre)))
+                  .toList(),
+              onChanged: onOpcionChanged,
+            ),
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: item.descripcionController,
-            maxLines: 2,
-            decoration: decoration('Descripción'),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextFormField(
+              controller: item.precioController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: decoration('+\$ / $unidad'),
+            ),
+          ),
+          IconButton(
+            onPressed: onEliminar,
+            icon: const Icon(Icons.delete_outline, color: AppColors.error),
           ),
         ],
       ),

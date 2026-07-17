@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'opcion_catalogo.dart';
 import 'servicio.dart';
 import 'servicio_lavanderia.dart';
 
@@ -97,3 +98,30 @@ class ServicioDisplay {
 List<ServicioDisplay> catalogoParaMostrar(List<Servicio> activosReales) => activosReales.isNotEmpty
     ? activosReales.map(ServicioDisplay.fromReal).toList()
     : serviciosDisponibles.map(ServicioDisplay.fromEstatico).toList();
+
+/// Convierte las referencias que guarda un servicio (opcionId + precio para
+/// ESE servicio) en opciones listas para mostrar, resolviendo cada una
+/// contra el catálogo global. Si una opción fue borrada del catálogo, se
+/// omite en vez de mostrar una tarjeta rota.
+List<OpcionAcabado> resolverOpcionesAcabado(
+  List<OpcionAcabadoRef> referencias,
+  List<OpcionCatalogo> catalogo,
+) {
+  final resultado = <OpcionAcabado>[];
+  for (final ref in referencias) {
+    OpcionCatalogo? opcion;
+    for (final candidata in catalogo) {
+      if (candidata.id == ref.opcionId) {
+        opcion = candidata;
+        break;
+      }
+    }
+    if (opcion == null) continue;
+    resultado.add(OpcionAcabado(
+      nombre: opcion.nombre,
+      descripcion: opcion.descripcion,
+      precioAdicional: ref.precioAdicional,
+    ));
+  }
+  return resultado;
+}

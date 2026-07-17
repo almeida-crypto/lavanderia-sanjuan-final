@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../models/servicio.dart';
 import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
+import '../../../providers/opciones_catalogo_provider.dart';
 import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/quantity_selector.dart';
@@ -47,7 +48,8 @@ class _PlanchadoScreenState extends State<PlanchadoScreen> {
         : 'Desde \$${servicio.precio.toStringAsFixed(0)}';
     final tiempoEstimado = (servicio?.tiempoEstimado.isNotEmpty ?? false) ? servicio!.tiempoEstimado : '12-24 horas';
     final beneficios = servicio?.beneficios ?? [];
-    final opcionesEntrega = servicio?.opcionesAcabado ?? [];
+    final catalogo = context.watch<OpcionesCatalogoProvider>().opciones;
+    final opcionesEntrega = resolverOpcionesAcabado(servicio?.opcionesAcabado ?? [], catalogo);
 
     if (opcionesEntrega.isNotEmpty && !_entregaInicializada) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../models/opcion_catalogo.dart';
 import '../models/pedido_admin.dart';
 import '../models/promocion.dart';
 import '../models/servicio.dart';
+import '../services/opcion_catalogo_service.dart';
 import '../services/pedido_service.dart';
 import '../services/promocion_service.dart';
 import '../services/servicio_service.dart';
@@ -10,6 +12,7 @@ class AdminProvider extends ChangeNotifier {
   final _pedidoService = PedidoService();
   final _servicioService = ServicioService();
   final _promocionService = PromocionService();
+  final _opcionCatalogoService = OpcionCatalogoService();
 
   final List<PedidoAdmin> _pedidos = [];
   bool _isLoading = false;
@@ -337,6 +340,55 @@ class AdminProvider extends ChangeNotifier {
       activa: !actual.activa,
     );
     _promociones[index] = await _promocionService.actualizar(editada);
+    notifyListeners();
+  }
+
+  // Catálogo global de opciones (ej. "Doblado en Gancho"): se definen una
+  // sola vez aquí y cualquier servicio (actual o nuevo) puede ofrecerlas,
+  // cada uno con su propio precio adicional.
+
+  final List<OpcionCatalogo> _opcionesCatalogo = [];
+  bool _isLoadingOpcionesCatalogo = false;
+
+  List<OpcionCatalogo> get opcionesCatalogo => List.unmodifiable(_opcionesCatalogo);
+  bool get isLoadingOpcionesCatalogo => _isLoadingOpcionesCatalogo;
+
+  Future<void> cargarOpcionesCatalogo() async {
+    _isLoadingOpcionesCatalogo = true;
+    notifyListeners();
+    try {
+      final data = await _opcionCatalogoService.listar();
+      _opcionesCatalogo
+        ..clear()
+        ..addAll(data);
+    } catch (_) {
+      // Conserva la lista previa para que la pantalla siga usable.
+    } finally {
+      _isLoadingOpcionesCatalogo = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> addOpcionCatalogo(OpcionCatalogo opcion) async {
+    final guardada = await _opcionCatalogoService.crear(opcion);
+    _opcionesCatalogo.add(guardada);
+    notifyListeners();
+  }
+
+  Future<void> updateOpcionCatalogo(OpcionCatalogo opcion) async {
+    final index = _opcionesCatalogo.indexWhere((o) => o.id == opcion.id);
+    final actualizada = await _opcionCatalogoService.actualizar(opcion);
+    if (index != -1) {
+      _opcionesCatalogo[index] = actualizada;
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleOpcionCatalogoActiva(String id) async {
+    final index = _opcionesCatalogo.indexWhere((o) => o.id == id);
+    if (index == -1) return;
+    final editada = _opcionesCatalogo[index].copyWith(activa: !_opcionesCatalogo[index].activa);
+    _opcionesCatalogo[index] = await _opcionCatalogoService.actualizar(editada);
     notifyListeners();
   }
 }

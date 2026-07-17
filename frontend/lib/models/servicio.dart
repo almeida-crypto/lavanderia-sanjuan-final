@@ -17,26 +17,36 @@ class BeneficioServicio {
   Map<String, dynamic> toJson() => {'icono': icono, 'titulo': titulo, 'descripcion': descripcion};
 }
 
-/// Una opción de acabado/entrega que el cliente puede elegir para un
-/// servicio (ej. "Doblado en Gancho", o para Tintorería un nivel "Premium"),
-/// con un cargo adicional sobre el precio base del servicio.
+/// Una opción de acabado/entrega YA RESUELTA contra el catálogo global (ej.
+/// "Doblado en Gancho", o para Tintorería un nivel "Premium"), lista para
+/// mostrar: nombre/descripción reales + el cargo adicional que le
+/// corresponde al servicio desde el que se resolvió.
 class OpcionAcabado {
   const OpcionAcabado({required this.nombre, required this.precioAdicional, this.descripcion = ''});
 
   final String nombre;
   final double precioAdicional;
   final String descripcion;
+}
 
-  factory OpcionAcabado.fromJson(Map<String, dynamic> json) => OpcionAcabado(
-    nombre: json['nombre']?.toString() ?? '',
+/// Lo que un servicio realmente guarda: una referencia a una fila del
+/// catálogo global de opciones (ver OpcionCatalogo) más el cargo adicional
+/// que le corresponde a ESTE servicio en particular. La misma opción
+/// ("Doblado") puede costar distinto —o nada— según el servicio.
+class OpcionAcabadoRef {
+  const OpcionAcabadoRef({required this.opcionId, required this.precioAdicional});
+
+  final String opcionId;
+  final double precioAdicional;
+
+  factory OpcionAcabadoRef.fromJson(Map<String, dynamic> json) => OpcionAcabadoRef(
+    opcionId: json['opcionId']?.toString() ?? '',
     precioAdicional: double.tryParse(json['precioAdicional']?.toString() ?? '0') ?? 0,
-    descripcion: json['descripcion']?.toString() ?? '',
   );
 
   Map<String, dynamic> toJson() => {
-    'nombre': nombre,
+    'opcionId': opcionId,
     'precioAdicional': precioAdicional,
-    'descripcion': descripcion,
   };
 }
 
@@ -53,7 +63,7 @@ class Servicio {
     this.tiempoEstimado = '',
     List<String>? itemsSugeridos,
     List<BeneficioServicio>? beneficios,
-    List<OpcionAcabado>? opcionesAcabado,
+    List<OpcionAcabadoRef>? opcionesAcabado,
   }) : itemsSugeridos = itemsSugeridos ?? [],
        beneficios = beneficios ?? [],
        opcionesAcabado = opcionesAcabado ?? [];
@@ -78,12 +88,11 @@ class Servicio {
   List<String> itemsSugeridos;
   List<BeneficioServicio> beneficios;
 
-  /// Cubre tanto "opciones de doblado"/"modo de entrega" como los niveles
-  /// de tarifa (ej. Tintorería Básica/Premium/Luxury): todas son, en el
-  /// fondo, opciones con un cargo distinto que el cliente elige antes de
-  /// agendar. Vacía = el servicio no ofrece variantes, se cobra el precio
-  /// base tal cual.
-  List<OpcionAcabado> opcionesAcabado;
+  /// Referencias al catálogo global de opciones (ver OpcionCatalogo) que
+  /// este servicio ofrece, cada una con el cargo adicional que le
+  /// corresponde a este servicio en particular. Vacía = el servicio no
+  /// ofrece variantes, se cobra el precio base tal cual.
+  List<OpcionAcabadoRef> opcionesAcabado;
 
   factory Servicio.fromJson(Map<String, dynamic> json) => Servicio(
     id: json['id']?.toString() ?? '',
@@ -101,7 +110,7 @@ class Servicio {
             .toList() ??
         [],
     opcionesAcabado: (json['opcionesAcabado'] as List<dynamic>?)
-            ?.map((e) => OpcionAcabado.fromJson(e as Map<String, dynamic>))
+            ?.map((e) => OpcionAcabadoRef.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [],
   );
@@ -134,7 +143,7 @@ class Servicio {
     String? tiempoEstimado,
     List<String>? itemsSugeridos,
     List<BeneficioServicio>? beneficios,
-    List<OpcionAcabado>? opcionesAcabado,
+    List<OpcionAcabadoRef>? opcionesAcabado,
   }) => Servicio(
     id: id,
     nombre: nombre ?? this.nombre,
