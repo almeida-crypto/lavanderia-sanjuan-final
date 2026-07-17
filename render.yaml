@@ -11,6 +11,8 @@ services:
     envVars:
       - key: Supabase__Enabled
         value: "true"
+      - key: DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE
+        value: "false"
       - key: Supabase__Url
         sync: false
       - key: Supabase__AnonKey
