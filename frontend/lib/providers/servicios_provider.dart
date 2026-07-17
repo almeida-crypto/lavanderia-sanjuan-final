@@ -13,19 +13,22 @@ class ServiciosProvider extends ChangeNotifier {
 
   List<Servicio> _servicios = [];
   bool _isLoading = false;
-  bool _cargado = false;
 
   List<Servicio> get servicios => List.unmodifiable(_servicios);
   List<Servicio> get activos => _servicios.where((s) => s.activo).toList();
   bool get isLoading => _isLoading;
 
-  Future<void> cargar({bool forzar = false}) async {
-    if (_cargado && !forzar) return;
+  /// Siempre vuelve a pedir el catálogo al backend: es una lista chica (un
+  /// puñado de servicios) y sale más barato refrescarla seguido que
+  /// arriesgarse a que el cliente vea datos viejos después de que el admin
+  /// edita algo (antes se guardaba en caché para toda la sesión de la app y
+  /// los cambios del admin no se reflejaban sin reiniciarla).
+  Future<void> cargar() async {
+    if (_isLoading) return;
     _isLoading = true;
     notifyListeners();
     try {
       _servicios = await _servicioService.listar();
-      _cargado = true;
     } catch (_) {
       // Si el backend no responde, se mantiene el catálogo previo (o vacío)
       // y las pantallas caen de nuevo a los precios de referencia estáticos.

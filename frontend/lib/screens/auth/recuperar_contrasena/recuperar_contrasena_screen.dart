@@ -188,7 +188,7 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
           child: TextButton(
             onPressed: () => Navigator.of(context).maybePop(),
             child: Text(
-              'Volver al Login',
+              'Volver a Iniciar Sesión',
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -248,7 +248,7 @@ class _ExitoView extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             child: Text(
-              'Volver al Login',
+              'Volver a Iniciar Sesión',
               style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),

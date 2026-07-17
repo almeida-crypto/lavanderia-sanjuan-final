@@ -38,25 +38,25 @@ class AppBottomNavBar extends StatelessWidget {
             children: [
               _NavItem(
                 icon: Icons.home_rounded,
-                label: 'Home',
+                label: 'Inicio',
                 active: currentTab == AppBottomTab.home,
                 onTap: () => onTabSelected(AppBottomTab.home),
               ),
               _NavItem(
                 icon: Icons.local_laundry_service_outlined,
-                label: 'Services',
+                label: 'Servicios',
                 active: currentTab == AppBottomTab.services,
                 onTap: () => onTabSelected(AppBottomTab.services),
               ),
               _NavItem(
                 icon: Icons.receipt_long_outlined,
-                label: 'Orders',
+                label: 'Pedidos',
                 active: currentTab == AppBottomTab.orders,
                 onTap: () => onTabSelected(AppBottomTab.orders),
               ),
               _NavItem(
                 icon: Icons.person_outline_rounded,
-                label: 'Profile',
+                label: 'Perfil',
                 active: currentTab == AppBottomTab.profile,
                 onTap: () => onTabSelected(AppBottomTab.profile),
               ),

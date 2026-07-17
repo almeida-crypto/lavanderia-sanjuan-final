@@ -32,6 +32,24 @@ const beneficioIconos = <String, IconData>{
 
 IconData iconoDeBeneficio(String clave) => beneficioIconos[clave] ?? Icons.star_rounded;
 
+/// Nombre en español de cada ícono, solo para mostrar en el selector del
+/// admin (la clave en inglés se mantiene igual por dentro/en la base).
+const beneficioIconoNombres = <String, String>{
+  'eco': 'Ecológico',
+  'sanitizer': 'Sanitizante',
+  'checkroom': 'Prenda',
+  'schedule': 'Horario',
+  'shipping': 'Envío',
+  'shield': 'Garantía',
+  'star': 'Destacado',
+  'inventory': 'Empaque',
+  'waves': 'Suavidad',
+  'iron': 'Planchado',
+  'spa': 'Spa',
+};
+
+String nombreDeIconoBeneficio(String clave) => beneficioIconoNombres[clave] ?? clave;
+
 /// Une el catálogo real del backend con la info de referencia estática
 /// (usada solo mientras el catálogo real no ha cargado) en una sola forma,
 /// para que las pantallas no necesiten saber de dónde vino el dato.

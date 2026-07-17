@@ -39,17 +39,22 @@ class DashboardView extends StatelessWidget {
     final pedidosRecientes = pedidos.take(3).toList();
 
     final ahora = DateTime.now();
+    // "Hoy" es cuándo se CREÓ el pedido, no la fecha de recolección que
+    // eligió el cliente (esa puede ser cualquier día de la semana entrante).
     final pedidosHoy = pedidos.where((p) {
-      final fecha = DateTime.tryParse(p.fecha);
-      return fecha != null &&
-          fecha.year == ahora.year &&
-          fecha.month == ahora.month &&
-          fecha.day == ahora.day;
+      final creado = p.creadoEn;
+      return creado != null &&
+          creado.year == ahora.year &&
+          creado.month == ahora.month &&
+          creado.day == ahora.day;
     }).length;
     final entregasActivas = pedidos
         .where((p) => p.estado == PedidoEstado.asignado || p.estado == PedidoEstado.enCamino)
         .length;
-    final ingresos = pedidos.fold<double>(0, (suma, p) => suma + p.precioFinal);
+    final cancelados = pedidos.where((p) => p.estado == PedidoEstado.cancelado).length;
+    final ingresos = pedidos
+        .where((p) => p.estado != PedidoEstado.cancelado)
+        .fold<double>(0, (suma, p) => suma + p.precioFinal);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -110,6 +115,15 @@ class DashboardView extends StatelessWidget {
                           iconBg: AppColors.surfaceContainerHigh,
                           iconColor: AppColors.primary,
                         ),
+                        const SizedBox(width: 16),
+                        _buildMetricCard(
+                          context,
+                          title: 'Cancelados',
+                          value: '$cancelados',
+                          icon: Icons.cancel_outlined,
+                          iconBg: AppColors.errorContainer,
+                          iconColor: AppColors.error,
+                        ),
                       ],
                     )
                   : Column(
@@ -146,6 +160,15 @@ class DashboardView extends StatelessWidget {
                               iconBg: AppColors.secondaryContainer,
                               iconColor: AppColors.onSecondaryContainer,
                               progress: pedidos.isEmpty ? 0 : entregasActivas / pedidos.length,
+                            ),
+                            const SizedBox(width: 12),
+                            _buildMetricCard(
+                              context,
+                              title: 'Cancelados',
+                              value: '$cancelados',
+                              icon: Icons.cancel_outlined,
+                              iconBg: AppColors.errorContainer,
+                              iconColor: AppColors.error,
                             ),
                           ],
                         ),

@@ -513,7 +513,7 @@ class _BeneficioCard extends StatelessWidget {
                               children: [
                                 Icon(e.value, size: 18, color: AppColors.primary),
                                 const SizedBox(width: 8),
-                                Text(e.key),
+                                Text(nombreDeIconoBeneficio(e.key)),
                               ],
                             ),
                           ))

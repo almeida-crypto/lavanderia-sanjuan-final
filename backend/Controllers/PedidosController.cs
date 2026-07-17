@@ -170,7 +170,8 @@ public class PedidosController : ControllerBase
         Calificacion = I(row, "calificacion"),
         Resena = S(row, "resena"),
         ReporteTipo = S(row, "reporte_tipo"),
-        ReporteDetalles = S(row, "reporte_detalles")
+        ReporteDetalles = S(row, "reporte_detalles"),
+        CreatedAt = S(row, "created_at")
     };
 
     private ObjectResult DataError(SupabaseDataException ex) =>
@@ -243,4 +244,9 @@ public class PedidoDto
     public string? Resena { get; set; }
     public string? ReporteTipo { get; set; }
     public string? ReporteDetalles { get; set; }
+
+    /// Cuándo se creó el pedido (distinto de [Fecha], que es la fecha de
+    /// recolección que eligió el cliente). Es lo que define si un pedido
+    /// cuenta como "de hoy" en el panel del admin.
+    public string? CreatedAt { get; set; }
 }
