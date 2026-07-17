@@ -2,3 +2,13 @@ node_modules/
 build/
 .dart_tool/
 .env.local
+
+# Archivos generados por .NET. Nunca deben subirse al repositorio.
+**/bin/
+**/obj/
+
+# Configuración local: puede contener credenciales de desarrollo.
+**/appsettings.Development.json
+
+# Perfil local temporal utilizado durante compilaciones aisladas.
+backend/.appdata/
