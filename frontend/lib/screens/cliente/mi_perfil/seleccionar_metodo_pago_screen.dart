@@ -8,9 +8,14 @@ import '../../../utils/app_colors.dart';
 import 'agregar_tarjeta_screen.dart';
 
 class SeleccionarMetodoPagoScreen extends StatefulWidget {
-  const SeleccionarMetodoPagoScreen({super.key, required this.seleccionActual});
+  const SeleccionarMetodoPagoScreen({
+    super.key,
+    required this.seleccionActual,
+    required this.esEfectivoInicial,
+  });
 
   final TarjetaGuardada? seleccionActual;
+  final bool esEfectivoInicial;
 
   @override
   State<SeleccionarMetodoPagoScreen> createState() =>
@@ -20,6 +25,7 @@ class SeleccionarMetodoPagoScreen extends StatefulWidget {
 class _SeleccionarMetodoPagoScreenState
     extends State<SeleccionarMetodoPagoScreen> {
   late TarjetaGuardada? _seleccionada = widget.seleccionActual;
+  late bool _esEfectivo = widget.esEfectivoInicial;
 
   Future<void> _agregarTarjeta() async {
     final nueva = await Navigator.of(context).push<TarjetaGuardada>(
@@ -28,7 +34,12 @@ class _SeleccionarMetodoPagoScreenState
     if (nueva != null && mounted) {
       try {
         final guardada = await context.read<MetodosPagoProvider>().agregar(nueva);
-        if (mounted) setState(() => _seleccionada = guardada);
+        if (mounted) {
+          setState(() {
+            _seleccionada = guardada;
+            _esEfectivo = false;
+          });
+        }
       } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -70,7 +81,89 @@ class _SeleccionarMetodoPagoScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Mis Tarjetas',
+                'Método de Pago',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () => setState(() {
+                  _esEfectivo = true;
+                  _seleccionada = null;
+                }),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _esEfectivo
+                        ? AppColors.surfaceContainerLow
+                        : AppColors.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _esEfectivo ? AppColors.primary : AppColors.surfaceVariant,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 32,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainer,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: AppColors.outlineVariant.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.payments_outlined,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Efectivo contra entrega',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.onSurface,
+                              ),
+                            ),
+                            Text(
+                              'Paga al repartidor al recibir tus prendas',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        _esEfectivo
+                            ? Icons.radio_button_checked_rounded
+                            : Icons.radio_button_off_rounded,
+                        color: _esEfectivo
+                            ? AppColors.primary
+                            : AppColors.outlineVariant,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                'Mis Tarjetas Guardadas',
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -82,7 +175,10 @@ class _SeleccionarMetodoPagoScreenState
                 _TarjetaOpcion(
                   tarjeta: tarjetas[i],
                   seleccionada: tarjetas[i] == _seleccionada,
-                  onTap: () => setState(() => _seleccionada = tarjetas[i]),
+                  onTap: () => setState(() {
+                    _seleccionada = tarjetas[i];
+                    _esEfectivo = false;
+                  }),
                 ),
                 if (i != tarjetas.length - 1) const SizedBox(height: 12),
               ],
@@ -133,9 +229,15 @@ class _SeleccionarMetodoPagoScreenState
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: _seleccionada == null
+              onPressed: (_esEfectivo == false && _seleccionada == null)
                   ? null
-                  : () => Navigator.of(context).pop(_seleccionada),
+                  : () {
+                      if (_esEfectivo) {
+                        Navigator.of(context).pop('efectivo');
+                      } else {
+                        Navigator.of(context).pop(_seleccionada);
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,

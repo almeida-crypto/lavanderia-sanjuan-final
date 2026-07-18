@@ -13,6 +13,7 @@ import '../../../utils/app_colors.dart';
 import '../../../widgets/labeled_text_field.dart';
 import '../../admin/home_administrador/home_administrador_screen.dart';
 import '../../cliente/home_cliente/home_cliente_screen.dart';
+import '../../empleado/home_empleado/home_empleado_screen.dart';
 import '../crear_cuenta/crear_cuenta_screen.dart';
 import '../recuperar_contrasena/recuperar_contrasena_screen.dart';
 
@@ -45,9 +46,14 @@ class LoginScreen extends StatelessWidget {
     ]);
     if (!context.mounted) return;
 
-    final destino = auth.currentUser!.rol == UserRole.administrador
-        ? const HomeAdministradorScreen()
-        : const HomeClienteScreen();
+    final Widget destino;
+    if (auth.currentUser!.rol == UserRole.administrador) {
+      destino = const HomeAdministradorScreen();
+    } else if (auth.currentUser!.rol == UserRole.empleado) {
+      destino = const HomeEmpleadoScreen();
+    } else {
+      destino = const HomeClienteScreen();
+    }
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => destino),

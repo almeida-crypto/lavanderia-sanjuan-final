@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../models/pedido_admin.dart';
+import '../../../models/usuario.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../pedido/order_detail_screen.dart';
 
@@ -15,6 +17,7 @@ class DashboardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final admin = context.watch<AdminProvider>();
     final pedidos = admin.pedidos;
+    final isEmpleado = context.watch<AuthProvider>().currentUser?.rol == UserRole.empleado;
 
     if (admin.isLoading && pedidos.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -107,15 +110,17 @@ class DashboardView extends StatelessWidget {
                           progress: pedidos.isEmpty ? 0 : entregasActivas / pedidos.length,
                         ),
                         const SizedBox(width: 16),
-                        _buildMetricCard(
-                          context,
-                          title: 'Ingresos',
-                          value: '\$${ingresos.toStringAsFixed(2)}',
-                          icon: Icons.payments_outlined,
-                          iconBg: AppColors.surfaceContainerHigh,
-                          iconColor: AppColors.primary,
-                        ),
-                        const SizedBox(width: 16),
+                        if (!isEmpleado) ...[
+                          _buildMetricCard(
+                            context,
+                            title: 'Ingresos',
+                            value: '\$${ingresos.toStringAsFixed(2)}',
+                            icon: Icons.payments_outlined,
+                            iconBg: AppColors.surfaceContainerHigh,
+                            iconColor: AppColors.primary,
+                          ),
+                          const SizedBox(width: 16),
+                        ],
                         _buildMetricCard(
                           context,
                           title: 'Cancelados',
@@ -139,14 +144,24 @@ class DashboardView extends StatelessWidget {
                               iconColor: AppColors.primary,
                             ),
                             const SizedBox(width: 12),
-                            _buildMetricCard(
-                              context,
-                              title: 'Ingresos',
-                              value: '\$${ingresos.toStringAsFixed(2)}',
-                              icon: Icons.payments_outlined,
-                              iconBg: AppColors.surfaceContainerHigh,
-                              iconColor: AppColors.primary,
-                            ),
+                            if (!isEmpleado)
+                              _buildMetricCard(
+                                context,
+                                title: 'Ingresos',
+                                value: '\$${ingresos.toStringAsFixed(2)}',
+                                icon: Icons.payments_outlined,
+                                iconBg: AppColors.surfaceContainerHigh,
+                                iconColor: AppColors.primary,
+                              )
+                            else
+                              _buildMetricCard(
+                                context,
+                                title: 'Cancelados',
+                                value: '$cancelados',
+                                icon: Icons.cancel_outlined,
+                                iconBg: AppColors.errorContainer,
+                                iconColor: AppColors.error,
+                              ),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -162,14 +177,17 @@ class DashboardView extends StatelessWidget {
                               progress: pedidos.isEmpty ? 0 : entregasActivas / pedidos.length,
                             ),
                             const SizedBox(width: 12),
-                            _buildMetricCard(
-                              context,
-                              title: 'Cancelados',
-                              value: '$cancelados',
-                              icon: Icons.cancel_outlined,
-                              iconBg: AppColors.errorContainer,
-                              iconColor: AppColors.error,
-                            ),
+                            if (!isEmpleado)
+                              _buildMetricCard(
+                                context,
+                                title: 'Cancelados',
+                                value: '$cancelados',
+                                icon: Icons.cancel_outlined,
+                                iconBg: AppColors.errorContainer,
+                                iconColor: AppColors.error,
+                              )
+                            else
+                              const Spacer(),
                           ],
                         ),
                       ],

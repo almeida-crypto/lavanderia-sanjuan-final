@@ -93,7 +93,17 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
   TarjetaGuardada? _tarjetaSeleccionada;
   TarjetaGuardada? get tarjetaSeleccionada => _tarjetaSeleccionada;
 
+  bool _esPagoEfectivo = false;
+  bool get esPagoEfectivo => _esPagoEfectivo;
+
+  void seleccionarEfectivo() {
+    _esPagoEfectivo = true;
+    _tarjetaSeleccionada = null;
+    notifyListeners();
+  }
+
   void seleccionarTarjeta(TarjetaGuardada tarjeta) {
+    _esPagoEfectivo = false;
     _tarjetaSeleccionada = tarjeta;
     notifyListeners();
   }
@@ -211,7 +221,7 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
       final franjaEtiqueta = franjasDisponibles
           .firstWhere((f) => f.valor == _franja)
           .etiqueta;
-      final tarjeta = _tarjetaSeleccionada;
+      final tarjeta = _esPagoEfectivo ? null : _tarjetaSeleccionada;
       final metodoPago = tarjeta == null
           ? 'Efectivo contra entrega'
           : '${tarjeta.marca == MarcaTarjeta.mastercard ? 'Mastercard' : 'Visa'} •••• ${tarjeta.ultimosDigitos}';

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../models/usuario.dart';
 import '../../../utils/app_colors.dart';
 import '../../auth/login/login_screen.dart';
 
@@ -76,16 +77,22 @@ class PerfilAdministradorScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.primary, width: 2),
                       ),
-                      child: const Icon(Icons.admin_panel_settings_rounded, size: 44, color: AppColors.primary),
+                      child: Icon(
+                        usuario?.rol == UserRole.empleado
+                            ? Icons.badge_outlined
+                            : Icons.admin_panel_settings_rounded,
+                        size: 44,
+                        color: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      usuario?.nombre ?? 'Administrador',
+                      usuario?.nombre ?? (usuario?.rol == UserRole.empleado ? 'Empleado' : 'Administrador'),
                       style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.onSurface),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      usuario?.correo ?? 'admin@freshclean.com',
+                      usuario?.correo ?? (usuario?.rol == UserRole.empleado ? 'empleado@freshclean.com' : 'admin@freshclean.com'),
                       style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurfaceVariant),
                     ),
                     const SizedBox(height: 8),
@@ -96,7 +103,7 @@ class PerfilAdministradorScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        'ADMINISTRADOR',
+                        usuario?.rol == UserRole.empleado ? 'EMPLEADO' : 'ADMINISTRADOR',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,

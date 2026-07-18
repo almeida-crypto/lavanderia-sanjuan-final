@@ -168,13 +168,17 @@ class AgendarRecoleccionScreen extends StatelessWidget {
     AgendarRecoleccionProvider provider,
     TarjetaGuardada? tarjetaActual,
   ) async {
-    final resultado = await Navigator.of(context).push<TarjetaGuardada>(
+    final resultado = await Navigator.of(context).push<dynamic>(
       MaterialPageRoute(
-        builder: (_) =>
-            SeleccionarMetodoPagoScreen(seleccionActual: tarjetaActual),
+        builder: (_) => SeleccionarMetodoPagoScreen(
+          seleccionActual: tarjetaActual,
+          esEfectivoInicial: provider.esPagoEfectivo,
+        ),
       ),
     );
-    if (resultado != null) {
+    if (resultado == 'efectivo') {
+      provider.seleccionarEfectivo();
+    } else if (resultado is TarjetaGuardada) {
       provider.seleccionarTarjeta(resultado);
     }
   }
@@ -199,9 +203,10 @@ class AgendarRecoleccionScreen extends StatelessWidget {
     final direccionActual =
         provider.direccionSeleccionada ??
         context.watch<DireccionesProvider>().predeterminada;
-    final tarjetaActual =
-        provider.tarjetaSeleccionada ??
-        context.watch<MetodosPagoProvider>().principal;
+    final tarjetaActual = provider.esPagoEfectivo
+        ? null
+        : (provider.tarjetaSeleccionada ??
+            context.watch<MetodosPagoProvider>().principal);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -249,6 +254,7 @@ class AgendarRecoleccionScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _PaymentCard(
                 tarjeta: tarjetaActual,
+                esEfectivo: provider.esPagoEfectivo || tarjetaActual == null,
                 onTap: () => _seleccionarTarjeta(context, provider, tarjetaActual),
               ),
               const SizedBox(height: 32),
@@ -391,14 +397,19 @@ class _AddressCard extends StatelessWidget {
 }
 
 class _PaymentCard extends StatelessWidget {
-  const _PaymentCard({required this.tarjeta, required this.onTap});
+  const _PaymentCard({
+    required this.tarjeta,
+    required this.esEfectivo,
+    required this.onTap,
+  });
 
   final TarjetaGuardada? tarjeta;
+  final bool esEfectivo;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final tarjetaActual = tarjeta;
+    final tarjetaActual = esEfectivo ? null : tarjeta;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -424,53 +435,62 @@ class _PaymentCard extends StatelessWidget {
                 color: AppColors.secondaryContainer,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.credit_card_rounded,
+              child: Icon(
+                esEfectivo ? Icons.payments_outlined : Icons.credit_card_rounded,
                 color: AppColors.primary,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: tarjetaActual == null
+              child: esEfectivo
                   ? Text(
-                      'Agregar método de pago',
+                      'Efectivo contra entrega',
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: AppColors.onSurface,
                       ),
                     )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${tarjetaActual.marca == MarcaTarjeta.mastercard ? 'Mastercard' : 'Visa'} **** ${tarjetaActual.ultimosDigitos}',
+                  : (tarjetaActual == null
+                      ? Text(
+                          'Agregar método de pago',
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: AppColors.onSurface,
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Vence ${tarjetaActual.expira}',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                      ],
-                    ),
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${tarjetaActual.marca == MarcaTarjeta.mastercard ? 'Mastercard' : 'Visa'} **** ${tarjetaActual.ultimosDigitos}',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Vence ${tarjetaActual.expira}',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: AppColors.secondary,
+                              ),
+                            ),
+                          ],
+                        )),
             ),
-            if (tarjetaActual != null)
-              Text(
-                'Cambiar',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
+            const SizedBox(width: 8),
+            Text(
+              (esEfectivo || tarjetaActual != null) ? 'Cambiar' : 'Agregar',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
               ),
+            ),
           ],
         ),
       ),

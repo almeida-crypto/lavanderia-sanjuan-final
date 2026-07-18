@@ -24,6 +24,143 @@ class OrderDetailScreen extends StatelessWidget {
     final isWarning = currentPedido.estado == PedidoEstado.atencion &&
         currentPedido.warningMessage != null;
 
+    final esFinal = currentPedido.estado == PedidoEstado.entregado ||
+        currentPedido.estado == PedidoEstado.cancelado;
+
+    if (currentPedido.estado == PedidoEstado.cancelado) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.surface,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            'Pedido ${currentPedido.numero}',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              color: AppColors.onSurface,
+            ),
+          ),
+        ),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: const BorderSide(color: AppColors.errorContainer, width: 1.5),
+                ),
+                color: AppColors.surfaceContainerLowest,
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: const BoxDecoration(
+                          color: AppColors.errorContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.cancel_outlined,
+                          color: AppColors.error,
+                          size: 64,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'PEDIDO CANCELADO',
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.error,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Este pedido se encuentra cancelado permanentemente y no está disponible para su visualización ni modificación.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: AppColors.onSurfaceVariant,
+                          height: 1.5,
+                        ),
+                      ),
+                      const Divider(color: AppColors.surfaceVariant, height: 40),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Detalles del Pedido:',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildRowDetail('Cliente', currentPedido.clienteNombre),
+                            const SizedBox(height: 12),
+                            _buildRowDetail('Teléfono', currentPedido.clienteTelefono),
+                            const SizedBox(height: 12),
+                            _buildRowDetail('Dirección', currentPedido.clienteDireccion),
+                            const SizedBox(height: 12),
+                            _buildRowDetail('Fecha de solicitud', currentPedido.fecha),
+                            const Divider(color: AppColors.surfaceVariant, height: 24),
+                            // Mostrar la razón si está en las notas
+                            () {
+                              final notaCancelacion = currentPedido.notas.firstWhere(
+                                (n) => n.texto.startsWith('Cliente canceló:'),
+                                orElse: () => const NotaPedido(fecha: '', texto: ''),
+                              );
+                              if (notaCancelacion.texto.isNotEmpty) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Motivo de Cancelación:',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.error,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      notaCancelacion.texto.replaceFirst('Cliente canceló: ', ''),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            }(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -540,16 +677,18 @@ class OrderDetailScreen extends StatelessWidget {
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ActualizarEstadoScreen(pedido: currentPedido),
-                          ),
-                        );
-                      },
+                      onPressed: esFinal
+                          ? null
+                          : () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ActualizarEstadoScreen(pedido: currentPedido),
+                                ),
+                              );
+                            },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        backgroundColor: esFinal ? AppColors.surfaceContainer : AppColors.primary,
+                        foregroundColor: esFinal ? AppColors.onSurfaceVariant.withValues(alpha: 0.5) : Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
                       child: const Text('Actualizar Estado'),
