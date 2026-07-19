@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/empleado.dart';
 import '../models/opcion_catalogo.dart';
 import '../models/pedido_admin.dart';
 import '../models/promocion.dart';
@@ -15,12 +16,77 @@ class AdminProvider extends ChangeNotifier {
   final _opcionCatalogoService = OpcionCatalogoService();
 
   final List<PedidoAdmin> _pedidos = [];
+  final List<Empleado> _empleados = [
+    Empleado(
+      id: 'emp_1',
+      nombre: 'Carlos Ramírez',
+      correo: 'carlos.empleado@sanjuan.com',
+      telefono: '555-123-4567',
+      fechaRegistro: '2026-01-15',
+    ),
+    Empleado(
+      id: 'emp_2',
+      nombre: 'María López',
+      correo: 'maria.empleado@sanjuan.com',
+      telefono: '555-987-6543',
+      fechaRegistro: '2026-03-10',
+    ),
+  ];
+
   bool _isLoading = false;
   String? _error;
 
   List<PedidoAdmin> get pedidos => List.unmodifiable(_pedidos);
+  List<Empleado> get empleados => List.unmodifiable(_empleados);
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  bool esEmpleadoEmail(String email) {
+    if (email.isEmpty) return false;
+    final lower = email.trim().toLowerCase();
+    return _empleados.any((e) => e.correo.trim().toLowerCase() == lower);
+  }
+
+  void agregarEmpleado({
+    required String nombre,
+    required String correo,
+    required String telefono,
+  }) {
+    final nuevo = Empleado(
+      id: 'emp_${DateTime.now().millisecondsSinceEpoch}',
+      nombre: nombre.trim(),
+      correo: correo.trim(),
+      telefono: telefono.trim(),
+      fechaRegistro: DateTime.now().toString().split(' ')[0],
+    );
+    _empleados.add(nuevo);
+    notifyListeners();
+  }
+
+  void editarEmpleado({
+    required String id,
+    required String nombre,
+    required String correo,
+    required String telefono,
+  }) {
+    final index = _empleados.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      _empleados[index] = Empleado(
+        id: id,
+        nombre: nombre.trim(),
+        correo: correo.trim(),
+        telefono: telefono.trim(),
+        fechaRegistro: _empleados[index].fechaRegistro,
+        activo: _empleados[index].activo,
+      );
+      notifyListeners();
+    }
+  }
+
+  void eliminarEmpleado(String id) {
+    _empleados.removeWhere((e) => e.id == id);
+    notifyListeners();
+  }
 
   /// Trae los pedidos reales desde el backend (todos, sin filtrar por
   /// cliente, ya que este es el panel de administrador).

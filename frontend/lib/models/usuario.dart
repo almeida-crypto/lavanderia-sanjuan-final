@@ -34,6 +34,16 @@ class Usuario {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nombre': nombre,
+      'correo': correo,
+      'telefono': telefono,
+      'rol': rol.name,
+    };
+  }
+
   final String id;
   final String nombre;
   final String correo;
