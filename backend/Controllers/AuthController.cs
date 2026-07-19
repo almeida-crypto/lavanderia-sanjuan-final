@@ -114,4 +114,5 @@ public class UsuarioDto
     public string? Telefono { get; set; }
     public string? Password { get; set; }
     public string? Rol { get; set; }
+    public bool Activa { get; set; } = true;
 }

@@ -45,9 +45,11 @@ class LoginScreen extends StatelessWidget {
     ]);
     if (!context.mounted) return;
 
-    final destino = auth.currentUser!.rol == UserRole.administrador
-        ? const HomeAdministradorScreen()
-        : const HomeClienteScreen();
+    // Empleado y administrador comparten el panel; adentro se le esconden
+    // las secciones que su rol no debe tocar (ver HomeAdministradorScreen).
+    final destino = auth.currentUser!.rol == UserRole.cliente
+        ? const HomeClienteScreen()
+        : const HomeAdministradorScreen();
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => destino),

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../models/usuario.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../auth/login/login_screen.dart';
+import '../empleados/empleados_screen.dart';
 
 class PerfilAdministradorScreen extends StatelessWidget {
   const PerfilAdministradorScreen({super.key});
@@ -96,7 +98,7 @@ class PerfilAdministradorScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        'ADMINISTRADOR',
+                        usuario?.rol == UserRole.empleado ? 'EMPLEADO' : 'ADMINISTRADOR',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -130,6 +132,25 @@ class PerfilAdministradorScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (usuario?.rol == UserRole.administrador) ...[
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const EmpleadosScreen()),
+                  ),
+                  icon: const Icon(Icons.badge_outlined, size: 20),
+                  label: Text(
+                    'Gestionar Empleados',
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    minimumSize: const Size.fromHeight(56),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () => _cerrarSesion(context),

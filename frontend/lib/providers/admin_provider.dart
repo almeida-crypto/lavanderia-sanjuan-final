@@ -3,6 +3,8 @@ import '../models/opcion_catalogo.dart';
 import '../models/pedido_admin.dart';
 import '../models/promocion.dart';
 import '../models/servicio.dart';
+import '../models/usuario.dart';
+import '../services/empleado_service.dart';
 import '../services/opcion_catalogo_service.dart';
 import '../services/pedido_service.dart';
 import '../services/promocion_service.dart';
@@ -13,6 +15,7 @@ class AdminProvider extends ChangeNotifier {
   final _servicioService = ServicioService();
   final _promocionService = PromocionService();
   final _opcionCatalogoService = OpcionCatalogoService();
+  final _empleadoService = EmpleadoService();
 
   final List<PedidoAdmin> _pedidos = [];
   bool _isLoading = false;
@@ -389,6 +392,66 @@ class AdminProvider extends ChangeNotifier {
     if (index == -1) return;
     final editada = _opcionesCatalogo[index].copyWith(activa: !_opcionesCatalogo[index].activa);
     _opcionesCatalogo[index] = await _opcionCatalogoService.actualizar(editada);
+    notifyListeners();
+  }
+
+  // Empleados: cuentas de trabajo (empleado/administrador) que solo el
+  // propio admin crea y administra; nunca incluye clientes.
+
+  final List<Usuario> _empleados = [];
+  bool _isLoadingEmpleados = false;
+
+  List<Usuario> get empleados => List.unmodifiable(_empleados);
+  bool get isLoadingEmpleados => _isLoadingEmpleados;
+
+  Future<void> cargarEmpleados() async {
+    _isLoadingEmpleados = true;
+    notifyListeners();
+    try {
+      final data = await _empleadoService.listar();
+      _empleados
+        ..clear()
+        ..addAll(data);
+    } catch (_) {
+      // Conserva la lista previa para que la pantalla siga usable.
+    } finally {
+      _isLoadingEmpleados = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> crearEmpleado({
+    required String nombre,
+    required String correo,
+    required String password,
+    required UserRole rol,
+  }) async {
+    final creado = await _empleadoService.crear(nombre: nombre, correo: correo, password: password, rol: rol);
+    _empleados.insert(0, creado);
+    notifyListeners();
+  }
+
+  Future<void> cambiarRolEmpleado(String id, UserRole rol, {required String actorId}) async {
+    final index = _empleados.indexWhere((e) => e.id == id);
+    final actualizado = await _empleadoService.cambiarRol(id, rol, actorId: actorId);
+    if (index != -1) {
+      _empleados[index] = actualizado;
+      notifyListeners();
+    }
+  }
+
+  Future<void> cambiarEstadoEmpleado(String id, bool activa, {required String actorId}) async {
+    final index = _empleados.indexWhere((e) => e.id == id);
+    final actualizado = await _empleadoService.cambiarEstado(id, activa, actorId: actorId);
+    if (index != -1) {
+      _empleados[index] = actualizado;
+      notifyListeners();
+    }
+  }
+
+  Future<void> eliminarEmpleado(String id, {required String actorId}) async {
+    await _empleadoService.eliminar(id, actorId: actorId);
+    _empleados.removeWhere((e) => e.id == id);
     notifyListeners();
   }
 }

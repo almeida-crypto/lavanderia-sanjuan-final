@@ -1,15 +1,24 @@
-enum UserRole { cliente, administrador }
+enum UserRole { cliente, empleado, administrador }
 
 UserRole userRoleFromString(String? value) {
   switch (value?.toLowerCase()) {
     case 'administrador':
     case 'admin':
       return UserRole.administrador;
+    case 'empleado':
+    case 'trabajador':
+      return UserRole.empleado;
     case 'cliente':
     default:
       return UserRole.cliente;
   }
 }
+
+String userRoleToString(UserRole rol) => switch (rol) {
+  UserRole.administrador => 'administrador',
+  UserRole.empleado => 'empleado',
+  UserRole.cliente => 'cliente',
+};
 
 class Usuario {
   const Usuario({
@@ -18,6 +27,7 @@ class Usuario {
     required this.correo,
     required this.rol,
     this.telefono,
+    this.activo = true,
   });
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
@@ -27,6 +37,7 @@ class Usuario {
       correo: json['correo'] as String? ?? json['email'] as String? ?? '',
       telefono: json['telefono'] as String? ?? json['phone'] as String?,
       rol: userRoleFromString(json['rol'] as String? ?? json['role'] as String?),
+      activo: json['activa'] != false,
     );
   }
 
@@ -35,4 +46,5 @@ class Usuario {
   final String correo;
   final String? telefono;
   final UserRole rol;
+  final bool activo;
 }

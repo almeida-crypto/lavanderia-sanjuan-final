@@ -182,6 +182,152 @@ public class SupabaseService
         return new OperationResult(true, StatusCodes.Status200OK, null);
     }
 
+    /// Crea una cuenta directamente (correo ya confirmado, sin pasar por el
+    /// flujo normal de registro/verificación) con el rol que decida el admin.
+    /// Requiere la service_role key porque /auth/v1/admin/users es una
+    /// operación privilegiada de Supabase.
+    public async Task<UsuarioOperationResult> CreateUserAsync(string nombre, string correo, string password, string rol)
+    {
+        var payload = new JsonObject
+        {
+            ["email"] = correo,
+            ["password"] = password,
+            ["email_confirm"] = true,
+            ["user_metadata"] = new JsonObject
+            {
+                ["nombre"] = nombre,
+                ["rol"] = rol
+            }
+        };
+
+        var response = await SendAsync(HttpMethod.Post, "/auth/v1/admin/users", payload, useServiceRole: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(response, "No se pudo crear la cuenta");
+            var statusCode = response.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity
+                || response.StatusCode == System.Net.HttpStatusCode.Conflict
+                ? StatusCodes.Status409Conflict
+                : (int)response.StatusCode;
+
+            return new UsuarioOperationResult(false, statusCode, message, null);
+        }
+
+        var root = await ReadJsonAsync(response);
+        if (root is null)
+        {
+            return new UsuarioOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null);
+        }
+
+        return new UsuarioOperationResult(true, StatusCodes.Status201Created, null, MapUser(root));
+    }
+
+    /// Lista todas las cuentas que no son "cliente" (empleados/admins), para
+    /// que el panel de administrador las gestione sin exponer ni mezclar la
+    /// lista con los clientes normales.
+    public async Task<List<UsuarioDto>> ListStaffUsersAsync()
+    {
+        var response = await SendAsync(HttpMethod.Get, "/auth/v1/admin/users?per_page=1000", useServiceRole: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            return [];
+        }
+
+        var root = await ReadJsonAsync(response);
+        var users = root?["users"] as JsonArray;
+        if (users is null) return [];
+
+        return users
+            .Where(u => u is not null)
+            .Select(u => MapUser(u!))
+            .Where(u => !string.Equals(u.Rol, "cliente", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    /// Cambia el rol de una cuenta ya creada (ej. empleado -> administrador).
+    /// A propósito no toca nombre/correo/telefono: es una acción separada y
+    /// más sensible que solo el admin real debería poder disparar.
+    public async Task<UsuarioOperationResult> UpdateRoleAsync(string id, string nuevoRol)
+    {
+        var currentUserResponse = await SendAsync(HttpMethod.Get, $"/auth/v1/admin/users/{id}", useServiceRole: true);
+        if (!currentUserResponse.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(currentUserResponse, "Usuario no encontrado");
+            var statusCode = currentUserResponse.StatusCode == System.Net.HttpStatusCode.NotFound
+                ? StatusCodes.Status404NotFound
+                : (int)currentUserResponse.StatusCode;
+
+            return new UsuarioOperationResult(false, statusCode, message, null);
+        }
+
+        var currentRoot = await ReadJsonAsync(currentUserResponse);
+        var currentUser = currentRoot?["user"] ?? currentRoot;
+        if (currentUser is null)
+        {
+            return new UsuarioOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null);
+        }
+
+        var metadata = currentUser["user_metadata"] as JsonObject ?? new JsonObject();
+        metadata["rol"] = nuevoRol;
+
+        var payload = new JsonObject { ["user_metadata"] = metadata };
+
+        var updateResponse = await SendAsync(HttpMethod.Put, $"/auth/v1/admin/users/{id}", payload, useServiceRole: true);
+        if (!updateResponse.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(updateResponse, "No se pudo actualizar el rol");
+            return new UsuarioOperationResult(false, (int)updateResponse.StatusCode, message, null);
+        }
+
+        var updatedRoot = await ReadJsonAsync(updateResponse);
+        if (updatedRoot is null)
+        {
+            return new UsuarioOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null);
+        }
+
+        return new UsuarioOperationResult(true, StatusCodes.Status200OK, null, MapUser(updatedRoot));
+    }
+
+    /// Desactiva/reactiva una cuenta usando el "ban" nativo de Supabase Auth:
+    /// no borra nada, solo le impide iniciar sesión hasta que se reactive.
+    public async Task<UsuarioOperationResult> SetActivaAsync(string id, bool activa)
+    {
+        var payload = new JsonObject
+        {
+            // "none" quita el ban; un número de horas muy grande equivale a
+            // "desactivada hasta que un admin la reactive a mano".
+            ["ban_duration"] = activa ? "none" : "87600h"
+        };
+
+        var response = await SendAsync(HttpMethod.Put, $"/auth/v1/admin/users/{id}", payload, useServiceRole: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(response, "No se pudo actualizar el estado de la cuenta");
+            return new UsuarioOperationResult(false, (int)response.StatusCode, message, null);
+        }
+
+        var root = await ReadJsonAsync(response);
+        if (root is null)
+        {
+            return new UsuarioOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null);
+        }
+
+        return new UsuarioOperationResult(true, StatusCodes.Status200OK, null, MapUser(root));
+    }
+
+    /// Borra la cuenta por completo (irreversible). A diferencia de
+    /// [SetActivaAsync], esto no se puede deshacer desde la app.
+    public async Task<OperationResult> DeleteUserAsync(string id)
+    {
+        var response = await SendAsync(HttpMethod.Delete, $"/auth/v1/admin/users/{id}", useServiceRole: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(response, "No se pudo eliminar la cuenta");
+            return new OperationResult(false, (int)response.StatusCode, message);
+        }
+
+        return new OperationResult(true, StatusCodes.Status200OK, null);
+    }
+
     public async Task<OperationResult> RequestPasswordRecoveryAsync(string correo)
     {
         var payload = new JsonObject
@@ -276,6 +422,7 @@ public class SupabaseService
     {
         var metadata = userNode["user_metadata"];
         var correo = userNode["email"]?.GetValue<string>() ?? string.Empty;
+        var bannedUntil = userNode["banned_until"]?.GetValue<string>();
 
         return new UsuarioDto
         {
@@ -283,7 +430,12 @@ public class SupabaseService
             Nombre = metadata?["nombre"]?.GetValue<string>() ?? correo,
             Correo = correo,
             Telefono = metadata?["telefono"]?.GetValue<string>() ?? userNode["phone"]?.GetValue<string>(),
-            Rol = metadata?["rol"]?.GetValue<string>() ?? "cliente"
+            Rol = metadata?["rol"]?.GetValue<string>() ?? "cliente",
+            // "banned_until" viene vacío para cuentas que nunca se
+            // desactivaron, o con una fecha futura mientras SetActivaAsync
+            // las mantenga baneadas. Si esa fecha ya pasó, ya no aplica.
+            Activa = string.IsNullOrWhiteSpace(bannedUntil) ||
+                     (DateTimeOffset.TryParse(bannedUntil, out var hasta) && hasta <= DateTimeOffset.UtcNow)
         };
     }
 }

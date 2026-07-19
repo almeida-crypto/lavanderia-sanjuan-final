@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../models/usuario.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
 import 'dashboard_view.dart';
 import '../pedidos/orders_view.dart';
@@ -20,16 +22,20 @@ class HomeAdministradorScreen extends StatefulWidget {
 class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
   int _selectedIndex = 0;
 
+  late final bool _puedeVerServicios;
   late final List<Widget> _views;
 
   @override
   void initState() {
     super.initState();
+    // Un empleado ve Panel/Pedidos/Clientes, pero no puede tocar precios,
+    // promociones ni el catálogo de servicios: esa pestaña ni se construye.
+    _puedeVerServicios = context.read<AuthProvider>().currentUser?.rol != UserRole.empleado;
     _views = [
       DashboardView(onViewOrdersTap: () => _onItemTapped(1)),
       const OrdersView(),
       const CustomersView(),
-      const ServicesView(),
+      if (_puedeVerServicios) const ServicesView(),
     ];
     context.read<AdminProvider>().cargarPedidos();
   }
@@ -111,27 +117,28 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
           selectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
           unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 12),
           elevation: 0,
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
               activeIcon: Icon(Icons.dashboard),
               label: 'Panel',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.list_alt_outlined),
               activeIcon: Icon(Icons.list_alt),
               label: 'Pedidos',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.people_outline),
               activeIcon: Icon(Icons.people),
               label: 'Clientes',
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings_outlined),
-              activeIcon: Icon(Icons.settings),
-              label: 'Servicios',
-            ),
+            if (_puedeVerServicios)
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.settings_outlined),
+                activeIcon: Icon(Icons.settings),
+                label: 'Servicios',
+              ),
           ],
         ),
       ),
