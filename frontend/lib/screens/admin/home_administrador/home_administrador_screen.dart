@@ -125,7 +125,7 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.people_outline),
               activeIcon: Icon(Icons.people),
-              label: 'Clientes',
+              label: 'Directorio',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings_outlined),

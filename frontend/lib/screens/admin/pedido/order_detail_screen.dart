@@ -6,7 +6,6 @@ import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../utils/app_colors.dart';
 import 'actualizar_estado_screen.dart';
-import 'seleccionar_repartidor_screen.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   const OrderDetailScreen({super.key, required this.pedido});
@@ -403,7 +402,7 @@ class OrderDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Entrega y repartidor
+              // Entrega
               Text(
                 'Entrega',
                 style: GoogleFonts.inter(
@@ -424,26 +423,7 @@ class OrderDetailScreen extends StatelessWidget {
                   children: [
                     _buildRowDetail('Tipo de entrega', currentPedido.tipoEntrega),
                     const Divider(color: AppColors.surfaceVariant, height: 24),
-                    _buildRowDetail(
-                      'Repartidor',
-                      currentPedido.repartidorNombre ?? 'No asignado',
-                      trailing: currentPedido.tipoEntrega == 'Domicilio'
-                          ? TextButton(
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => SeleccionarRepartidorScreen(pedido: currentPedido),
-                                ),
-                              ),
-                              child: Text(
-                                currentPedido.repartidorNombre != null ? 'Cambiar' : 'Asignar',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            )
-                          : null,
-                    ),
+                    _buildRowDetail('Estado del envío', estadoToString(currentPedido.estado)),
                   ],
                 ),
               ),

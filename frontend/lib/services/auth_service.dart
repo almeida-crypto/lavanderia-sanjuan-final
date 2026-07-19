@@ -92,7 +92,7 @@ class AuthService {
   Future<Usuario> actualizarPerfil(Usuario usuario) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/usuarios/${usuario.id}'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode({
         'nombre': usuario.nombre,
         'correo': usuario.correo,
@@ -121,7 +121,7 @@ class AuthService {
   }) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/usuarios/cambiar-password'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode({
         'correo': correo,
         'passwordActual': passwordActual,

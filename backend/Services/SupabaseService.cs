@@ -199,6 +199,184 @@ public class SupabaseService
         return new OperationResult(true, StatusCodes.Status200OK, null);
     }
 
+    public async Task<AuthOperationResult> CreateUserAsync(string nombre, string correo, string password, string rol)
+    {
+        var payload = new JsonObject
+        {
+            ["email"] = correo,
+            ["password"] = password,
+            ["email_confirm"] = true,
+            ["user_metadata"] = new JsonObject
+            {
+                ["nombre"] = nombre,
+                ["rol"] = rol
+            }
+        };
+
+        var response = await SendAsync(HttpMethod.Post, "/auth/v1/admin/users", payload, useServiceRole: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(response, "No se pudo crear la cuenta");
+            var statusCode = response.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity
+                || response.StatusCode == System.Net.HttpStatusCode.Conflict
+                ? StatusCodes.Status409Conflict
+                : (int)response.StatusCode;
+
+            return new AuthOperationResult(false, statusCode, message, null, null);
+        }
+
+        var root = await ReadJsonAsync(response);
+        if (root is null)
+        {
+            return new AuthOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null, null);
+        }
+
+        return new AuthOperationResult(true, StatusCodes.Status201Created, null, MapUser(root), null);
+    }
+
+    public async Task<List<UsuarioDto>> ListStaffUsersAsync()
+    {
+        var response = await SendAsync(HttpMethod.Get, "/auth/v1/admin/users?per_page=1000", useServiceRole: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            return [];
+        }
+
+        var root = await ReadJsonAsync(response);
+        var users = root?["users"] as JsonArray;
+        if (users is null)
+        {
+            return [];
+        }
+
+        var staff = new List<UsuarioDto>();
+        foreach (var userNode in users)
+        {
+            if (userNode is null) continue;
+            var mapped = MapUser(userNode);
+            if (mapped.Rol != "cliente")
+            {
+                staff.Add(mapped);
+            }
+        }
+
+        return staff;
+    }
+
+    public async Task<UsuarioOperationResult> UpdateRoleAsync(string id, string rol)
+    {
+        var currentUserResponse = await SendAsync(HttpMethod.Get, $"/auth/v1/admin/users/{id}", useServiceRole: true);
+        if (!currentUserResponse.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(currentUserResponse, "Usuario no encontrado");
+            return new UsuarioOperationResult(false, (int)currentUserResponse.StatusCode, message, null);
+        }
+
+        var currentRoot = await ReadJsonAsync(currentUserResponse);
+        var currentUser = currentRoot?["user"] ?? currentRoot;
+        var metadata = currentUser?["user_metadata"] as JsonObject ?? new JsonObject();
+        metadata["rol"] = rol;
+
+        var payload = new JsonObject { ["user_metadata"] = metadata };
+        var updateResponse = await SendAsync(HttpMethod.Put, $"/auth/v1/admin/users/{id}", payload, useServiceRole: true);
+        if (!updateResponse.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(updateResponse, "No se pudo cambiar el rol");
+            return new UsuarioOperationResult(false, (int)updateResponse.StatusCode, message, null);
+        }
+
+        var updatedRoot = await ReadJsonAsync(updateResponse);
+        var updatedUser = updatedRoot?["user"] ?? updatedRoot;
+        if (updatedUser is null)
+        {
+            return new UsuarioOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null);
+        }
+
+        return new UsuarioOperationResult(true, StatusCodes.Status200OK, null, MapUser(updatedUser));
+    }
+
+    public async Task<UsuarioOperationResult> SetActivaAsync(string id, bool activa)
+    {
+        var payload = new JsonObject
+        {
+            ["ban_duration"] = activa ? "none" : "87600h"
+        };
+
+        var response = await SendAsync(HttpMethod.Put, $"/auth/v1/admin/users/{id}", payload, useServiceRole: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(response, "No se pudo cambiar el estado de la cuenta");
+            return new UsuarioOperationResult(false, (int)response.StatusCode, message, null);
+        }
+
+        var root = await ReadJsonAsync(response);
+        var user = root?["user"] ?? root;
+        if (user is null)
+        {
+            return new UsuarioOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null);
+        }
+
+        return new UsuarioOperationResult(true, StatusCodes.Status200OK, null, MapUser(user));
+    }
+
+    public async Task<UsuarioOperationResult> SetPasswordAsync(string id, string nuevaPassword)
+    {
+        var payload = new JsonObject
+        {
+            ["password"] = nuevaPassword
+        };
+
+        var response = await SendAsync(HttpMethod.Put, $"/auth/v1/admin/users/{id}", payload, useServiceRole: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(response, "No se pudo cambiar la contraseña");
+            return new UsuarioOperationResult(false, (int)response.StatusCode, message, null);
+        }
+
+        var root = await ReadJsonAsync(response);
+        var user = root?["user"] ?? root;
+        if (user is null)
+        {
+            return new UsuarioOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null);
+        }
+
+        return new UsuarioOperationResult(true, StatusCodes.Status200OK, null, MapUser(user));
+    }
+
+    public async Task<OperationResult> DeleteUserAsync(string id)
+    {
+        var response = await SendAsync(HttpMethod.Delete, $"/auth/v1/admin/users/{id}", useServiceRole: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(response, "No se pudo eliminar la cuenta");
+            return new OperationResult(false, (int)response.StatusCode, message);
+        }
+
+        return new OperationResult(true, StatusCodes.Status200OK, null);
+    }
+
+    /// Valida un access token de Supabase preguntándole directamente al
+    /// servidor de autenticación quién es (en vez de verificar la firma del
+    /// JWT localmente, para lo cual necesitaríamos el secreto de firma que no
+    /// tenemos configurado). Es lo que usa SupabaseAuthHandler para saber
+    /// quién llama a la API y con qué rol, en cada petición protegida.
+    public async Task<UsuarioDto?> GetUserFromTokenAsync(string accessToken)
+    {
+        var response = await SendAsync(HttpMethod.Get, "/auth/v1/user", accessToken: accessToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var root = await ReadJsonAsync(response);
+        if (root is null)
+        {
+            return null;
+        }
+
+        return MapUser(root);
+    }
+
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, JsonObject? payload = null, bool useServiceRole = false, string? accessToken = null)
     {
         if (!IsConfigured)
@@ -276,6 +454,9 @@ public class SupabaseService
     {
         var metadata = userNode["user_metadata"];
         var correo = userNode["email"]?.GetValue<string>() ?? string.Empty;
+        var bannedUntil = userNode["banned_until"]?.GetValue<string>();
+        var activa = string.IsNullOrWhiteSpace(bannedUntil) ||
+            (DateTimeOffset.TryParse(bannedUntil, out var hasta) && hasta <= DateTimeOffset.UtcNow);
 
         return new UsuarioDto
         {
@@ -283,7 +464,8 @@ public class SupabaseService
             Nombre = metadata?["nombre"]?.GetValue<string>() ?? correo,
             Correo = correo,
             Telefono = metadata?["telefono"]?.GetValue<string>() ?? userNode["phone"]?.GetValue<string>(),
-            Rol = metadata?["rol"]?.GetValue<string>() ?? "cliente"
+            Rol = metadata?["rol"]?.GetValue<string>() ?? "cliente",
+            Activa = activa
         };
     }
 }

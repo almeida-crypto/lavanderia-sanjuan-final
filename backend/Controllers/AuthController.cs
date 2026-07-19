@@ -32,6 +32,14 @@ public class AuthController : ControllerBase
             return StatusCode(login.StatusCode, new { message = login.ErrorMessage ?? "No se pudo iniciar sesión" });
         }
 
+        // El cliente necesita este token para mandarlo como "Authorization:
+        // Bearer" en el resto de las peticiones; sin él, el backend no tiene
+        // forma de saber quién está llamando ni con qué rol.
+        if (login.Usuario is not null)
+        {
+            login.Usuario.AccessToken = login.AccessToken;
+        }
+
         return Ok(login.Usuario);
     }
 
@@ -114,4 +122,11 @@ public class UsuarioDto
     public string? Telefono { get; set; }
     public string? Password { get; set; }
     public string? Rol { get; set; }
+    public bool Activa { get; set; } = true;
+
+    /// Solo se llena en la respuesta de /auth/login: el token de Supabase que
+    /// el cliente debe reenviar como "Authorization: Bearer" en el resto de
+    /// sus peticiones. En cualquier otra respuesta (listar empleados, etc.)
+    /// queda null a propósito.
+    public string? AccessToken { get; set; }
 }

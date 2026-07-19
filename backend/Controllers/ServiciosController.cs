@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
@@ -35,6 +36,7 @@ public class ServiciosController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> Crear([FromBody] ServicioRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Nombre) || request.Precio < 0)
@@ -48,6 +50,7 @@ public class ServiciosController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> Actualizar(string id, [FromBody] ServicioRequest request)
     {
         try

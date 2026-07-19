@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/usuario.dart';
-import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/direcciones_provider.dart';
 import '../../../providers/login_provider.dart';
@@ -47,13 +46,10 @@ class LoginScreen extends StatelessWidget {
     ]);
     if (!context.mounted) return;
 
-    final esEmpleado = auth.currentUser!.rol == UserRole.empleado ||
-        context.read<AdminProvider>().esEmpleadoEmail(auth.currentUser!.correo);
-
     final Widget destino;
     if (auth.currentUser!.rol == UserRole.administrador) {
       destino = const HomeAdministradorScreen();
-    } else if (esEmpleado) {
+    } else if (auth.currentUser!.rol == UserRole.empleado) {
       destino = const HomeEmpleadoScreen();
     } else {
       destino = const HomeClienteScreen();

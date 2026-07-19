@@ -12,7 +12,7 @@ class DireccionService {
     final uri = Uri.parse('$_baseUrl/direcciones').replace(
       queryParameters: {'usuarioId': usuarioId},
     );
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: ApiConfig.authHeaders);
     if (response.statusCode != 200) {
       throw Exception('No se pudieron cargar las direcciones');
     }
@@ -27,7 +27,7 @@ class DireccionService {
     final payload = direccion.toJson()..['usuarioId'] = usuarioId;
     final response = await http.post(
       Uri.parse('$_baseUrl/direcciones'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(payload),
     );
 
@@ -42,7 +42,7 @@ class DireccionService {
     final payload = direccion.toJson()..['usuarioId'] = usuarioId;
     final response = await http.put(
       Uri.parse('$_baseUrl/direcciones/$id'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(payload),
     );
 
@@ -54,7 +54,7 @@ class DireccionService {
   }
 
   Future<void> eliminarDireccion(String id) async {
-    final response = await http.delete(Uri.parse('$_baseUrl/direcciones/$id'));
+    final response = await http.delete(Uri.parse('$_baseUrl/direcciones/$id'), headers: ApiConfig.authHeaders);
     if (response.statusCode != 200) {
       throw Exception('No se pudo eliminar la dirección');
     }

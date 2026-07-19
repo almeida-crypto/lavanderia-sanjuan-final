@@ -10,7 +10,7 @@ class PedidoOpsService {
   Future<Map<String, dynamic>> cancelarPedido(String pedidoId, {required String razon, String? comentarios}) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/pedidos/$pedidoId/cancelar'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'razon': razon, 'comentarios': comentarios}),
     );
 
@@ -24,7 +24,7 @@ class PedidoOpsService {
   Future<Map<String, dynamic>> calificarPedido(String pedidoId, {required int calificacionGeneral, String? resena}) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/pedidos/$pedidoId/calificar'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'calificacionGeneral': calificacionGeneral, 'resena': resena}),
     );
 
@@ -38,7 +38,7 @@ class PedidoOpsService {
   Future<Map<String, dynamic>> reportarProblema(String pedidoId, {required String tipo, String? detalles}) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/pedidos/$pedidoId/reportar'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'tipo': tipo, 'detalles': detalles}),
     );
 

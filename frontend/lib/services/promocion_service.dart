@@ -18,7 +18,7 @@ class PromocionService {
   Future<Promocion> crear(Promocion promocion) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/promociones'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(promocion.toJson()),
     );
     if (response.statusCode != 201) throw Exception('No se pudo crear la promoción');
@@ -28,7 +28,7 @@ class PromocionService {
   Future<Promocion> actualizar(Promocion promocion) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/promociones/${promocion.id}'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(promocion.toJson()),
     );
     if (response.statusCode != 200) throw Exception('No se pudo actualizar la promoción');

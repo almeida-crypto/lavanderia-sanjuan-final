@@ -12,7 +12,7 @@ class MetodoPagoService {
     final uri = Uri.parse('$_baseUrl/metodos-pago').replace(
       queryParameters: {'usuarioId': usuarioId},
     );
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: ApiConfig.authHeaders);
     if (response.statusCode != 200) {
       throw Exception('No se pudieron cargar los métodos de pago');
     }
@@ -25,7 +25,7 @@ class MetodoPagoService {
     final payload = tarjeta.toJson()..['usuarioId'] = usuarioId;
     final response = await http.post(
       Uri.parse('$_baseUrl/metodos-pago'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(payload),
     );
 
@@ -37,7 +37,7 @@ class MetodoPagoService {
   }
 
   Future<void> eliminarMetodoPago(String id) async {
-    final response = await http.delete(Uri.parse('$_baseUrl/metodos-pago/$id'));
+    final response = await http.delete(Uri.parse('$_baseUrl/metodos-pago/$id'), headers: ApiConfig.authHeaders);
     if (response.statusCode != 200) {
       throw Exception('No se pudo eliminar el método de pago');
     }
@@ -46,7 +46,7 @@ class MetodoPagoService {
   Future<TarjetaGuardada> marcarPrincipal(String usuarioId, String id) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/metodos-pago/$id/principal'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'usuarioId': usuarioId}),
     );
     if (response.statusCode != 200) {
