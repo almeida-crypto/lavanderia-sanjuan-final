@@ -1,24 +1,35 @@
+using System.Security.Claims;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class PedidosController : ControllerBase
 {
     private readonly SupabaseDataService _data;
 
     public PedidosController(SupabaseDataService data) => _data = data;
 
+    private string? CallerId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+    private string? CallerRol => User.FindFirstValue(ClaimTypes.Role);
+    private bool EsStaff => CallerRol is "administrador" or "empleado";
+
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery] string? clienteId)
     {
         try
         {
-            var filter = string.IsNullOrWhiteSpace(clienteId)
+            // Un cliente solo puede listar sus propios pedidos, sin importar
+            // qué clienteId haya mandado en la URL. Solo el staff puede ver
+            // los de todos (o filtrar por cualquier cliente).
+            var idEfectivo = EsStaff ? clienteId : CallerId;
+            var filter = string.IsNullOrWhiteSpace(idEfectivo)
                 ? "order=created_at.desc"
-                : $"cliente_id=eq.{E(clienteId)}&order=created_at.desc";
+                : $"cliente_id=eq.{E(idEfectivo)}&order=created_at.desc";
             var rows = await _data.ListAsync("pedidos", filter);
             return Ok(rows.OfType<JsonObject>().Select(Map));
         }
@@ -31,7 +42,12 @@ public class PedidosController : ControllerBase
         try
         {
             var row = await _data.FindOneAsync("pedidos", $"id=eq.{E(id)}&limit=1");
-            return row is null ? NotFound(new { message = "Pedido no encontrado" }) : Ok(Map(row));
+            if (row is null) return NotFound(new { message = "Pedido no encontrado" });
+            if (!EsStaff && row["cliente_id"]?.ToString() != CallerId)
+            {
+                return NotFound(new { message = "Pedido no encontrado" });
+            }
+            return Ok(Map(row));
         }
         catch (SupabaseDataException ex) { return DataError(ex); }
     }
@@ -43,6 +59,13 @@ public class PedidosController : ControllerBase
             return BadRequest(new { message = "El cliente es obligatorio" });
         if (string.IsNullOrWhiteSpace(request.Servicio))
             return BadRequest(new { message = "El servicio es obligatorio" });
+
+        // Un cliente solo puede crear pedidos a su propio nombre, nunca en
+        // nombre de otro usuario.
+        if (!EsStaff && request.ClienteId != CallerId)
+        {
+            return Forbid();
+        }
 
         try
         {
@@ -73,10 +96,12 @@ public class PedidosController : ControllerBase
     }
 
     [HttpPut("{id}/estado")]
+    [Authorize(Roles = "administrador,empleado")]
     public Task<IActionResult> ActualizarEstado(string id, [FromBody] ActualizarEstadoRequest request) =>
         UpdatePedido(id, new JsonObject { ["estado"] = request.Estado }, "No se pudo actualizar el estado");
 
     [HttpPut("{id}/repartidor")]
+    [Authorize(Roles = "administrador,empleado")]
     public async Task<IActionResult> AsignarRepartidor(string id, [FromBody] AsignarRepartidorRequest request)
     {
         try
@@ -92,6 +117,7 @@ public class PedidosController : ControllerBase
     }
 
     [HttpPut("{id}/confirmar-precio")]
+    [Authorize(Roles = "administrador,empleado")]
     public Task<IActionResult> ConfirmarPrecio(string id, [FromBody] ConfirmarPrecioRequest request) =>
         UpdatePedido(id, new JsonObject
         {
@@ -102,31 +128,60 @@ public class PedidosController : ControllerBase
     [HttpPost("{id}/cancelar")]
     public async Task<IActionResult> Cancelar(string id, [FromBody] CancelarPedidoRequest request)
     {
-        var result = await UpdatePedido(id, new JsonObject
+        var bloqueado = await BloqueadoSiNoEsPropioAsync(id);
+        if (bloqueado is not null) return bloqueado;
+        return await UpdatePedido(id, new JsonObject
         {
             ["estado"] = "Cancelado",
             ["razon_cancelacion"] = request.Razon ?? "Otro",
             ["comentarios_cancelacion"] = request.Comentarios ?? string.Empty
         }, "No se pudo cancelar el pedido");
-        return result;
     }
 
     [HttpPost("{id}/calificar")]
-    public Task<IActionResult> Calificar(string id, [FromBody] CalificarPedidoRequest request) =>
-        UpdatePedido(id, new JsonObject
+    public async Task<IActionResult> Calificar(string id, [FromBody] CalificarPedidoRequest request)
+    {
+        var bloqueado = await BloqueadoSiNoEsPropioAsync(id);
+        if (bloqueado is not null) return bloqueado;
+        return await UpdatePedido(id, new JsonObject
         {
             ["calificacion"] = request.CalificacionGeneral,
             ["resena"] = request.Resena ?? string.Empty
         }, "No se pudo guardar la calificación");
+    }
 
     [HttpPost("{id}/reportar")]
-    public Task<IActionResult> Reportar(string id, [FromBody] ReportarPedidoRequest request) =>
-        UpdatePedido(id, new JsonObject
+    public async Task<IActionResult> Reportar(string id, [FromBody] ReportarPedidoRequest request)
+    {
+        var bloqueado = await BloqueadoSiNoEsPropioAsync(id);
+        if (bloqueado is not null) return bloqueado;
+        return await UpdatePedido(id, new JsonObject
         {
             ["reporte_tipo"] = request.Tipo ?? "Otro problema",
             ["reporte_detalles"] = request.Detalles ?? string.Empty,
             ["estado"] = "Atención"
         }, "No se pudo guardar el reporte");
+    }
+
+    /// Un cliente solo puede cancelar/calificar/reportar SUS PROPIOS pedidos;
+    /// el staff puede hacerlo sobre cualquiera. Devuelve null si puede seguir;
+    /// si no, ya trae el IActionResult a devolver (404 si no es dueño o no
+    /// existe -para no filtrar esa información-, o el error controlado si
+    /// falla la consulta a Supabase).
+    private async Task<IActionResult?> BloqueadoSiNoEsPropioAsync(string id)
+    {
+        if (EsStaff) return null;
+        try
+        {
+            var row = await _data.FindOneAsync("pedidos", $"id=eq.{E(id)}&limit=1");
+            if (row is not null && row["cliente_id"]?.ToString() == CallerId) return null;
+            return NotFound(new { message = "Pedido no encontrado" });
+        }
+        catch (SupabaseDataException ex)
+        {
+            return DataError(ex);
+        }
+    }
 
     private async Task<IActionResult> UpdatePedido(string id, JsonObject payload, string fallback)
     {

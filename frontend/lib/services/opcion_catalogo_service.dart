@@ -18,7 +18,7 @@ class OpcionCatalogoService {
   Future<OpcionCatalogo> crear(OpcionCatalogo opcion) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/opciones'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(opcion.toJson()),
     );
     if (response.statusCode != 201) throw Exception('No se pudo crear la opción');
@@ -28,7 +28,7 @@ class OpcionCatalogoService {
   Future<OpcionCatalogo> actualizar(OpcionCatalogo opcion) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/opciones/${opcion.id}'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(opcion.toJson()),
     );
     if (response.statusCode != 200) throw Exception('No se pudo actualizar la opción');

@@ -36,6 +36,7 @@ class Pedido {
     this.totalConfirmado,
     this.repartidorNombre,
     this.opcionAcabado,
+    this.creadoEn,
   });
 
   factory Pedido.fromJson(Map<String, dynamic> json) {
@@ -66,6 +67,7 @@ class Pedido {
       totalConfirmado: double.tryParse(json['totalConfirmado']?.toString() ?? ''),
       repartidorNombre: _cleanRepartidor(json['repartidor']?.toString()),
       opcionAcabado: json['opcionAcabado']?.toString(),
+      creadoEn: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
     );
   }
 
@@ -89,6 +91,7 @@ class Pedido {
   final double? totalConfirmado;
   final String? repartidorNombre;
   final String? opcionAcabado;
+  final DateTime? creadoEn;
 
   /// Folio corto y legible en vez del uuid interno (que es horrible de
   /// mostrar). Si por alguna razón el backend no lo mandó todavía (base sin

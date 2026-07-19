@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
@@ -26,6 +27,7 @@ public class OpcionesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> Crear([FromBody] OpcionRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Nombre))
@@ -39,6 +41,7 @@ public class OpcionesController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> Actualizar(string id, [FromBody] OpcionRequest request)
     {
         try

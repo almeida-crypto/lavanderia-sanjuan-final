@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
@@ -22,6 +23,7 @@ public class PromocionesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> Crear([FromBody] PromocionRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Codigo) || string.IsNullOrWhiteSpace(request.Titulo))
@@ -37,6 +39,7 @@ public class PromocionesController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> Actualizar(string id, [FromBody] PromocionRequest request)
     {
         try

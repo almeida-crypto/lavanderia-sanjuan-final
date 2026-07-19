@@ -1,4 +1,6 @@
 using backend;
+using backend.Auth;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +24,15 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<SupabaseService>();
 builder.Services.AddSingleton<SupabaseDataService>();
 
+// Cada petición protegida trae "Authorization: Bearer <token>"; este esquema
+// valida ese token contra Supabase y arma el rol real del que llama, para
+// que [Authorize]/[Authorize(Roles=...)] en los controladores dejen de ser
+// solo una convención de la app y pasen a exigirse de verdad en el backend.
+builder.Services
+    .AddAuthentication("Supabase")
+    .AddScheme<AuthenticationSchemeOptions, SupabaseAuthHandler>("Supabase", null);
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 var supabaseService = app.Services.GetRequiredService<SupabaseService>();
@@ -35,6 +46,7 @@ else
 }
 
 app.UseCors();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", (SupabaseDataService data) => Results.Ok(new
 {

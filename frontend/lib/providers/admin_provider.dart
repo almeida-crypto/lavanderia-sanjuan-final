@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/empleado.dart';
 import '../models/opcion_catalogo.dart';
 import '../models/pedido_admin.dart';
 import '../models/promocion.dart';
 import '../models/servicio.dart';
+import '../models/usuario.dart';
+import '../services/empleado_service.dart';
 import '../services/opcion_catalogo_service.dart';
 import '../services/pedido_service.dart';
 import '../services/promocion_service.dart';
@@ -14,77 +15,104 @@ class AdminProvider extends ChangeNotifier {
   final _servicioService = ServicioService();
   final _promocionService = PromocionService();
   final _opcionCatalogoService = OpcionCatalogoService();
+  final _empleadoService = EmpleadoService();
 
   final List<PedidoAdmin> _pedidos = [];
-  final List<Empleado> _empleados = [
-    Empleado(
-      id: 'emp_1',
-      nombre: 'Carlos Ramírez',
-      correo: 'carlos.empleado@sanjuan.com',
-      telefono: '555-123-4567',
-      fechaRegistro: '2026-01-15',
-    ),
-    Empleado(
-      id: 'emp_2',
-      nombre: 'María López',
-      correo: 'maria.empleado@sanjuan.com',
-      telefono: '555-987-6543',
-      fechaRegistro: '2026-03-10',
-    ),
-  ];
 
   bool _isLoading = false;
   String? _error;
 
   List<PedidoAdmin> get pedidos => List.unmodifiable(_pedidos);
-  List<Empleado> get empleados => List.unmodifiable(_empleados);
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  bool esEmpleadoEmail(String email) {
-    if (email.isEmpty) return false;
-    final lower = email.trim().toLowerCase();
-    return _empleados.any((e) => e.correo.trim().toLowerCase() == lower);
-  }
+  // Gestión de empleados: respaldada por cuentas reales de Supabase Auth
+  // (rol "empleado" o "administrador"), administradas por el admin desde su
+  // perfil. Nunca se guarda una copia local: cada acción llama al backend y
+  // luego refresca la lista para reflejar el estado real de la cuenta.
 
-  void agregarEmpleado({
-    required String nombre,
-    required String correo,
-    required String telefono,
-  }) {
-    final nuevo = Empleado(
-      id: 'emp_${DateTime.now().millisecondsSinceEpoch}',
-      nombre: nombre.trim(),
-      correo: correo.trim(),
-      telefono: telefono.trim(),
-      fechaRegistro: DateTime.now().toString().split(' ')[0],
-    );
-    _empleados.add(nuevo);
+  final List<Usuario> _empleados = [];
+  bool _isLoadingEmpleados = false;
+  String? _errorEmpleados;
+
+  List<Usuario> get empleados => List.unmodifiable(_empleados);
+  bool get isLoadingEmpleados => _isLoadingEmpleados;
+  String? get errorEmpleados => _errorEmpleados;
+
+  Future<void> cargarEmpleados() async {
+    _isLoadingEmpleados = true;
+    _errorEmpleados = null;
     notifyListeners();
-  }
-
-  void editarEmpleado({
-    required String id,
-    required String nombre,
-    required String correo,
-    required String telefono,
-  }) {
-    final index = _empleados.indexWhere((e) => e.id == id);
-    if (index != -1) {
-      _empleados[index] = Empleado(
-        id: id,
-        nombre: nombre.trim(),
-        correo: correo.trim(),
-        telefono: telefono.trim(),
-        fechaRegistro: _empleados[index].fechaRegistro,
-        activo: _empleados[index].activo,
-      );
+    try {
+      final data = await _empleadoService.listar();
+      _empleados
+        ..clear()
+        ..addAll(data);
+    } catch (_) {
+      _errorEmpleados = 'No se pudo cargar el personal';
+    } finally {
+      _isLoadingEmpleados = false;
       notifyListeners();
     }
   }
 
-  void eliminarEmpleado(String id) {
+  Future<void> crearEmpleado({
+    required String nombre,
+    required String correo,
+    required String password,
+    required UserRole rol,
+  }) async {
+    final creado = await _empleadoService.crear(nombre: nombre, correo: correo, password: password, rol: rol);
+    _empleados.add(creado);
+    notifyListeners();
+  }
+
+  Future<void> cambiarRolEmpleado(String id, UserRole rol, {required String actorId}) async {
+    final actualizado = await _empleadoService.cambiarRol(id, rol, actorId: actorId);
+    final index = _empleados.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      _empleados[index] = actualizado;
+      notifyListeners();
+    }
+  }
+
+  Future<void> cambiarEstadoEmpleado(String id, bool activa, {required String actorId}) async {
+    final actualizado = await _empleadoService.cambiarEstado(id, activa, actorId: actorId);
+    final index = _empleados.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      _empleados[index] = actualizado;
+      notifyListeners();
+    }
+  }
+
+  Future<void> cambiarPasswordEmpleado(
+    String id, {
+    required String nuevaPassword,
+    required String actorCorreo,
+    required String actorPassword,
+  }) async {
+    await _empleadoService.cambiarPassword(
+      id,
+      nuevaPassword: nuevaPassword,
+      actorCorreo: actorCorreo,
+      actorPassword: actorPassword,
+    );
+  }
+
+  Future<void> eliminarEmpleado(String id, {required String actorId}) async {
+    await _empleadoService.eliminar(id, actorId: actorId);
     _empleados.removeWhere((e) => e.id == id);
+    notifyListeners();
+  }
+
+  /// Limpia los datos de la sesión del admin/empleado saliente para que la
+  /// próxima cuenta que inicie sesión en el dispositivo no vea (ni por un
+  /// instante) pedidos o personal de la cuenta anterior.
+  void limpiar() {
+    _pedidos.clear();
+    _empleados.clear();
+    _error = null;
+    _errorEmpleados = null;
     notifyListeners();
   }
 
@@ -247,23 +275,6 @@ class AdminProvider extends ChangeNotifier {
     _pedidos[index].progreso = _progresoParaEstado(nuevoEstado);
     _pedidos[index].notas.add(
       NotaPedido(fecha: 'Justo ahora', texto: "Estado cambiado a '${estadoToString(nuevoEstado)}'", autor: 'Admin'),
-    );
-    notifyListeners();
-  }
-
-  Future<void> assignRepartidor(String id, String repartidorNombre) async {
-    final index = _pedidos.indexWhere((p) => p.id == id);
-    if (index == -1) return;
-
-    await _pedidoService.asignarRepartidor(id, repartidorNombre);
-
-    _pedidos[index].repartidorNombre = repartidorNombre;
-    if (_pedidos[index].estado == PedidoEstado.recibido) {
-      _pedidos[index].estado = PedidoEstado.asignado;
-      _pedidos[index].progreso = _progresoParaEstado(PedidoEstado.asignado);
-    }
-    _pedidos[index].notas.add(
-      NotaPedido(fecha: 'Justo ahora', texto: 'Repartidor $repartidorNombre asignado', autor: 'Admin'),
     );
     notifyListeners();
   }

@@ -9,7 +9,7 @@ class PedidoService {
 
   Future<List<Map<String, dynamic>>> listarPedidos({String? clienteId}) async {
     final uri = Uri.parse('$_baseUrl/pedidos').replace(queryParameters: clienteId == null ? null : {'clienteId': clienteId});
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: ApiConfig.authHeaders);
     if (response.statusCode != 200) {
       throw Exception('No se pudieron cargar los pedidos');
     }
@@ -23,7 +23,7 @@ class PedidoService {
   Future<Map<String, dynamic>> crearPedido(Map<String, dynamic> pedido) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/pedidos'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(pedido),
     );
     if (response.statusCode != 201) {
@@ -35,7 +35,7 @@ class PedidoService {
   Future<Map<String, dynamic>> actualizarEstado(String id, String estado) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/pedidos/$id/estado'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'estado': estado}),
     );
     if (response.statusCode != 200) {
@@ -44,17 +44,6 @@ class PedidoService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> asignarRepartidor(String id, String repartidor) async {
-    final response = await http.put(
-      Uri.parse('$_baseUrl/pedidos/$id/repartidor'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'repartidor': repartidor}),
-    );
-    if (response.statusCode != 200) {
-      throw Exception('No se pudo asignar el repartidor');
-    }
-    return jsonDecode(response.body) as Map<String, dynamic>;
-  }
 
   Future<Map<String, dynamic>> confirmarPrecio(
     String id, {
@@ -63,7 +52,7 @@ class PedidoService {
   }) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/pedidos/$id/confirmar-precio'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'pesoConfirmado': pesoConfirmado, 'totalConfirmado': totalConfirmado}),
     );
     if (response.statusCode != 200) {

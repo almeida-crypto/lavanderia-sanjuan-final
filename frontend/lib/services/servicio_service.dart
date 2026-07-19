@@ -18,7 +18,7 @@ class ServicioService {
   Future<Servicio> crear(Servicio servicio) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/servicios'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(servicio.toJson()),
     );
     if (response.statusCode != 201) throw Exception('No se pudo crear el servicio');
@@ -28,7 +28,7 @@ class ServicioService {
   Future<Servicio> actualizar(Servicio servicio) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/servicios/${servicio.id}'),
-      headers: {'Content-Type': 'application/json'},
+      headers: ApiConfig.jsonHeaders,
       body: jsonEncode(servicio.toJson()),
     );
     if (response.statusCode != 200) throw Exception('No se pudo actualizar el servicio');

@@ -1,9 +1,12 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class UsuariosController : ControllerBase
 {
     private readonly SupabaseService _supabaseService;
@@ -19,6 +22,15 @@ public class UsuariosController : ControllerBase
         if (!_supabaseService.IsConfigured)
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Supabase no está configurado en el backend" });
+        }
+
+        // Nadie puede editar el perfil de otra persona, ni siquiera con el id
+        // a mano: solo la propia cuenta, o un admin.
+        var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var callerRol = User.FindFirstValue(ClaimTypes.Role);
+        if (callerId != id && callerRol != "administrador")
+        {
+            return Forbid();
         }
 
         var update = await _supabaseService.UpdateProfileAsync(id, request.Nombre, request.Correo, request.Telefono);

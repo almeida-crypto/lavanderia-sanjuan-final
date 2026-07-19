@@ -1,21 +1,28 @@
+using System.Security.Claims;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
 
 [ApiController]
 [Route("api/metodos-pago")]
+[Authorize]
 public class MetodosPagoController : ControllerBase
 {
     private readonly SupabaseDataService _data;
 
     public MetodosPagoController(SupabaseDataService data) => _data = data;
 
+    private string? CallerId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery] string? usuarioId)
     {
         if (string.IsNullOrWhiteSpace(usuarioId))
             return BadRequest(new { message = "usuarioId es obligatorio" });
+        if (usuarioId != CallerId)
+            return Forbid();
 
         try
         {
@@ -32,6 +39,8 @@ public class MetodosPagoController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.UsuarioId))
             return BadRequest(new { message = "El usuario es obligatorio" });
+        if (request.UsuarioId != CallerId)
+            return Forbid();
         if (request.UltimosDigitos?.Length != 4 || !request.UltimosDigitos.All(char.IsDigit))
             return BadRequest(new { message = "Los últimos cuatro dígitos no son válidos" });
 
@@ -61,7 +70,9 @@ public class MetodosPagoController : ControllerBase
         try
         {
             var row = await _data.FindOneAsync("metodos_pago", $"id=eq.{E(id)}&limit=1");
-            return row is null ? NotFound(new { message = "Método de pago no encontrado" }) : Ok(Map(row));
+            if (row is null) return NotFound(new { message = "Método de pago no encontrado" });
+            if (row["usuario_id"]?.ToString() != CallerId) return NotFound(new { message = "Método de pago no encontrado" });
+            return Ok(Map(row));
         }
         catch (SupabaseDataException ex) { return DataError(ex); }
     }
@@ -71,6 +82,8 @@ public class MetodosPagoController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.UsuarioId))
             return BadRequest(new { message = "El usuario es obligatorio" });
+        if (request.UsuarioId != CallerId)
+            return Forbid();
 
         try
         {
@@ -89,6 +102,10 @@ public class MetodosPagoController : ControllerBase
     {
         try
         {
+            var existente = await _data.FindOneAsync("metodos_pago", $"id=eq.{E(id)}&limit=1");
+            if (existente is null) return NotFound(new { message = "Método de pago no encontrado" });
+            if (existente["usuario_id"]?.ToString() != CallerId) return NotFound(new { message = "Método de pago no encontrado" });
+
             var deleted = await _data.DeleteAsync("metodos_pago", $"id=eq.{E(id)}");
             return deleted ? Ok(new { message = "Método de pago eliminado" }) : NotFound(new { message = "Método de pago no encontrado" });
         }

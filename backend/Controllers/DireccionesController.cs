@@ -1,21 +1,28 @@
+using System.Security.Claims;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
 
 [ApiController]
 [Route("api/direcciones")]
+[Authorize]
 public class DireccionesController : ControllerBase
 {
     private readonly SupabaseDataService _data;
 
     public DireccionesController(SupabaseDataService data) => _data = data;
 
+    private string? CallerId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery] string? usuarioId)
     {
         if (string.IsNullOrWhiteSpace(usuarioId))
             return BadRequest(new { message = "usuarioId es obligatorio" });
+        if (usuarioId != CallerId)
+            return Forbid();
 
         try
         {
@@ -32,6 +39,8 @@ public class DireccionesController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.UsuarioId))
             return BadRequest(new { message = "El usuario es obligatorio" });
+        if (request.UsuarioId != CallerId)
+            return Forbid();
         if (string.IsNullOrWhiteSpace(request.Calle) || string.IsNullOrWhiteSpace(request.Colonia) ||
             string.IsNullOrWhiteSpace(request.Ciudad) || string.IsNullOrWhiteSpace(request.Estado) ||
             string.IsNullOrWhiteSpace(request.CodigoPostal))
@@ -55,7 +64,9 @@ public class DireccionesController : ControllerBase
         try
         {
             var row = await _data.FindOneAsync("direcciones", $"id=eq.{E(id)}&limit=1");
-            return row is null ? NotFound(new { message = "Dirección no encontrada" }) : Ok(Map(row));
+            if (row is null) return NotFound(new { message = "Dirección no encontrada" });
+            if (row["usuario_id"]?.ToString() != CallerId) return NotFound(new { message = "Dirección no encontrada" });
+            return Ok(Map(row));
         }
         catch (SupabaseDataException ex) { return DataError(ex); }
     }
@@ -65,9 +76,15 @@ public class DireccionesController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.UsuarioId))
             return BadRequest(new { message = "El usuario es obligatorio" });
+        if (request.UsuarioId != CallerId)
+            return Forbid();
 
         try
         {
+            var existente = await _data.FindOneAsync("direcciones", $"id=eq.{E(id)}&limit=1");
+            if (existente is null) return NotFound(new { message = "Dirección no encontrada" });
+            if (existente["usuario_id"]?.ToString() != CallerId) return NotFound(new { message = "Dirección no encontrada" });
+
             if (request.Predeterminada)
                 await QuitarPredeterminada(request.UsuarioId);
 
@@ -82,6 +99,10 @@ public class DireccionesController : ControllerBase
     {
         try
         {
+            var existente = await _data.FindOneAsync("direcciones", $"id=eq.{E(id)}&limit=1");
+            if (existente is null) return NotFound(new { message = "Dirección no encontrada" });
+            if (existente["usuario_id"]?.ToString() != CallerId) return NotFound(new { message = "Dirección no encontrada" });
+
             var deleted = await _data.DeleteAsync("direcciones", $"id=eq.{E(id)}");
             return deleted ? Ok(new { message = "Dirección eliminada" }) : NotFound(new { message = "Dirección no encontrada" });
         }

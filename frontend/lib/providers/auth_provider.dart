@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/usuario.dart';
 import '../services/auth_service.dart';
+import '../utils/api_config.dart';
 
 class AuthProvider extends ChangeNotifier {
   static const String _userKey = 'saved_logged_user';
@@ -34,6 +35,7 @@ class AuthProvider extends ChangeNotifier {
       if (userStr != null && userStr.isNotEmpty) {
         final Map<String, dynamic> map = jsonDecode(userStr);
         _currentUser = Usuario.fromJson(map);
+        ApiConfig.authToken = _currentUser?.accessToken;
       }
     } catch (_) {
       _currentUser = null;
@@ -65,6 +67,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       _currentUser = await _authService.login(correo: correo, password: password);
       if (_currentUser != null) {
+        ApiConfig.authToken = _currentUser!.accessToken;
         await _guardarUsuarioLocal(_currentUser!);
       }
       return true;
@@ -131,10 +134,19 @@ class AuthProvider extends ChangeNotifier {
       final actualizado = await _authService.actualizarPerfil(
         Usuario(id: actual.id, nombre: nombre, correo: correo, telefono: telefono, rol: actual.rol),
       );
-      _currentUser = actualizado;
-      if (_currentUser != null) {
-        await _guardarUsuarioLocal(_currentUser!);
-      }
+      // El endpoint de perfil no reenvía el access token (solo /auth/login lo
+      // hace), así que hay que conservar el de la sesión actual o se perdería
+      // la sesión autenticada en la siguiente petición.
+      _currentUser = Usuario(
+        id: actualizado.id,
+        nombre: actualizado.nombre,
+        correo: actualizado.correo,
+        telefono: actualizado.telefono,
+        rol: actualizado.rol,
+        activo: actualizado.activo,
+        accessToken: actual.accessToken,
+      );
+      await _guardarUsuarioLocal(_currentUser!);
       return true;
     } on AuthException catch (e) {
       _errorMessage = e.message;
@@ -150,6 +162,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     _currentUser = null;
+    ApiConfig.authToken = null;
     await _eliminarUsuarioLocal();
     notifyListeners();
   }

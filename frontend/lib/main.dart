@@ -79,12 +79,9 @@ class AuthWrapper extends StatelessWidget {
       context.read<MetodosPagoProvider>().cargarParaUsuario(usuario.id);
     });
 
-    final esEmpleado = usuario.rol == UserRole.empleado ||
-        context.read<AdminProvider>().esEmpleadoEmail(usuario.correo);
-
     if (usuario.rol == UserRole.administrador) {
       return const HomeAdministradorScreen();
-    } else if (esEmpleado) {
+    } else if (usuario.rol == UserRole.empleado) {
       return const HomeEmpleadoScreen();
     } else {
       return const HomeClienteScreen();

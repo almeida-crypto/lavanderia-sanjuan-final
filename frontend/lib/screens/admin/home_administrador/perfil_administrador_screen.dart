@@ -32,12 +32,25 @@ class PerfilAdministradorScreen extends StatelessWidget {
 
     if (confirmado != true || !context.mounted) return;
 
-    context.read<AuthProvider>().logout();
+    context.read<AdminProvider>().limpiar();
+    await context.read<AuthProvider>().logout();
+    if (!context.mounted) return;
+
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
   }
+
+  static String _etiquetaRol(UserRole? rol) => switch (rol) {
+    UserRole.empleado => 'EMPLEADO',
+    _ => 'ADMINISTRADOR',
+  };
+
+  static IconData _iconoRol(UserRole? rol) => switch (rol) {
+    UserRole.empleado => Icons.badge_outlined,
+    _ => Icons.admin_panel_settings_rounded,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -78,21 +91,19 @@ class PerfilAdministradorScreen extends StatelessWidget {
                         border: Border.all(color: AppColors.primary, width: 2),
                       ),
                       child: Icon(
-                        usuario?.rol == UserRole.empleado
-                            ? Icons.badge_outlined
-                            : Icons.admin_panel_settings_rounded,
+                        _iconoRol(usuario?.rol),
                         size: 44,
                         color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      usuario?.nombre ?? (usuario?.rol == UserRole.empleado ? 'Empleado' : 'Administrador'),
+                      usuario?.nombre ?? _etiquetaRol(usuario?.rol),
                       style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.onSurface),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      usuario?.correo ?? (usuario?.rol == UserRole.empleado ? 'empleado@freshclean.com' : 'admin@freshclean.com'),
+                      usuario?.correo ?? '',
                       style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurfaceVariant),
                     ),
                     const SizedBox(height: 8),
@@ -103,7 +114,7 @@ class PerfilAdministradorScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        usuario?.rol == UserRole.empleado ? 'EMPLEADO' : 'ADMINISTRADOR',
+                        _etiquetaRol(usuario?.rol),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,

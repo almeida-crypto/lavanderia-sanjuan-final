@@ -22,6 +22,8 @@ class Usuario {
     required this.correo,
     required this.rol,
     this.telefono,
+    this.activo = true,
+    this.accessToken,
   });
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,8 @@ class Usuario {
       correo: json['correo'] as String? ?? json['email'] as String? ?? '',
       telefono: json['telefono'] as String? ?? json['phone'] as String?,
       rol: userRoleFromString(json['rol'] as String? ?? json['role'] as String?),
+      activo: json['activa'] != false,
+      accessToken: json['accessToken'] as String?,
     );
   }
 
@@ -41,6 +45,8 @@ class Usuario {
       'correo': correo,
       'telefono': telefono,
       'rol': rol.name,
+      'activa': activo,
+      'accessToken': accessToken,
     };
   }
 
@@ -49,4 +55,10 @@ class Usuario {
   final String correo;
   final String? telefono;
   final UserRole rol;
+  final bool activo;
+
+  /// Token de Supabase de esta sesión. Se persiste junto con el resto del
+  /// perfil (SharedPreferences) para que la sesión sobreviva a un reinicio de
+  /// la app sin tener que iniciar sesión de nuevo.
+  final String? accessToken;
 }
