@@ -750,14 +750,17 @@ class _CustomersViewState extends State<CustomersView> {
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: filteredCustomers.length,
-                      itemBuilder: (context, index) {
-                        final customer = filteredCustomers[index];
-                        return _buildCustomerItem(context, customer);
-                      },
+                  : RefreshIndicator(
+                      onRefresh: adminProvider.cargarPedidos,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                        itemCount: filteredCustomers.length,
+                        itemBuilder: (context, index) {
+                          final customer = filteredCustomers[index];
+                          return _buildCustomerItem(context, customer);
+                        },
+                      ),
                     ))
               : (adminProvider.isLoadingEmpleados
                   ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
@@ -775,14 +778,17 @@ class _CustomersViewState extends State<CustomersView> {
                             ],
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: filteredEmpleados.length,
-                          itemBuilder: (context, index) {
-                            final empleado = filteredEmpleados[index];
-                            return _buildEmpleadoItem(context, empleado, actorId);
-                          },
+                      : RefreshIndicator(
+                          onRefresh: adminProvider.cargarEmpleados,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                            itemCount: filteredEmpleados.length,
+                            itemBuilder: (context, index) {
+                              final empleado = filteredEmpleados[index];
+                              return _buildEmpleadoItem(context, empleado, actorId);
+                            },
+                          ),
                         )),
         ),
       ],

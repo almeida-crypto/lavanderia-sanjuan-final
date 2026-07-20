@@ -28,6 +28,25 @@ alter table public.direcciones add column if not exists ciudad text not null def
 alter table public.direcciones add column if not exists estado text not null default '';
 alter table public.direcciones add column if not exists codigo_postal text not null default '';
 
+-- Catálogo real de códigos postales de México (datos oficiales de SEPOMEX,
+-- ~145,900 filas: cada CP puede tener varias colonias). Se usa para que al
+-- escribir el código postal en el formulario de dirección se rellenen solos
+-- estado/ciudad y se sugieran las colonias reales de ese CP, y para poder
+-- avisar si el cliente escribió un CP que no existe. La tabla se crea vacía
+-- aquí; los datos se importan una sola vez desde
+-- supabase/codigos_postales.csv usando el importador de CSV del Table
+-- Editor de Supabase (demasiadas filas para un insert por SQL).
+create table if not exists public.codigos_postales (
+  id bigint generated always as identity primary key,
+  codigo_postal text not null,
+  estado text not null,
+  municipio text not null,
+  ciudad text not null default '',
+  colonia text not null,
+  tipo_asentamiento text
+);
+create index if not exists codigos_postales_por_cp on public.codigos_postales(codigo_postal);
+
 create table if not exists public.metodos_pago (
   id uuid primary key default gen_random_uuid(),
   usuario_id text not null,
@@ -155,6 +174,7 @@ alter table public.servicios enable row level security;
 alter table public.pedidos enable row level security;
 alter table public.promociones enable row level security;
 alter table public.opciones enable row level security;
+alter table public.codigos_postales enable row level security;
 
 insert into public.opciones (nombre, descripcion) values
   ('Doblado Estándar', 'Perfecto para el uso diario, doblado y apilado con cuidado.'),

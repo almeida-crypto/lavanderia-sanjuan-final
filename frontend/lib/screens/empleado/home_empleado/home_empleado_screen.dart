@@ -35,6 +35,9 @@ class _HomeEmpleadoScreenState extends State<HomeEmpleadoScreen> {
     setState(() {
       _selectedIndex = index;
     });
+    // Mismo motivo que en el panel de admin: las pestañas viven en un
+    // IndexedStack y solo cargaban datos una vez al iniciar sesión.
+    context.read<AdminProvider>().cargarPedidos();
   }
 
   @override

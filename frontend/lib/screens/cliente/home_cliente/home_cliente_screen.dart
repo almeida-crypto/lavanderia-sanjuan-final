@@ -42,9 +42,18 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
   @override
   void initState() {
     super.initState();
-    _cargarPedidoActivo();
-    _cargarPromocionVigente();
-    context.read<ServiciosProvider>().cargar();
+    _cargarTodo();
+  }
+
+  /// Se llama al abrir la pantalla y también al deslizar hacia abajo para
+  /// refrescar: sin esto, un cambio de precio/promoción del admin no se
+  /// veía aquí hasta cerrar y volver a abrir la app.
+  Future<void> _cargarTodo() {
+    return Future.wait([
+      _cargarPedidoActivo(),
+      _cargarPromocionVigente(),
+      context.read<ServiciosProvider>().cargar(),
+    ]);
   }
 
   Future<void> _cargarPromocionVigente() async {
@@ -176,7 +185,10 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: SingleChildScrollView(
+        child: RefreshIndicator(
+          onRefresh: _cargarTodo,
+          child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,6 +251,7 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
                 ],
               ],
             ],
+          ),
           ),
         ),
       ),

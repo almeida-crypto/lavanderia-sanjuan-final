@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/direccion.dart';
+import '../../../services/codigo_postal_service.dart';
 import '../../../utils/app_colors.dart';
 
 class FormularioDireccionScreen extends StatefulWidget {
@@ -25,6 +26,11 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
   final _ciudadController = TextEditingController();
   final _estadoController = TextEditingController();
   final _cpController = TextEditingController();
+  final _codigoPostalService = CodigoPostalService();
+
+  bool _buscandoCp = false;
+  String? _cpErrorMensaje;
+  List<String> _coloniasSugeridas = [];
 
   bool get _esEdicion => widget.direccionExistente != null;
 
@@ -60,6 +66,48 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
   String? _requerido(String? value) {
     if (value == null || value.trim().isEmpty) return 'Campo obligatorio';
     return null;
+  }
+
+  /// Al completar los 5 dígitos, consulta el catálogo real de SEPOMEX:
+  /// rellena Estado y Ciudad solos, sugiere las colonias reales de ese CP
+  /// (casi siempre hay varias) y avisa si el código postal no existe.
+  Future<void> _buscarCodigoPostal(String value) async {
+    final cp = value.trim();
+    if (cp.length != 5) {
+      setState(() {
+        _cpErrorMensaje = null;
+        _coloniasSugeridas = [];
+      });
+      return;
+    }
+
+    setState(() {
+      _buscandoCp = true;
+      _cpErrorMensaje = null;
+    });
+    try {
+      final info = await _codigoPostalService.buscar(cp);
+      if (!mounted) return;
+      setState(() {
+        _estadoController.text = info.estado;
+        _ciudadController.text = info.ciudad;
+        _coloniasSugeridas = info.colonias;
+        if (_coloniaController.text.trim().isEmpty && info.colonias.length == 1) {
+          _coloniaController.text = info.colonias.first;
+        }
+      });
+    } on CodigoPostalException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _cpErrorMensaje = e.message;
+        _coloniasSugeridas = [];
+      });
+    } catch (_) {
+      // Sin conexión al catálogo: no bloquea, el cliente puede seguir
+      // llenando el resto a mano.
+    } finally {
+      if (mounted) setState(() => _buscandoCp = false);
+    }
   }
 
   void _guardar() {
@@ -166,6 +214,21 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
                         icon: Icons.holiday_village_outlined,
                         validator: _requerido,
                       ),
+                      if (_coloniasSugeridas.length > 1) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final colonia in _coloniasSugeridas)
+                              _ColoniaChip(
+                                label: colonia,
+                                seleccionada: _coloniaController.text.trim() == colonia,
+                                onTap: () => setState(() => _coloniaController.text = colonia),
+                              ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       _CampoDireccion(
                         label: 'Entre calles / Referencias (Opcional)',
@@ -178,22 +241,36 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
+                            child: _CampoDireccion(
+                              label: 'Código Postal',
+                              controller: _cpController,
+                              hintText: '54000',
+                              keyboardType: TextInputType.number,
+                              validator: _requerido,
+                              onChanged: _buscarCodigoPostal,
+                              helperError: _cpErrorMensaje,
+                              suffixIcon: _buscandoCp
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(14),
+                                      child: SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      ),
+                                    )
+                                  : (_cpErrorMensaje == null && _coloniasSugeridas.isNotEmpty
+                                      ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
+                                      : null),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
                             flex: 2,
                             child: _CampoDireccion(
                               label: 'Ciudad / Municipio',
                               controller: _ciudadController,
                               hintText: 'Tu ciudad',
                               icon: Icons.location_city_rounded,
-                              validator: _requerido,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _CampoDireccion(
-                              label: 'Código Postal',
-                              controller: _cpController,
-                              hintText: '54000',
-                              keyboardType: TextInputType.number,
                               validator: _requerido,
                             ),
                           ),
@@ -303,6 +380,38 @@ class _MapaPlaceholder extends StatelessWidget {
   }
 }
 
+class _ColoniaChip extends StatelessWidget {
+  const _ColoniaChip({required this.label, required this.seleccionada, required this.onTap});
+
+  final String label;
+  final bool seleccionada;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: seleccionada ? AppColors.primary : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: seleccionada ? AppColors.primary : AppColors.outlineVariant),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: seleccionada ? Colors.white : AppColors.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CampoDireccion extends StatelessWidget {
   const _CampoDireccion({
     required this.label,
@@ -311,6 +420,9 @@ class _CampoDireccion extends StatelessWidget {
     this.icon,
     this.keyboardType,
     this.validator,
+    this.onChanged,
+    this.suffixIcon,
+    this.helperError,
   });
 
   final String label;
@@ -319,6 +431,13 @@ class _CampoDireccion extends StatelessWidget {
   final IconData? icon;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final ValueChanged<String>? onChanged;
+  final Widget? suffixIcon;
+
+  /// Mensaje de error "en vivo" (ej. "ese código postal no existe") que se
+  /// muestra debajo del campo sin depender de que se intente enviar el
+  /// formulario, a diferencia de [validator].
+  final String? helperError;
 
   @override
   Widget build(BuildContext context) {
@@ -340,11 +459,13 @@ class _CampoDireccion extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           validator: validator,
+          onChanged: onChanged,
           style: GoogleFonts.inter(fontSize: 15, color: AppColors.onSurface),
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: GoogleFonts.inter(color: AppColors.outline.withValues(alpha: 0.6)),
             prefixIcon: icon != null ? Icon(icon, color: AppColors.outline, size: 20) : null,
+            suffixIcon: suffixIcon,
             filled: true,
             fillColor: AppColors.surfaceContainerLowest,
             contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -366,6 +487,16 @@ class _CampoDireccion extends StatelessWidget {
             ),
           ),
         ),
+        if (helperError != null) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              helperError!,
+              style: GoogleFonts.inter(fontSize: 12, color: AppColors.error),
+            ),
+          ),
+        ],
       ],
     );
   }

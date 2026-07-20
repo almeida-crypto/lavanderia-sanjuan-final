@@ -126,14 +126,17 @@ class ServicesView extends StatelessWidget {
 
         // Services List
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            physics: const BouncingScrollPhysics(),
-            itemCount: servicios.length,
-            itemBuilder: (context, index) {
-              final servicio = servicios[index];
-              return _buildServiceCard(context, provider, servicio);
-            },
+          child: RefreshIndicator(
+            onRefresh: provider.cargarServicios,
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              itemCount: servicios.length,
+              itemBuilder: (context, index) {
+                final servicio = servicios[index];
+                return _buildServiceCard(context, provider, servicio);
+              },
+            ),
           ),
         ),
       ],

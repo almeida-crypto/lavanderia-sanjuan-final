@@ -20,6 +20,17 @@ class PedidoService {
     return [];
   }
 
+  /// Trae el pedido tal como está AHORA en el backend (para refrescar la
+  /// pantalla de seguimiento sin tener que salir de la app y volver a
+  /// entrar cuando el admin/empleado cambia el estado).
+  Future<Map<String, dynamic>> obtenerPedido(String id) async {
+    final response = await withTimeout(http.get(Uri.parse('$_baseUrl/pedidos/$id'), headers: ApiConfig.authHeaders));
+    if (response.statusCode != 200) {
+      throw Exception('No se pudo actualizar el pedido');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> crearPedido(Map<String, dynamic> pedido) async {
     final response = await withTimeout(http.post(
       Uri.parse('$_baseUrl/pedidos'),

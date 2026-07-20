@@ -59,9 +59,12 @@ class DashboardView extends StatelessWidget {
         .where((p) => p.estado != PedidoEstado.cancelado)
         .fold<double>(0, (suma, p) => suma + p.precioFinal);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Column(
+    return RefreshIndicator(
+      onRefresh: admin.cargarPedidos,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Section
@@ -226,6 +229,7 @@ class DashboardView extends StatelessWidget {
           // Recent Orders List
           ...pedidosRecientes.map((pedido) => _buildOrderCard(context, pedido)),
         ],
+        ),
       ),
     );
   }

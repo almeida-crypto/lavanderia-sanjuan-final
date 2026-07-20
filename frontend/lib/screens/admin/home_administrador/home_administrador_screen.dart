@@ -39,6 +39,17 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
     setState(() {
       _selectedIndex = index;
     });
+    // Las 4 pestañas viven en un IndexedStack (para no perder el scroll/estado
+    // de cada una), así que solo cargaban sus datos una vez al iniciar sesión
+    // y se quedaban desactualizadas hasta cerrar y volver a abrir la app.
+    // Recargar al cambiar de pestaña resuelve eso sin salir de la app.
+    final admin = context.read<AdminProvider>();
+    admin.cargarPedidos();
+    if (index == 2) admin.cargarEmpleados();
+    if (index == 3) {
+      admin.cargarPromociones();
+      admin.cargarOpcionesCatalogo();
+    }
   }
 
   @override

@@ -24,6 +24,13 @@ class TintoreriaScreen extends StatefulWidget {
 
 class _TintoreriaScreenState extends State<TintoreriaScreen> {
   int _tierSeleccionado = 0;
+  int _cantidad = 1;
+
+  void _incrementarCantidad() => setState(() => _cantidad++);
+
+  void _decrementarCantidad() {
+    if (_cantidad > 1) setState(() => _cantidad--);
+  }
 
   void _onTabSelected(AppBottomTab tab) {
     switch (tab) {
@@ -52,6 +59,7 @@ class _TintoreriaScreenState extends State<TintoreriaScreen> {
       AgendarRecoleccionScreen.route(
         servicioInicial: TipoServicio.tintoreria,
         opcionAcabadoInicial: tier,
+        cantidadInicial: _cantidad,
       ),
     );
   }
@@ -121,6 +129,14 @@ class _TintoreriaScreenState extends State<TintoreriaScreen> {
                     ],
                     const SizedBox(height: 32),
                     const _InstruccionesEspecialesCard(),
+                    const SizedBox(height: 32),
+                    _SectionHeader(icon: Icons.add_shopping_cart_rounded, title: 'Cantidad de prendas'),
+                    const SizedBox(height: 16),
+                    _CantidadCard(
+                      cantidad: _cantidad,
+                      onIncrementar: _incrementarCantidad,
+                      onDecrementar: _decrementarCantidad,
+                    ),
                     if (opciones.isNotEmpty) ...[
                       const SizedBox(height: 32),
                       _SectionHeader(icon: Icons.sell_outlined, title: 'Tarifas'),
@@ -384,6 +400,101 @@ class _InstruccionesEspecialesCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CantidadCard extends StatelessWidget {
+  const _CantidadCard({
+    required this.cantidad,
+    required this.onIncrementar,
+    required this.onDecrementar,
+  });
+
+  final int cantidad;
+  final VoidCallback onIncrementar;
+  final VoidCallback onDecrementar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.surfaceVariant),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              '¿Cuántas prendas aproximadamente?',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.onSurface,
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              _QtyButton(
+                icon: Icons.remove_rounded,
+                bg: AppColors.surfaceVariant,
+                iconColor: AppColors.primary,
+                onTap: onDecrementar,
+              ),
+              SizedBox(
+                width: 32,
+                child: Text(
+                  '$cantidad',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+              ),
+              _QtyButton(
+                icon: Icons.add_rounded,
+                bg: AppColors.primary,
+                iconColor: Colors.white,
+                onTap: onIncrementar,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QtyButton extends StatelessWidget {
+  const _QtyButton({
+    required this.icon,
+    required this.bg,
+    required this.iconColor,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color bg;
+  final Color iconColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+        child: Icon(icon, size: 18, color: iconColor),
       ),
     );
   }
