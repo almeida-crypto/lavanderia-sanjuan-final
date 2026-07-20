@@ -171,13 +171,12 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
   String get unidad => servicioReal?.unidad ?? servicioInfo.unidad;
 
   double get _precioUnitario =>
-      (servicioReal?.precio ?? servicioInfo.totalEstimado) + (_opcionAcabado?.precioAdicional ?? 0);
+      (servicioReal?.precio ?? servicioInfo.totalEstimado);
 
   double get totalEstimado => _precioUnitario * _cantidad;
 
-  /// Cuánto del total corresponde a la opción de acabado elegida (para
-  /// desglosarlo igual que lo hace el panel admin al mostrar el pedido).
-  double get montoOpcionAcabado => (_opcionAcabado?.precioAdicional ?? 0) * _cantidad;
+  /// Ya no hay cargos adicionales por opciones de acabado (precio único)
+  double get montoOpcionAcabado => 0;
 
   double get descuento => totalEstimado * tasaDescuento;
 

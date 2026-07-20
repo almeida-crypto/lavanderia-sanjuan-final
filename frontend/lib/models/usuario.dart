@@ -1,4 +1,4 @@
-enum UserRole { cliente, administrador, empleado }
+enum UserRole { cliente, administrador, empleado, repartidor }
 
 UserRole userRoleFromString(String? value) {
   switch (value?.toLowerCase()) {
@@ -9,6 +9,10 @@ UserRole userRoleFromString(String? value) {
     case 'employee':
     case 'staff':
       return UserRole.empleado;
+    case 'repartidor':
+    case 'driver':
+    case 'delivery':
+      return UserRole.repartidor;
     case 'cliente':
     default:
       return UserRole.cliente;

@@ -15,6 +15,7 @@ import 'screens/admin/home_administrador/home_administrador_screen.dart';
 import 'screens/auth/login/login_screen.dart';
 import 'screens/cliente/home_cliente/home_cliente_screen.dart';
 import 'screens/empleado/home_empleado/home_empleado_screen.dart';
+import 'screens/repartidor/home_repartidor/home_repartidor_screen.dart';
 import 'utils/app_colors.dart';
 import 'utils/app_scroll_behavior.dart';
 
@@ -79,9 +80,14 @@ class AuthWrapper extends StatelessWidget {
       context.read<MetodosPagoProvider>().cargarParaUsuario(usuario.id);
     });
 
+    final esEmpleado = usuario.rol == UserRole.empleado ||
+        context.read<AdminProvider>().esEmpleadoEmail(usuario.correo);
+
     if (usuario.rol == UserRole.administrador) {
       return const HomeAdministradorScreen();
-    } else if (usuario.rol == UserRole.empleado) {
+    } else if (usuario.rol == UserRole.repartidor) {
+      return const HomeRepartidorScreen();
+    } else if (esEmpleado) {
       return const HomeEmpleadoScreen();
     } else {
       return const HomeClienteScreen();
