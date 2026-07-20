@@ -18,54 +18,6 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
   late PedidoEstado _seleccionado = widget.pedido.estado;
   bool _isSaving = false;
 
-  bool _esTransicionValida(PedidoEstado actual, PedidoEstado destino) {
-    if (actual == destino) return true;
-
-    // Final states cannot transition to anything
-    if (actual == PedidoEstado.entregado || actual == PedidoEstado.cancelado) {
-      return false;
-    }
-
-    // Any active state can transition to 'atencion' (to raise an alert)
-    if (destino == PedidoEstado.atencion) {
-      return true;
-    }
-
-    // If currently in 'atencion', can transition to any operational state to resolve it
-    if (actual == PedidoEstado.atencion) {
-      return destino != PedidoEstado.cancelado && destino != PedidoEstado.entregado;
-    }
-
-    switch (actual) {
-      case PedidoEstado.recibido:
-        return destino == PedidoEstado.asignado || destino == PedidoEstado.enPlanta;
-      case PedidoEstado.asignado:
-        return destino == PedidoEstado.enPlanta;
-      case PedidoEstado.enPlanta:
-        return destino == PedidoEstado.lavando;
-      case PedidoEstado.lavando:
-        return destino == PedidoEstado.secandoDoblado;
-      case PedidoEstado.secandoDoblado:
-        return destino == PedidoEstado.listo || destino == PedidoEstado.enCamino;
-      case PedidoEstado.listo:
-        return destino == PedidoEstado.enCamino || destino == PedidoEstado.entregado;
-      case PedidoEstado.enCamino:
-        return destino == PedidoEstado.entregado;
-      default:
-        return false;
-    }
-  }
-
-  bool _deberiaMostrarEstado(PedidoEstado actual, PedidoEstado estado) {
-    if (estado == PedidoEstado.cancelado) {
-      return actual == PedidoEstado.cancelado;
-    }
-    if (estado == PedidoEstado.atencion) {
-      return actual == PedidoEstado.atencion || (actual != PedidoEstado.entregado && actual != PedidoEstado.cancelado);
-    }
-    return true;
-  }
-
   Future<void> _guardar(BuildContext context, PedidoAdmin currentPedido) async {
     setState(() => _isSaving = true);
     try {
@@ -181,76 +133,51 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.surfaceVariant),
                 ),
-                child: Builder(
-                  builder: (context) {
-                    final estadosAMostrar = PedidoEstado.values
-                        .where((e) => _deberiaMostrarEstado(currentPedido.estado, e))
-                        .toList();
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      padding: EdgeInsets.zero,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: estadosAMostrar.length,
-                      itemBuilder: (context, index) {
-                        final estado = estadosAMostrar[index];
-                        final isSelected = _seleccionado == estado;
-                        final esValida = _esTransicionValida(currentPedido.estado, estado);
-                        return Column(
-                          children: [
-                            RadioListTile<PedidoEstado>.adaptive(
-                              value: estado,
-                              groupValue: _seleccionado,
-                              activeColor: AppColors.primary,
-                              onChanged: esValida
-                                  ? (val) {
-                                      if (val != null) setState(() => _seleccionado = val);
-                                    }
-                                  : null,
-                              secondary: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? AppColors.primaryFixed
-                                      : (esValida
-                                          ? AppColors.surfaceContainer
-                                          : AppColors.surfaceContainer.withValues(alpha: 0.4)),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  iconoParaEstado(estado),
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : (esValida
-                                          ? AppColors.onSurfaceVariant
-                                          : AppColors.onSurfaceVariant.withValues(alpha: 0.4)),
-                                  size: 18,
-                                ),
-                              ),
-                              title: Text(
-                                estadoToString(estado),
-                                style: GoogleFonts.inter(
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                  color: esValida
-                                      ? AppColors.onSurface
-                                      : AppColors.onSurfaceVariant.withValues(alpha: 0.4),
-                                ),
-                              ),
-                              subtitle: Text(
-                                subtituloParaEstado(estado),
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: esValida
-                                      ? AppColors.onSurfaceVariant
-                                      : AppColors.onSurfaceVariant.withValues(alpha: 0.4),
-                                ),
-                              ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: PedidoEstado.values.length,
+                  itemBuilder: (context, index) {
+                    final estado = PedidoEstado.values[index];
+                    final isSelected = _seleccionado == estado;
+                    return Column(
+                      children: [
+                        RadioListTile<PedidoEstado>.adaptive(
+                          value: estado,
+                          groupValue: _seleccionado,
+                          activeColor: AppColors.primary,
+                          onChanged: (val) {
+                            if (val != null) setState(() => _seleccionado = val);
+                          },
+                          secondary: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.primaryFixed : AppColors.surfaceContainer,
+                              shape: BoxShape.circle,
                             ),
-                            if (index < estadosAMostrar.length - 1)
-                              const Divider(color: AppColors.surfaceVariant, height: 1),
-                          ],
-                        );
-                      },
+                            child: Icon(
+                              iconoParaEstado(estado),
+                              color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+                              size: 18,
+                            ),
+                          ),
+                          title: Text(
+                            estadoToString(estado),
+                            style: GoogleFonts.inter(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: AppColors.onSurface,
+                            ),
+                          ),
+                          subtitle: Text(
+                            subtituloParaEstado(estado),
+                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
+                          ),
+                        ),
+                        if (index < PedidoEstado.values.length - 1)
+                          const Divider(color: AppColors.surfaceVariant, height: 1),
+                      ],
                     );
                   },
                 ),

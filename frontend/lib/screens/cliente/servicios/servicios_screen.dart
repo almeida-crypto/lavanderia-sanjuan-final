@@ -7,6 +7,7 @@ import '../../../models/servicio_lavanderia.dart';
 import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
+import '../../../widgets/doble_back_para_salir.dart';
 import '../home_cliente/home_cliente_screen.dart';
 import '../mi_perfil/mi_perfil_screen.dart';
 import '../mis_pedidos/mis_pedidos_screen.dart';
@@ -85,7 +86,14 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
     final items = catalogoParaMostrar(reales);
     final servicios = items.where((s) => s.nombre.toLowerCase().contains(_query.toLowerCase())).toList();
 
-    return Scaffold(
+    return DobleBackParaSalir(
+      antesDeSalir: () {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeClienteScreen()),
+        );
+        return true;
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
@@ -176,6 +184,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
       bottomNavigationBar: AppBottomNavBar(
         currentTab: AppBottomTab.services,
         onTabSelected: _onTabSelected,
+      ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/admin_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/doble_back_para_salir.dart';
 import '../../admin/home_administrador/dashboard_view.dart';
 import '../../admin/home_administrador/perfil_administrador_screen.dart';
 import '../../admin/pedidos/orders_view.dart';
@@ -38,7 +39,15 @@ class _HomeEmpleadoScreenState extends State<HomeEmpleadoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return DobleBackParaSalir(
+      antesDeSalir: () {
+        if (_selectedIndex != 0) {
+          _onItemTapped(0);
+          return true;
+        }
+        return false;
+      },
+      child: Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
@@ -120,6 +129,7 @@ class _HomeEmpleadoScreenState extends State<HomeEmpleadoScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

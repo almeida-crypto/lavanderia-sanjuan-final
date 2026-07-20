@@ -12,6 +12,7 @@ import '../../../services/pedido_service.dart';
 import '../../../services/promocion_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
+import '../../../widgets/doble_back_para_salir.dart';
 import '../mi_perfil/mi_perfil_screen.dart';
 import '../mis_pedidos/mis_pedidos_screen.dart';
 import '../notificaciones/notificaciones_screen.dart';
@@ -126,7 +127,8 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
   Widget build(BuildContext context) {
     final nombre = context.watch<AuthProvider>().currentUser?.nombre ?? 'Usuario';
 
-    return Scaffold(
+    return DobleBackParaSalir(
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
@@ -230,6 +232,7 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
       bottomNavigationBar: AppBottomNavBar(
         currentTab: AppBottomTab.home,
         onTabSelected: (tab) => _onTabSelected(context, tab),
+      ),
       ),
     );
   }

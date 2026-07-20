@@ -1,3 +1,27 @@
+import 'package:http/http.dart' as http;
+
+/// El backend gratuito de Render se "duerme" tras un rato sin tráfico y
+/// tarda hasta medio minuto en despertar en la siguiente petición. Sin un
+/// límite de tiempo, las llamadas se quedan esperando indefinidamente y la
+/// pantalla parece congelada (botón sin respuesta, sin error, sin nada).
+class ServidorLentoException implements Exception {
+  const ServidorLentoException();
+
+  @override
+  String toString() =>
+      'El servidor está tardando en responder (puede estar "despertando"). Intenta de nuevo en unos segundos.';
+}
+
+/// Envuelve cualquier llamada http.get/post/put/delete con un límite de
+/// tiempo razonable, para que un backend dormido dé un error claro en vez de
+/// dejar la pantalla colgada sin ninguna señal de qué está pasando.
+Future<http.Response> withTimeout(Future<http.Response> request) {
+  return request.timeout(
+    const Duration(seconds: 30),
+    onTimeout: () => throw const ServidorLentoException(),
+  );
+}
+
 /// Configuración central de la URL del backend.
 class ApiConfig {
   const ApiConfig._();

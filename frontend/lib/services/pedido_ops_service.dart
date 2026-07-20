@@ -8,11 +8,11 @@ class PedidoOpsService {
   String get _baseUrl => ApiConfig.baseUrl;
 
   Future<Map<String, dynamic>> cancelarPedido(String pedidoId, {required String razon, String? comentarios}) async {
-    final response = await http.post(
+    final response = await withTimeout(http.post(
       Uri.parse('$_baseUrl/pedidos/$pedidoId/cancelar'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'razon': razon, 'comentarios': comentarios}),
-    );
+    ));
 
     if (response.statusCode != 200) {
       throw Exception('No se pudo cancelar el pedido');
@@ -22,11 +22,11 @@ class PedidoOpsService {
   }
 
   Future<Map<String, dynamic>> calificarPedido(String pedidoId, {required int calificacionGeneral, String? resena}) async {
-    final response = await http.post(
+    final response = await withTimeout(http.post(
       Uri.parse('$_baseUrl/pedidos/$pedidoId/calificar'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'calificacionGeneral': calificacionGeneral, 'resena': resena}),
-    );
+    ));
 
     if (response.statusCode != 200) {
       throw Exception('No se pudo enviar la calificación');
@@ -36,11 +36,11 @@ class PedidoOpsService {
   }
 
   Future<Map<String, dynamic>> reportarProblema(String pedidoId, {required String tipo, String? detalles}) async {
-    final response = await http.post(
+    final response = await withTimeout(http.post(
       Uri.parse('$_baseUrl/pedidos/$pedidoId/reportar'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'tipo': tipo, 'detalles': detalles}),
-    );
+    ));
 
     if (response.statusCode != 200) {
       throw Exception('No se pudo enviar el reporte');
