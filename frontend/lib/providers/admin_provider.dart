@@ -105,6 +105,12 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool esEmpleadoEmail(String email) {
+    if (email.isEmpty) return false;
+    final lower = email.trim().toLowerCase();
+    return _empleados.any((e) => e.correo.trim().toLowerCase() == lower && (e.rol == UserRole.empleado || e.rol == UserRole.repartidor));
+  }
+
   /// Limpia los datos de la sesión del admin/empleado saliente para que la
   /// próxima cuenta que inicie sesión en el dispositivo no vea (ni por un
   /// instante) pedidos o personal de la cuenta anterior.
