@@ -12,7 +12,7 @@ class DireccionService {
     final uri = Uri.parse('$_baseUrl/direcciones').replace(
       queryParameters: {'usuarioId': usuarioId},
     );
-    final response = await http.get(uri, headers: ApiConfig.authHeaders);
+    final response = await withTimeout(http.get(uri, headers: ApiConfig.authHeaders));
     if (response.statusCode != 200) {
       throw Exception('No se pudieron cargar las direcciones');
     }
@@ -25,11 +25,11 @@ class DireccionService {
 
   Future<Direccion> crearDireccion(String usuarioId, Direccion direccion) async {
     final payload = direccion.toJson()..['usuarioId'] = usuarioId;
-    final response = await http.post(
+    final response = await withTimeout(http.post(
       Uri.parse('$_baseUrl/direcciones'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode(payload),
-    );
+    ));
 
     if (response.statusCode != 201) {
       throw Exception('No se pudo guardar la dirección');
@@ -40,11 +40,11 @@ class DireccionService {
 
   Future<Direccion> actualizarDireccion(String usuarioId, String id, Direccion direccion) async {
     final payload = direccion.toJson()..['usuarioId'] = usuarioId;
-    final response = await http.put(
+    final response = await withTimeout(http.put(
       Uri.parse('$_baseUrl/direcciones/$id'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode(payload),
-    );
+    ));
 
     if (response.statusCode != 200) {
       throw Exception('No se pudo actualizar la dirección');
@@ -54,7 +54,7 @@ class DireccionService {
   }
 
   Future<void> eliminarDireccion(String id) async {
-    final response = await http.delete(Uri.parse('$_baseUrl/direcciones/$id'), headers: ApiConfig.authHeaders);
+    final response = await withTimeout(http.delete(Uri.parse('$_baseUrl/direcciones/$id'), headers: ApiConfig.authHeaders));
     if (response.statusCode != 200) {
       throw Exception('No se pudo eliminar la dirección');
     }

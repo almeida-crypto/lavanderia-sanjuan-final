@@ -12,7 +12,7 @@ class MetodoPagoService {
     final uri = Uri.parse('$_baseUrl/metodos-pago').replace(
       queryParameters: {'usuarioId': usuarioId},
     );
-    final response = await http.get(uri, headers: ApiConfig.authHeaders);
+    final response = await withTimeout(http.get(uri, headers: ApiConfig.authHeaders));
     if (response.statusCode != 200) {
       throw Exception('No se pudieron cargar los métodos de pago');
     }
@@ -23,11 +23,11 @@ class MetodoPagoService {
 
   Future<TarjetaGuardada> guardarMetodoPago(String usuarioId, TarjetaGuardada tarjeta) async {
     final payload = tarjeta.toJson()..['usuarioId'] = usuarioId;
-    final response = await http.post(
+    final response = await withTimeout(http.post(
       Uri.parse('$_baseUrl/metodos-pago'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode(payload),
-    );
+    ));
 
     if (response.statusCode != 201) {
       throw Exception('No se pudo guardar el método de pago');
@@ -37,18 +37,18 @@ class MetodoPagoService {
   }
 
   Future<void> eliminarMetodoPago(String id) async {
-    final response = await http.delete(Uri.parse('$_baseUrl/metodos-pago/$id'), headers: ApiConfig.authHeaders);
+    final response = await withTimeout(http.delete(Uri.parse('$_baseUrl/metodos-pago/$id'), headers: ApiConfig.authHeaders));
     if (response.statusCode != 200) {
       throw Exception('No se pudo eliminar el método de pago');
     }
   }
 
   Future<TarjetaGuardada> marcarPrincipal(String usuarioId, String id) async {
-    final response = await http.put(
+    final response = await withTimeout(http.put(
       Uri.parse('$_baseUrl/metodos-pago/$id/principal'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'usuarioId': usuarioId}),
-    );
+    ));
     if (response.statusCode != 200) {
       throw Exception('No se pudo marcar la tarjeta como principal');
     }

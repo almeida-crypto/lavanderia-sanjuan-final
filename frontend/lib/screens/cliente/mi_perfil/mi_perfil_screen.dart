@@ -8,6 +8,7 @@ import '../../../providers/metodos_pago_provider.dart';
 import '../../../providers/preferencias_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
+import '../../../widgets/doble_back_para_salir.dart';
 import '../../auth/login/login_screen.dart';
 import '../../auth/terminos_condiciones/politica_privacidad_screen.dart';
 import '../../auth/terminos_condiciones/terminos_condiciones_screen.dart';
@@ -78,10 +79,12 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
 
     if (confirmado != true || !mounted) return;
 
-    context.read<AuthProvider>().logout();
     context.read<PreferenciasProvider>().limpiar();
     context.read<DireccionesProvider>().limpiar();
     context.read<MetodosPagoProvider>().limpiar();
+    await context.read<AuthProvider>().logout();
+    if (!mounted) return;
+
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
@@ -95,7 +98,14 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
     final ecoFriendly = preferencias.ecoFriendly;
     final fragancia = preferencias.fragancia;
 
-    return Scaffold(
+    return DobleBackParaSalir(
+      antesDeSalir: () {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeClienteScreen()),
+        );
+        return true;
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
@@ -293,6 +303,7 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
       bottomNavigationBar: AppBottomNavBar(
         currentTab: AppBottomTab.profile,
         onTabSelected: _onTabSelected,
+      ),
       ),
     );
   }

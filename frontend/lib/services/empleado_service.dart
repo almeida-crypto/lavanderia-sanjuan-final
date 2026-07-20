@@ -28,7 +28,7 @@ class EmpleadoService {
   }
 
   Future<List<Usuario>> listar() async {
-    final response = await http.get(Uri.parse('$_baseUrl/empleados'), headers: ApiConfig.authHeaders);
+    final response = await withTimeout(http.get(Uri.parse('$_baseUrl/empleados'), headers: ApiConfig.authHeaders));
     if (response.statusCode != 200) {
       throw EmpleadoException(_extraerMensaje(response, 'No se pudo cargar el personal'));
     }
@@ -42,7 +42,7 @@ class EmpleadoService {
     required String password,
     required UserRole rol,
   }) async {
-    final response = await http.post(
+    final response = await withTimeout(http.post(
       Uri.parse('$_baseUrl/empleados'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({
@@ -51,7 +51,7 @@ class EmpleadoService {
         'password': password,
         'rol': rol.name,
       }),
-    );
+    ));
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw EmpleadoException(_extraerMensaje(response, 'No se pudo crear la cuenta'));
     }
@@ -59,11 +59,11 @@ class EmpleadoService {
   }
 
   Future<Usuario> cambiarRol(String id, UserRole rol, {required String actorId}) async {
-    final response = await http.put(
+    final response = await withTimeout(http.put(
       Uri.parse('$_baseUrl/empleados/$id/rol'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'rol': rol.name, 'actorId': actorId}),
-    );
+    ));
     if (response.statusCode != 200) {
       throw EmpleadoException(_extraerMensaje(response, 'No se pudo cambiar el rol'));
     }
@@ -71,11 +71,11 @@ class EmpleadoService {
   }
 
   Future<Usuario> cambiarEstado(String id, bool activa, {required String actorId}) async {
-    final response = await http.put(
+    final response = await withTimeout(http.put(
       Uri.parse('$_baseUrl/empleados/$id/estado'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'activa': activa, 'actorId': actorId}),
-    );
+    ));
     if (response.statusCode != 200) {
       throw EmpleadoException(_extraerMensaje(response, 'No se pudo cambiar el estado de la cuenta'));
     }
@@ -88,7 +88,7 @@ class EmpleadoService {
     required String actorCorreo,
     required String actorPassword,
   }) async {
-    final response = await http.put(
+    final response = await withTimeout(http.put(
       Uri.parse('$_baseUrl/empleados/$id/password'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({
@@ -96,7 +96,7 @@ class EmpleadoService {
         'actorCorreo': actorCorreo,
         'actorPassword': actorPassword,
       }),
-    );
+    ));
     if (response.statusCode != 200) {
       throw EmpleadoException(_extraerMensaje(response, 'No se pudo cambiar la contraseña'));
     }
@@ -104,10 +104,10 @@ class EmpleadoService {
   }
 
   Future<void> eliminar(String id, {required String actorId}) async {
-    final response = await http.delete(
+    final response = await withTimeout(http.delete(
       Uri.parse('$_baseUrl/empleados/$id?actorId=$actorId'),
       headers: ApiConfig.authHeaders,
-    );
+    ));
     if (response.statusCode != 200) {
       throw EmpleadoException(_extraerMensaje(response, 'No se pudo eliminar la cuenta'));
     }

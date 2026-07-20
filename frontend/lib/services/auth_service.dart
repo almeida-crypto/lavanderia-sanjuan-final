@@ -17,6 +17,22 @@ class AuthException implements Exception {
 class AuthService {
   String get _baseUrl => ApiConfig.baseUrl;
 
+  /// El backend gratuito de Render se "duerme" tras un rato sin tráfico y
+  /// tarda hasta medio minuto en despertar en la siguiente petición. Sin un
+  /// límite de tiempo, http.post/put se queda esperando indefinidamente y la
+  /// pantalla parece congelada (botón sin respuesta, sin error, sin nada).
+  /// Con el timeout, en vez de eso se avisa qué está pasando.
+  static const _timeout = Duration(seconds: 30);
+
+  Future<http.Response> _conTimeout(Future<http.Response> request) {
+    return request.timeout(
+      _timeout,
+      onTimeout: () => throw AuthException(
+        'El servidor está tardando en responder (puede estar "despertando"). Intenta de nuevo en unos segundos.',
+      ),
+    );
+  }
+
   /// Llama al endpoint de login del backend.
   ///
   /// El backend es quien valida la contraseña y decide el rol del usuario
@@ -31,11 +47,11 @@ class AuthService {
     required String correo,
     required String password,
   }) async {
-    final response = await http.post(
+    final response = await _conTimeout(http.post(
       Uri.parse('$_baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'correo': correo, 'password': password}),
-    );
+    ));
 
     if (response.statusCode == 401 || response.statusCode == 404) {
       throw AuthException('Correo o contraseña incorrectos');
@@ -62,7 +78,7 @@ class AuthService {
     required String telefono,
     required String password,
   }) async {
-    final response = await http.post(
+    final response = await _conTimeout(http.post(
       Uri.parse('$_baseUrl/auth/registro'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -72,7 +88,7 @@ class AuthService {
         'telefono': telefono,
         'password': password,
       }),
-    );
+    ));
 
     if (response.statusCode == 409) {
       throw AuthException('Ese correo ya está registrado');
@@ -90,7 +106,7 @@ class AuthService {
   /// actualiza los datos. Este servicio solo debe mandar los campos y
   /// devolver el [Usuario] actualizado que responda el backend.
   Future<Usuario> actualizarPerfil(Usuario usuario) async {
-    final response = await http.put(
+    final response = await _conTimeout(http.put(
       Uri.parse('$_baseUrl/usuarios/${usuario.id}'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({
@@ -98,7 +114,7 @@ class AuthService {
         'correo': usuario.correo,
         'telefono': usuario.telefono,
       }),
-    );
+    ));
 
     if (response.statusCode != 200) {
       throw AuthException('No se pudo actualizar el perfil, intenta de nuevo');
@@ -119,7 +135,7 @@ class AuthService {
     required String passwordActual,
     required String passwordNueva,
   }) async {
-    final response = await http.post(
+    final response = await _conTimeout(http.post(
       Uri.parse('$_baseUrl/usuarios/cambiar-password'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({
@@ -127,7 +143,7 @@ class AuthService {
         'passwordActual': passwordActual,
         'passwordNueva': passwordNueva,
       }),
-    );
+    ));
 
     if (response.statusCode == 401) {
       throw AuthException('La contraseña actual es incorrecta');
@@ -143,11 +159,11 @@ class AuthService {
   /// revelar qué correos están registrados). Este servicio solo debe
   /// lanzar [AuthException] si la petición falla por completo.
   Future<void> solicitarRecuperacion({required String correo}) async {
-    final response = await http.post(
+    final response = await _conTimeout(http.post(
       Uri.parse('$_baseUrl/auth/recuperar-password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'correo': correo}),
-    );
+    ));
 
     if (response.statusCode != 200) {
       throw AuthException('No se pudo enviar el correo, intenta de nuevo');

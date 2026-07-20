@@ -162,6 +162,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     _currentUser = null;
+    _isLoading = false;
+    _errorMessage = null;
     ApiConfig.authToken = null;
     await _eliminarUsuarioLocal();
     notifyListeners();

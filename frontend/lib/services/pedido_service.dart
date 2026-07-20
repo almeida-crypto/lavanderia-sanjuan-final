@@ -9,7 +9,7 @@ class PedidoService {
 
   Future<List<Map<String, dynamic>>> listarPedidos({String? clienteId}) async {
     final uri = Uri.parse('$_baseUrl/pedidos').replace(queryParameters: clienteId == null ? null : {'clienteId': clienteId});
-    final response = await http.get(uri, headers: ApiConfig.authHeaders);
+    final response = await withTimeout(http.get(uri, headers: ApiConfig.authHeaders));
     if (response.statusCode != 200) {
       throw Exception('No se pudieron cargar los pedidos');
     }
@@ -21,11 +21,11 @@ class PedidoService {
   }
 
   Future<Map<String, dynamic>> crearPedido(Map<String, dynamic> pedido) async {
-    final response = await http.post(
+    final response = await withTimeout(http.post(
       Uri.parse('$_baseUrl/pedidos'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode(pedido),
-    );
+    ));
     if (response.statusCode != 201) {
       throw Exception('No se pudo crear el pedido');
     }
@@ -33,28 +33,27 @@ class PedidoService {
   }
 
   Future<Map<String, dynamic>> actualizarEstado(String id, String estado) async {
-    final response = await http.put(
+    final response = await withTimeout(http.put(
       Uri.parse('$_baseUrl/pedidos/$id/estado'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'estado': estado}),
-    );
+    ));
     if (response.statusCode != 200) {
       throw Exception('No se pudo actualizar el estado');
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-
   Future<Map<String, dynamic>> confirmarPrecio(
     String id, {
     double? pesoConfirmado,
     required double totalConfirmado,
   }) async {
-    final response = await http.put(
+    final response = await withTimeout(http.put(
       Uri.parse('$_baseUrl/pedidos/$id/confirmar-precio'),
       headers: ApiConfig.jsonHeaders,
       body: jsonEncode({'pesoConfirmado': pesoConfirmado, 'totalConfirmado': totalConfirmado}),
-    );
+    ));
     if (response.statusCode != 200) {
       throw Exception('No se pudo confirmar el precio');
     }
