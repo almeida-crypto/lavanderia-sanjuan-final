@@ -6,7 +6,7 @@ import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../models/usuario.dart';
 import '../../../utils/app_colors.dart';
-import '../../auth/login/login_screen.dart';
+import '../../auth/login/bienvenida_screen.dart';
 
 class PerfilAdministradorScreen extends StatelessWidget {
   const PerfilAdministradorScreen({super.key});
@@ -37,7 +37,7 @@ class PerfilAdministradorScreen extends StatelessWidget {
     if (!context.mounted) return;
 
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
       (route) => false,
     );
   }

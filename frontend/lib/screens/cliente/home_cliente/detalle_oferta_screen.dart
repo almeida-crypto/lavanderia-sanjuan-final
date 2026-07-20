@@ -112,6 +112,13 @@ class _DetalleOfertaScreenState extends State<DetalleOfertaScreen> {
                                 ? 'Aplica solo para ${widget.promocion.servicioAplicable}'
                                 : 'Aplica para todos los servicios',
                           ),
+                          if (widget.promocion.condicionesTexto != null) ...[
+                            const SizedBox(height: 12),
+                            _DetalleItem(
+                              icon: Icons.rule_rounded,
+                              texto: widget.promocion.condicionesTexto!,
+                            ),
+                          ],
                         ],
                       ),
                     ),

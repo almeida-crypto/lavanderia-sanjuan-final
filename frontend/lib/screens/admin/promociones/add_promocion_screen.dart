@@ -21,6 +21,8 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
   late final TextEditingController _tituloController;
   late final TextEditingController _descripcionController;
   late final TextEditingController _descuentoController;
+  late final TextEditingController _usosPorClienteController;
+  late final TextEditingController _cantidadMinimaController;
 
   String? _servicioAplicable;
   late DateTime _fechaInicio;
@@ -36,6 +38,8 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
     _tituloController = TextEditingController(text: p?.titulo ?? '');
     _descripcionController = TextEditingController(text: p?.descripcion ?? '');
     _descuentoController = TextEditingController(text: p?.descuentoPorcentaje.toStringAsFixed(0) ?? '');
+    _usosPorClienteController = TextEditingController(text: p?.usosPorCliente?.toString() ?? '');
+    _cantidadMinimaController = TextEditingController(text: p?.cantidadMinima?.toString() ?? '');
     _servicioAplicable = p?.servicioAplicable;
     _fechaInicio = p?.fechaInicio ?? DateTime.now();
     _fechaFin = p?.fechaFin;
@@ -52,6 +56,8 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
     _tituloController.dispose();
     _descripcionController.dispose();
     _descuentoController.dispose();
+    _usosPorClienteController.dispose();
+    _cantidadMinimaController.dispose();
     super.dispose();
   }
 
@@ -87,6 +93,8 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
       fechaInicio: _fechaInicio,
       fechaFin: _fechaFin,
       activa: _activa,
+      usosPorCliente: int.tryParse(_usosPorClienteController.text.trim()),
+      cantidadMinima: int.tryParse(_cantidadMinimaController.text.trim()),
     );
 
     setState(() => _isSaving = true);
@@ -181,6 +189,54 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
                     return null;
                   },
                   decoration: _decoration('Descuento (%)'),
+                ),
+                const SizedBox(height: 16),
+
+                Text(
+                  'Condiciones (opcional)',
+                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Déjalos vacíos para que el código no tenga límite de usos ni cantidad mínima.',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _usosPorClienteController,
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) return null;
+                          final n = int.tryParse(value.trim());
+                          if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                          return null;
+                        },
+                        decoration: _decoration('Usos por cliente'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _cantidadMinimaController,
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) return null;
+                          final n = int.tryParse(value.trim());
+                          if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                          return null;
+                        },
+                        decoration: _decoration('Mín. de prendas'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Ej. "50% en más de 10 prendas" → Descuento 50, Mín. de prendas 10.',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
                 ),
                 const SizedBox(height: 16),
 

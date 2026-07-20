@@ -23,6 +23,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<SupabaseService>();
 builder.Services.AddSingleton<SupabaseDataService>();
+builder.Services.AddSingleton<PromocionValidationService>();
 
 // Cada petición protegida trae "Authorization: Bearer <token>"; este esquema
 // valida ese token contra Supabase y arma el rol real del que llama, para

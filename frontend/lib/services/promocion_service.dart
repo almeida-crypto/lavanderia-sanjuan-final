@@ -5,8 +5,48 @@ import 'package:http/http.dart' as http;
 import '../models/promocion.dart';
 import '../utils/api_config.dart';
 
+class PromocionException implements Exception {
+  PromocionException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class PromocionService {
   String get _baseUrl => ApiConfig.baseUrl;
+
+  String _extraerMensaje(http.Response response, String fallback) {
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map && body['message'] is String) {
+        return body['message'] as String;
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
+  /// Le pregunta al backend si [codigo] realmente sirve para este cliente y
+  /// este pedido (vigencia, servicio, cantidad mínima de prendas y usos ya
+  /// gastados por este cliente) en vez de decidirlo con lo que ya se
+  /// descargó en [listar]. Lanza [PromocionException] con el motivo exacto
+  /// si no aplica.
+  Future<Promocion> validar({
+    required String codigo,
+    required String servicio,
+    required int cantidad,
+  }) async {
+    final response = await withTimeout(http.post(
+      Uri.parse('$_baseUrl/promociones/validar'),
+      headers: ApiConfig.jsonHeaders,
+      body: jsonEncode({'codigo': codigo, 'servicio': servicio, 'cantidad': cantidad}),
+    ));
+    if (response.statusCode != 200) {
+      throw PromocionException(_extraerMensaje(response, 'Ese código no es válido'));
+    }
+    return Promocion.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
 
   Future<List<Promocion>> listar() async {
     final response = await withTimeout(http.get(Uri.parse('$_baseUrl/promociones')));

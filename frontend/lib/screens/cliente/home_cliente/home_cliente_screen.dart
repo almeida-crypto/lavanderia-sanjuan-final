@@ -24,6 +24,7 @@ import '../servicios/planchado_screen.dart';
 import '../servicios/servicios_screen.dart';
 import '../servicios/tintoreria_screen.dart';
 import 'detalle_oferta_screen.dart';
+import 'ofertas_screen.dart';
 
 class HomeClienteScreen extends StatefulWidget {
   const HomeClienteScreen({super.key});
@@ -36,7 +37,7 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
   final _promocionService = PromocionService();
   bool _isLoading = true;
   Pedido? _pedidoActivo;
-  Promocion? _promocionVigente;
+  List<Promocion> _promocionesVigentes = [];
 
   @override
   void initState() {
@@ -49,16 +50,10 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
   Future<void> _cargarPromocionVigente() async {
     try {
       final promociones = await _promocionService.listar();
-      Promocion? vigente;
-      for (final promocion in promociones) {
-        if (promocion.vigente) {
-          vigente = promocion;
-          break;
-        }
-      }
-      if (mounted) setState(() => _promocionVigente = vigente);
+      final vigentes = promociones.where((p) => p.vigente).toList();
+      if (mounted) setState(() => _promocionesVigentes = vigentes);
     } catch (_) {
-      // Sin oferta si el backend no responde; el banner simplemente no aparece.
+      // Sin ofertas si el backend no responde; el banner simplemente no aparece.
     }
   }
 
@@ -216,14 +211,32 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
               _ServicesSection(
                 onServicioTap: (servicio) => _onServicioTap(context, servicio),
               ),
-              if (_promocionVigente != null) ...[
+              if (_promocionesVigentes.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 _WeeklyOfferBanner(
-                  promocion: _promocionVigente!,
+                  promocion: _promocionesVigentes.first,
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => DetalleOfertaScreen(promocion: _promocionVigente!)),
+                    MaterialPageRoute(
+                      builder: (_) => DetalleOfertaScreen(promocion: _promocionesVigentes.first),
+                    ),
                   ),
                 ),
+                if (_promocionesVigentes.length > 1) ...[
+                  const SizedBox(height: 12),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => OfertasScreen(promociones: _promocionesVigentes),
+                        ),
+                      ),
+                      child: Text(
+                        'Ver todas las ofertas (${_promocionesVigentes.length})',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.primary),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),

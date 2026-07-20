@@ -11,8 +11,13 @@ namespace backend.Controllers;
 public class PedidosController : ControllerBase
 {
     private readonly SupabaseDataService _data;
+    private readonly PromocionValidationService _validacionPromo;
 
-    public PedidosController(SupabaseDataService data) => _data = data;
+    public PedidosController(SupabaseDataService data, PromocionValidationService validacionPromo)
+    {
+        _data = data;
+        _validacionPromo = validacionPromo;
+    }
 
     private string? CallerId => User.FindFirstValue(ClaimTypes.NameIdentifier);
     private string? CallerRol => User.FindFirstValue(ClaimTypes.Role);
@@ -67,6 +72,27 @@ public class PedidosController : ControllerBase
             return Forbid();
         }
 
+        string? codigoPromocion = null;
+        if (!string.IsNullOrWhiteSpace(request.CodigoPromocion))
+        {
+            // Se vuelve a validar aquí (vigencia, cantidad mínima, usos por
+            // cliente) aunque el cliente ya lo haya "aplicado" antes en la
+            // pantalla: entre ese momento y el envío del pedido pudo haberse
+            // agotado, desactivado o vencido, y no queremos que el total con
+            // descuento se cobre sin que el código siga siendo válido.
+            try
+            {
+                var validacion = await _validacionPromo.ValidarAsync(
+                    request.CodigoPromocion, request.ClienteId, request.Servicio, request.CantidadAproximada);
+                if (!validacion.Success)
+                {
+                    return BadRequest(new { message = validacion.ErrorMessage });
+                }
+                codigoPromocion = request.CodigoPromocion.Trim().ToUpperInvariant();
+            }
+            catch (SupabaseDataException ex) { return DataError(ex); }
+        }
+
         try
         {
             var row = await _data.InsertAsync("pedidos", new JsonObject
@@ -86,6 +112,7 @@ public class PedidosController : ControllerBase
                 ["metodo_pago"] = request.MetodoPago,
                 ["opcion_acabado"] = request.OpcionAcabado,
                 ["precio_acabado"] = request.PrecioAcabado,
+                ["codigo_promocion"] = codigoPromocion,
                 ["total"] = request.Total ?? 0m,
                 ["estado"] = "Recibido"
             });
@@ -215,6 +242,7 @@ public class PedidosController : ControllerBase
         MetodoPago = S(row, "metodo_pago"),
         OpcionAcabado = S(row, "opcion_acabado"),
         PrecioAcabado = M(row, "precio_acabado"),
+        CodigoPromocion = S(row, "codigo_promocion"),
         Repartidor = S(row, "repartidor"),
         PesoConfirmado = N(row, "peso_confirmado"),
         TotalConfirmado = M(row, "total_confirmado"),
@@ -256,6 +284,7 @@ public class CrearPedidoRequest
     public string? MetodoPago { get; set; }
     public string? OpcionAcabado { get; set; }
     public decimal? PrecioAcabado { get; set; }
+    public string? CodigoPromocion { get; set; }
     public decimal? Total { get; set; }
 }
 
@@ -288,6 +317,7 @@ public class PedidoDto
     public string? MetodoPago { get; set; }
     public string? OpcionAcabado { get; set; }
     public decimal? PrecioAcabado { get; set; }
+    public string? CodigoPromocion { get; set; }
     public string? Repartidor { get; set; }
     public double? PesoConfirmado { get; set; }
     public decimal? TotalConfirmado { get; set; }

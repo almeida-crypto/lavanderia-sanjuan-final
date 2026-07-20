@@ -120,6 +120,11 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
   /// aquí solo se valida contra lo que el backend realmente tiene guardado.
   double get tasaDescuento => (_promoAplicada?.descuentoPorcentaje ?? 0) / 100;
 
+  /// Valida el código contra el backend (vigencia, servicio, cantidad
+  /// mínima de prendas y usos ya gastados por ESTE cliente, identificado por
+  /// el token de sesión) en vez de decidirlo solo con lo que se ve en el
+  /// celular; así un código con "1 uso por cliente" de verdad no se puede
+  /// reutilizar.
   Future<void> aplicarCodigoPromocional() async {
     final codigo = codigoPromoController.text.trim().toUpperCase();
     if (codigo.isEmpty) return;
@@ -127,28 +132,16 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
     _validandoPromo = true;
     notifyListeners();
     try {
-      final promociones = await _promocionService.listar();
-      Promocion? encontrada;
-      for (final promocion in promociones) {
-        if (promocion.codigo.toUpperCase() == codigo) {
-          encontrada = promocion;
-          break;
-        }
-      }
-
-      if (encontrada == null) {
-        _promoAplicada = null;
-        _mensajePromo = 'Código promocional no válido.';
-      } else if (!encontrada.vigente) {
-        _promoAplicada = null;
-        _mensajePromo = 'Ese código ya no está vigente.';
-      } else if (!encontrada.aplicaAServicio(nombreServicio)) {
-        _promoAplicada = null;
-        _mensajePromo = 'Ese código no aplica para "$nombreServicio".';
-      } else {
-        _promoAplicada = encontrada;
-        _mensajePromo = '¡Código aplicado! ${encontrada.descuentoPorcentaje.round()}% de descuento.';
-      }
+      final encontrada = await _promocionService.validar(
+        codigo: codigo,
+        servicio: nombreServicio,
+        cantidad: _cantidad,
+      );
+      _promoAplicada = encontrada;
+      _mensajePromo = '¡Código aplicado! ${encontrada.descuentoPorcentaje.round()}% de descuento.';
+    } on PromocionException catch (e) {
+      _promoAplicada = null;
+      _mensajePromo = e.message;
     } catch (_) {
       _promoAplicada = null;
       _mensajePromo = 'No se pudo validar el código, intenta de nuevo.';
@@ -241,6 +234,7 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
         'metodoPago': metodoPago,
         'opcionAcabado': _opcionAcabado?.nombre,
         'precioAcabado': _opcionAcabado == null ? null : montoOpcionAcabado,
+        'codigoPromocion': _promoAplicada?.codigo,
         'total': totalConDescuento,
       });
       return Pedido.fromJson(creado);
