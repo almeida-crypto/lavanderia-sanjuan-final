@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../services/notificaciones_store.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/doble_back_para_salir.dart';
 import '../clientes/customers_view.dart';
@@ -22,6 +24,7 @@ class HomeAdministradorScreen extends StatefulWidget {
 
 class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
   int _selectedIndex = 0;
+  int _notificacionesNoLeidas = 0;
 
   late final List<Widget> _views;
 
@@ -34,7 +37,25 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
       const CustomersView(),
       const ServicesView(),
     ];
-    context.read<AdminProvider>().cargarPedidos();
+    context.read<AdminProvider>().cargarPedidos().whenComplete(_actualizarNotificaciones);
+  }
+
+  String _claveDe(PedidoAdmin pedido) => 'pedido_${pedido.id}_${pedido.estado.name}';
+
+  Future<void> _actualizarNotificaciones() async {
+    final usuarioId = context.read<AuthProvider>().currentUser?.id;
+    final store = NotificacionesStore(namespace: 'admin', usuarioId: usuarioId);
+    await store.cargar();
+    final pedidos = context.read<AdminProvider>().pedidos.where(
+          (p) => p.estado == PedidoEstado.recibido || p.estado == PedidoEstado.atencion,
+        );
+    final cantidad = pedidos.where((pedido) {
+      final clave = _claveDe(pedido);
+      return !store.leidas.contains(clave) &&
+          !store.archivadas.contains(clave) &&
+          !store.eliminadas.contains(clave);
+    }).length;
+    if (mounted) setState(() => _notificacionesNoLeidas = cantidad);
   }
 
   void _onItemTapped(int index) {
@@ -46,7 +67,7 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
     // y se quedaban desactualizadas hasta cerrar y volver a abrir la app.
     // Recargar al cambiar de pestaña resuelve eso sin salir de la app.
     final admin = context.read<AdminProvider>();
-    admin.cargarPedidos();
+    admin.cargarPedidos().whenComplete(_actualizarNotificaciones);
     if (index == 2) admin.cargarEmpleados();
     if (index == 3) {
       admin.cargarPromociones();
@@ -97,22 +118,21 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
         ),
         actions: [
           Consumer<AdminProvider>(
-            builder: (context, admin, _) {
-              final pendientes = admin.pedidos
-                  .where((p) =>
-                      p.estado == PedidoEstado.recibido ||
-                      p.estado == PedidoEstado.atencion)
-                  .length;
+            builder: (context, _, __) {
+              final pendientes = _notificacionesNoLeidas;
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
                   IconButton(
                     tooltip: 'Notificaciones',
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const NotificacionesAdminScreen(),
-                      ),
-                    ),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NotificacionesAdminScreen(),
+                        ),
+                      );
+                      await _actualizarNotificaciones();
+                    },
                     icon: const Icon(
                       Icons.notifications_outlined,
                       color: AppColors.primary,

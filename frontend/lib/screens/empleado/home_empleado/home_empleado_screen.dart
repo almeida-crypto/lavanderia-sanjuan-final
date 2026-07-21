@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../services/notificaciones_store.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/doble_back_para_salir.dart';
 import '../../admin/home_administrador/dashboard_view.dart';
@@ -20,6 +22,7 @@ class HomeEmpleadoScreen extends StatefulWidget {
 
 class _HomeEmpleadoScreenState extends State<HomeEmpleadoScreen> {
   int _selectedIndex = 0;
+  int _notificacionesNoLeidas = 0;
 
   late final List<Widget> _views;
 
@@ -30,7 +33,25 @@ class _HomeEmpleadoScreenState extends State<HomeEmpleadoScreen> {
       DashboardView(onViewOrdersTap: () => _onItemTapped(1)),
       const OrdersView(),
     ];
-    context.read<AdminProvider>().cargarPedidos();
+    context.read<AdminProvider>().cargarPedidos().whenComplete(_actualizarNotificaciones);
+  }
+
+  String _claveDe(PedidoAdmin pedido) => 'pedido_${pedido.id}_${pedido.estado.name}';
+
+  Future<void> _actualizarNotificaciones() async {
+    final usuarioId = context.read<AuthProvider>().currentUser?.id;
+    final store = NotificacionesStore(namespace: 'empleado', usuarioId: usuarioId);
+    await store.cargar();
+    final pedidos = context.read<AdminProvider>().pedidos.where(
+          (p) => p.estado == PedidoEstado.recibido || p.estado == PedidoEstado.atencion,
+        );
+    final cantidad = pedidos.where((pedido) {
+      final clave = _claveDe(pedido);
+      return !store.leidas.contains(clave) &&
+          !store.archivadas.contains(clave) &&
+          !store.eliminadas.contains(clave);
+    }).length;
+    if (mounted) setState(() => _notificacionesNoLeidas = cantidad);
   }
 
   void _onItemTapped(int index) {
@@ -39,7 +60,7 @@ class _HomeEmpleadoScreenState extends State<HomeEmpleadoScreen> {
     });
     // Mismo motivo que en el panel de admin: las pestañas viven en un
     // IndexedStack y solo cargaban datos una vez al iniciar sesión.
-    context.read<AdminProvider>().cargarPedidos();
+    context.read<AdminProvider>().cargarPedidos().whenComplete(_actualizarNotificaciones);
   }
 
   @override
@@ -85,22 +106,21 @@ class _HomeEmpleadoScreenState extends State<HomeEmpleadoScreen> {
         ),
         actions: [
           Consumer<AdminProvider>(
-            builder: (context, admin, _) {
-              final pendientes = admin.pedidos
-                  .where((p) =>
-                      p.estado == PedidoEstado.recibido ||
-                      p.estado == PedidoEstado.atencion)
-                  .length;
+            builder: (context, _, __) {
+              final pendientes = _notificacionesNoLeidas;
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
                   IconButton(
                     tooltip: 'Notificaciones',
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const NotificacionesEmpleadoScreen(),
-                      ),
-                    ),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NotificacionesEmpleadoScreen(),
+                        ),
+                      );
+                      await _actualizarNotificaciones();
+                    },
                     icon: const Icon(
                       Icons.notifications_outlined,
                       color: AppColors.primary,

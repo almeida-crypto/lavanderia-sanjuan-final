@@ -199,7 +199,7 @@ class DashboardView extends StatelessWidget {
             },
           ),
           // Shortcut Banner: Configuración de Repartidores
-          InkWell(
+          if (!isEmpleado) InkWell(
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const RepartidoresConfigScreen()),

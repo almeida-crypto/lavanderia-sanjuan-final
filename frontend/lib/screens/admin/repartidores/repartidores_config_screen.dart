@@ -327,6 +327,7 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
   Widget build(BuildContext context) {
     final adminProvider = context.watch<AdminProvider>();
     final currentAdmin = context.watch<AuthProvider>().currentUser;
+    final puedeAdministrar = currentAdmin?.rol == UserRole.administrador;
     final query = _searchController.text.trim().toLowerCase();
 
     final todosEmpleados = adminProvider.empleados;
@@ -354,13 +355,15 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
           style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _abrirDialogoCrearRepartidor(context),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.two_wheeler_rounded),
-        label: Text('Nuevo Repartidor', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-      ),
+      floatingActionButton: puedeAdministrar
+          ? FloatingActionButton.extended(
+              onPressed: () => _abrirDialogoCrearRepartidor(context),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.two_wheeler_rounded),
+              label: Text('Nuevo Repartidor', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: () => adminProvider.cargarEmpleados(),
         child: SingleChildScrollView(

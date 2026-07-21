@@ -150,7 +150,7 @@ class PerfilAdministradorScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              ListTile(
+              if (usuario?.rol == UserRole.administrador) ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),

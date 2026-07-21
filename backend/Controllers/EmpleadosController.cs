@@ -5,7 +5,7 @@ namespace backend.Controllers;
 
 [ApiController]
 [Route("api/empleados")]
-[Authorize(Roles = "administrador")]
+[Authorize]
 public class EmpleadosController : ControllerBase
 {
     private static readonly string[] RolesValidos = ["empleado", "administrador", "repartidor"];
@@ -19,6 +19,7 @@ public class EmpleadosController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "administrador,empleado")]
     public async Task<IActionResult> Listar()
     {
         if (!_supabaseService.IsConfigured)
@@ -31,6 +32,7 @@ public class EmpleadosController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> Crear([FromBody] CrearEmpleadoRequest request)
     {
         if (!_supabaseService.IsConfigured)
@@ -64,6 +66,7 @@ public class EmpleadosController : ControllerBase
     }
 
     [HttpPut("{id}/rol")]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> CambiarRol(string id, [FromBody] CambiarRolRequest request)
     {
         if (!_supabaseService.IsConfigured)
@@ -98,6 +101,7 @@ public class EmpleadosController : ControllerBase
     }
 
     [HttpPut("{id}/estado")]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> CambiarEstado(string id, [FromBody] CambiarEstadoRequest request)
     {
         if (!_supabaseService.IsConfigured)
@@ -126,6 +130,7 @@ public class EmpleadosController : ControllerBase
     }
 
     [HttpPut("{id}/password")]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> CambiarPassword(string id, [FromBody] CambiarPasswordEmpleadoRequest request)
     {
         if (!_supabaseService.IsConfigured)
@@ -164,6 +169,7 @@ public class EmpleadosController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "administrador")]
     public async Task<IActionResult> Eliminar(string id, [FromQuery] string? actorId)
     {
         if (!_supabaseService.IsConfigured)
