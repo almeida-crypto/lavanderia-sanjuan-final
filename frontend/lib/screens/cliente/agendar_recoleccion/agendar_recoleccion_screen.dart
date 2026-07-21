@@ -273,25 +273,21 @@ class AgendarRecoleccionScreen extends StatelessWidget {
               const _SectionTitle('Resumen'),
               const SizedBox(height: 16),
               _ResumenEstimadoCard(provider: provider),
+              const SizedBox(height: 24),
+              _ConfirmarPedidoBar(
+                isLoading: provider.isLoading,
+                validandoPromo: provider.validandoPromo,
+                codigoPromoController: provider.codigoPromoController,
+                onAplicarCodigo: () => _aplicarCodigoPromocional(context, provider),
+                onConfirmar: () => _submit(context, provider, direccionActual),
+              ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ConfirmarPedidoBar(
-            isLoading: provider.isLoading,
-            validandoPromo: provider.validandoPromo,
-            codigoPromoController: provider.codigoPromoController,
-            onAplicarCodigo: () => _aplicarCodigoPromocional(context, provider),
-            onConfirmar: () => _submit(context, provider, direccionActual),
-          ),
-          AppBottomNavBar(
-            currentTab: AppBottomTab.orders,
-            onTabSelected: (tab) => _onTabSelected(context, tab),
-          ),
-        ],
+      bottomNavigationBar: AppBottomNavBar(
+        currentTab: AppBottomTab.orders,
+        onTabSelected: (tab) => _onTabSelected(context, tab),
       ),
     );
   }

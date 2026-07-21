@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/pedido.dart';
+import '../../../services/pedido_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../home_cliente/home_cliente_screen.dart';
@@ -44,10 +45,30 @@ List<_PasoPedido> _pasosPara(Pedido pedido) {
   return [confirmado, enProceso, entregado];
 }
 
-class PedidoScreen extends StatelessWidget {
+class PedidoScreen extends StatefulWidget {
   const PedidoScreen({super.key, required this.pedido});
 
   final Pedido pedido;
+
+  @override
+  State<PedidoScreen> createState() => _PedidoScreenState();
+}
+
+class _PedidoScreenState extends State<PedidoScreen> {
+  final _pedidoService = PedidoService();
+  late Pedido _pedido = widget.pedido;
+
+  /// Trae el pedido tal como está ahora en el backend, para que un cambio de
+  /// estado hecho por el admin/empleado se vea al deslizar hacia abajo, sin
+  /// tener que salir de la app.
+  Future<void> _refrescar() async {
+    try {
+      final actualizado = await _pedidoService.obtenerPedido(_pedido.id);
+      if (mounted) setState(() => _pedido = Pedido.fromJson(actualizado));
+    } catch (_) {
+      // Sin conexión: se queda mostrando lo último que sí se cargó.
+    }
+  }
 
   void _onTabSelected(BuildContext context, AppBottomTab tab) {
     switch (tab) {
@@ -72,6 +93,7 @@ class PedidoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pedido = _pedido;
     final necesitaAtencion = pedido.estado == EstadoPedido.atencion;
     final activo = pedido.estado == EstadoPedido.enProceso || necesitaAtencion;
     final cancelado = pedido.estado == EstadoPedido.cancelado;
@@ -136,7 +158,10 @@ class PedidoScreen extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child: SingleChildScrollView(
+        child: RefreshIndicator(
+          onRefresh: _refrescar,
+          child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,6 +241,7 @@ class PedidoScreen extends StatelessWidget {
                 ),
               ],
             ],
+          ),
           ),
         ),
       ),

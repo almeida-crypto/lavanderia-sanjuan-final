@@ -6,6 +6,7 @@ import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../models/usuario.dart';
 import '../../../utils/app_colors.dart';
+import '../../auth/login/bienvenida_screen.dart';
 import '../repartidores/repartidores_config_screen.dart';
 
 class PerfilAdministradorScreen extends StatelessWidget {
@@ -34,6 +35,12 @@ class PerfilAdministradorScreen extends StatelessWidget {
 
     context.read<AdminProvider>().limpiar();
     await context.read<AuthProvider>().logout(context);
+    if (!context.mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
+      (route) => false,
+    );
   }
 
   static String _etiquetaRol(UserRole? rol) => switch (rol) {

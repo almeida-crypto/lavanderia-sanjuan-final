@@ -12,7 +12,7 @@ import 'providers/opciones_catalogo_provider.dart';
 import 'providers/preferencias_provider.dart';
 import 'providers/servicios_provider.dart';
 import 'screens/admin/home_administrador/home_administrador_screen.dart';
-import 'screens/auth/login/login_screen.dart';
+import 'screens/auth/login/bienvenida_screen.dart';
 import 'screens/cliente/home_cliente/home_cliente_screen.dart';
 import 'screens/empleado/home_empleado/home_empleado_screen.dart';
 import 'screens/repartidor/home_repartidor/home_repartidor_screen.dart';
@@ -70,7 +70,7 @@ class AuthWrapper extends StatelessWidget {
     }
 
     if (auth.currentUser == null) {
-      return const LoginScreen();
+      return const BienvenidaScreen();
     }
 
     final usuario = auth.currentUser!;

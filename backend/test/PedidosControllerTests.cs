@@ -15,7 +15,8 @@ public class PedidosControllerTests
     {
         var config = new ConfigurationBuilder().Build();
         var data = new SupabaseDataService(config, new FakeHttpClientFactory());
-        var controller = new PedidosController(data)
+        var validacionPromo = new PromocionValidationService(data);
+        var controller = new PedidosController(data, validacionPromo)
         {
             // En producción, [Authorize] ya deja el ClaimsPrincipal armado
             // antes de que la acción se ejecute; acá lo simulamos como un

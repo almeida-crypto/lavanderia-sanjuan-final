@@ -163,6 +163,11 @@ class _PromocionCard extends StatelessWidget {
                     icon: Icons.sell_outlined,
                     texto: '${promocion.descuentoPorcentaje.toStringAsFixed(0)}% · ${promocion.codigo}',
                   ),
+                  if (promocion.condicionesTexto != null)
+                    _Chip(
+                      icon: Icons.rule_outlined,
+                      texto: promocion.condicionesTexto!,
+                    ),
                   _Chip(
                     icon: Icons.local_laundry_service_outlined,
                     texto: (promocion.servicioAplicable?.isNotEmpty ?? false)

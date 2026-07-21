@@ -28,6 +28,25 @@ alter table public.direcciones add column if not exists ciudad text not null def
 alter table public.direcciones add column if not exists estado text not null default '';
 alter table public.direcciones add column if not exists codigo_postal text not null default '';
 
+-- Catálogo real de códigos postales de México (datos oficiales de SEPOMEX,
+-- ~145,900 filas: cada CP puede tener varias colonias). Se usa para que al
+-- escribir el código postal en el formulario de dirección se rellenen solos
+-- estado/ciudad y se sugieran las colonias reales de ese CP, y para poder
+-- avisar si el cliente escribió un CP que no existe. La tabla se crea vacía
+-- aquí; los datos se importan una sola vez desde
+-- supabase/codigos_postales.csv usando el importador de CSV del Table
+-- Editor de Supabase (demasiadas filas para un insert por SQL).
+create table if not exists public.codigos_postales (
+  id bigint generated always as identity primary key,
+  codigo_postal text not null,
+  estado text not null,
+  municipio text not null,
+  ciudad text not null default '',
+  colonia text not null,
+  tipo_asentamiento text
+);
+create index if not exists codigos_postales_por_cp on public.codigos_postales(codigo_postal);
+
 create table if not exists public.metodos_pago (
   id uuid primary key default gen_random_uuid(),
   usuario_id text not null,
@@ -117,6 +136,11 @@ alter table public.pedidos add column if not exists precio_acabado numeric(10,2)
 -- también tengan uno.
 alter table public.pedidos add column if not exists numero_orden bigserial unique;
 
+-- Código de promoción aplicado a este pedido (si el cliente usó uno), en
+-- mayúsculas para que contar cuántas veces lo ha usado un cliente sea una
+-- comparación exacta sin importar cómo lo haya tecleado.
+alter table public.pedidos add column if not exists codigo_promocion text;
+
 create table if not exists public.promociones (
   id uuid primary key default gen_random_uuid(),
   codigo text not null unique,
@@ -129,6 +153,12 @@ create table if not exists public.promociones (
   activa boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+-- Límite de usos por cliente (null = sin límite) y cantidad mínima de
+-- prendas/kg para que el código aplique (null = sin mínimo). Ambos se
+-- validan de verdad en el backend, no solo en la pantalla del cliente.
+alter table public.promociones add column if not exists usos_por_cliente integer check (usos_por_cliente is null or usos_por_cliente > 0);
+alter table public.promociones add column if not exists cantidad_minima integer check (cantidad_minima is null or cantidad_minima > 0);
 
 create unique index if not exists una_direccion_principal_por_usuario
   on public.direcciones(usuario_id) where predeterminada;
@@ -143,6 +173,7 @@ alter table public.servicios enable row level security;
 alter table public.pedidos enable row level security;
 alter table public.promociones enable row level security;
 alter table public.opciones enable row level security;
+alter table public.codigos_postales enable row level security;
 
 insert into public.opciones (nombre, descripcion) values
   ('Doblado Estándar', 'Perfecto para el uso diario, doblado y apilado con cuidado.'),

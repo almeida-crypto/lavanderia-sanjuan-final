@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -9,8 +8,11 @@ import '../../../providers/login_provider.dart';
 import '../../../providers/metodos_pago_provider.dart';
 import '../../../providers/preferencias_provider.dart';
 import '../../../utils/app_colors.dart';
-import '../../../widgets/labeled_text_field.dart';
 import '../crear_cuenta/crear_cuenta_screen.dart';
+import '../../admin/home_administrador/home_administrador_screen.dart';
+import '../../cliente/home_cliente/home_cliente_screen.dart';
+import '../../empleado/home_empleado/home_empleado_screen.dart';
+import '../../repartidor/home_repartidor/home_repartidor_screen.dart';
 import '../recuperar_contrasena/recuperar_contrasena_screen.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -51,7 +53,20 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: Text(
+          'Iniciar Sesión',
+          style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.primary),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -62,43 +77,6 @@ class LoginScreen extends StatelessWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
-                        child: Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(
-                            Icons.local_laundry_service_rounded,
-                            color: Colors.white,
-                            size: 36,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Center(
-                        child: Text(
-                          'FreshClean',
-                          style: GoogleFonts.inter(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Center(
-                        child: Text(
-                          'Ropa fresca, vida simple.',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: AppColors.secondary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
                       Form(
                         key: login.formKey,
                         child: Column(
@@ -187,33 +165,6 @@ class LoginScreen extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                      ),
-                      const SizedBox(height: 32),
-                      Center(
-                        child: RichText(
-                          text: TextSpan(
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: AppColors.secondary,
-                            ),
-                            children: [
-                              const TextSpan(text: '¿No tienes cuenta? '),
-                              TextSpan(
-                                text: 'Crea una',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => const CrearCuentaScreen(),
-                                    ),
-                                  ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ),
                     ],
                   );
