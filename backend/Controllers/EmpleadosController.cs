@@ -8,7 +8,7 @@ namespace backend.Controllers;
 [Authorize(Roles = "administrador")]
 public class EmpleadosController : ControllerBase
 {
-    private static readonly string[] RolesValidos = ["empleado", "administrador"];
+    private static readonly string[] RolesValidos = ["empleado", "administrador", "repartidor"];
     private const string RolAdministrador = "administrador";
 
     private readonly SupabaseService _supabaseService;
@@ -51,7 +51,7 @@ public class EmpleadosController : ControllerBase
         var rol = string.IsNullOrWhiteSpace(request.Rol) ? "empleado" : request.Rol.Trim().ToLowerInvariant();
         if (!RolesValidos.Contains(rol))
         {
-            return BadRequest(new { message = "Rol inválido. Debe ser 'empleado' o 'administrador'" });
+            return BadRequest(new { message = "Rol inválido. Debe ser 'empleado', 'repartidor' o 'administrador'" });
         }
 
         var resultado = await _supabaseService.CreateUserAsync(request.Nombre.Trim(), request.Correo.Trim(), request.Password, rol);
@@ -73,7 +73,7 @@ public class EmpleadosController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(request.Rol) || !RolesValidos.Contains(request.Rol.Trim().ToLowerInvariant()))
         {
-            return BadRequest(new { message = "Rol inválido. Debe ser 'empleado' o 'administrador'" });
+            return BadRequest(new { message = "Rol inválido. Debe ser 'empleado', 'repartidor' o 'administrador'" });
         }
 
         if (!string.IsNullOrWhiteSpace(request.ActorId) && request.ActorId == id)

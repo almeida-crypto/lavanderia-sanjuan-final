@@ -205,7 +205,8 @@ class _CustomersViewState extends State<CustomersView> {
                         prefixIcon: Icon(Icons.badge_outlined),
                       ),
                       items: const [
-                        DropdownMenuItem(value: UserRole.empleado, child: Text('Empleado')),
+                        DropdownMenuItem(value: UserRole.empleado, child: Text('Empleado (Planta/Atención)')),
+                        DropdownMenuItem(value: UserRole.repartidor, child: Text('Repartidor (Recolecciones/Entregas)')),
                         DropdownMenuItem(value: UserRole.administrador, child: Text('Administrador')),
                       ],
                       onChanged: (value) {

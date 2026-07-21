@@ -152,7 +152,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
             icon: const Icon(Icons.logout_rounded, color: AppColors.error),
             tooltip: 'Cerrar Sesión',
             onPressed: () {
-              context.read<AuthProvider>().logout();
+              context.read<AuthProvider>().logout(context);
             },
           ),
           const SizedBox(width: 8),

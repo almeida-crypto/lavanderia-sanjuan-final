@@ -9,7 +9,6 @@ import '../../../providers/preferencias_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../../../widgets/doble_back_para_salir.dart';
-import '../../auth/login/login_screen.dart';
 import '../../auth/terminos_condiciones/politica_privacidad_screen.dart';
 import '../../auth/terminos_condiciones/terminos_condiciones_screen.dart';
 import '../home_cliente/home_cliente_screen.dart';
@@ -82,13 +81,7 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
     context.read<PreferenciasProvider>().limpiar();
     context.read<DireccionesProvider>().limpiar();
     context.read<MetodosPagoProvider>().limpiar();
-    await context.read<AuthProvider>().logout();
-    if (!mounted) return;
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
+    await context.read<AuthProvider>().logout(context);
   }
 
   @override

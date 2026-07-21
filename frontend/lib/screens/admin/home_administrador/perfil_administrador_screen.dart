@@ -6,7 +6,6 @@ import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../models/usuario.dart';
 import '../../../utils/app_colors.dart';
-import '../../auth/login/login_screen.dart';
 
 class PerfilAdministradorScreen extends StatelessWidget {
   const PerfilAdministradorScreen({super.key});
@@ -33,13 +32,7 @@ class PerfilAdministradorScreen extends StatelessWidget {
     if (confirmado != true || !context.mounted) return;
 
     context.read<AdminProvider>().limpiar();
-    await context.read<AuthProvider>().logout();
-    if (!context.mounted) return;
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
+    await context.read<AuthProvider>().logout(context);
   }
 
   static String _etiquetaRol(UserRole? rol) => switch (rol) {

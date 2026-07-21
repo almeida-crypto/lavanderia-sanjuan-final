@@ -12,10 +12,6 @@ import '../../../providers/metodos_pago_provider.dart';
 import '../../../providers/preferencias_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/labeled_text_field.dart';
-import '../../admin/home_administrador/home_administrador_screen.dart';
-import '../../cliente/home_cliente/home_cliente_screen.dart';
-import '../../empleado/home_empleado/home_empleado_screen.dart';
-import '../../repartidor/home_repartidor/home_repartidor_screen.dart';
 import '../crear_cuenta/crear_cuenta_screen.dart';
 import '../recuperar_contrasena/recuperar_contrasena_screen.dart';
 
@@ -48,23 +44,9 @@ class LoginScreen extends StatelessWidget {
     ]);
     if (!context.mounted) return;
 
-    final esEmpleado = auth.currentUser!.rol == UserRole.empleado ||
-        context.read<AdminProvider>().esEmpleadoEmail(auth.currentUser!.correo);
-
-    final Widget destino;
-    if (auth.currentUser!.rol == UserRole.administrador) {
-      destino = const HomeAdministradorScreen();
-    } else if (auth.currentUser!.rol == UserRole.repartidor) {
-      destino = const HomeRepartidorScreen();
-    } else if (esEmpleado) {
-      destino = const HomeEmpleadoScreen();
-    } else {
-      destino = const HomeClienteScreen();
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => destino),
-    );
   }
 
   @override
