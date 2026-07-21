@@ -29,7 +29,6 @@ class Pedido {
     required this.instrucciones,
     required this.total,
     required this.estado,
-    this.ecoFriendly = false,
     this.fragancia,
     this.cantidadAproximada,
     this.metodoPago,
@@ -60,7 +59,6 @@ class Pedido {
       instrucciones: (instrucciones == null || instrucciones.isEmpty) ? null : instrucciones,
       total: double.tryParse(json['total']?.toString() ?? '0') ?? 0,
       estado: estadoPedidoFromString(json['estado']?.toString()),
-      ecoFriendly: json['ecoFriendly'] == true,
       fragancia: json['fragancia']?.toString(),
       cantidadAproximada: int.tryParse(json['cantidadAproximada']?.toString() ?? ''),
       metodoPago: json['metodoPago']?.toString(),
@@ -84,7 +82,6 @@ class Pedido {
   final String? instrucciones;
   final double total;
   final EstadoPedido estado;
-  final bool ecoFriendly;
   final String? fragancia;
   final int? cantidadAproximada;
   final String? metodoPago;

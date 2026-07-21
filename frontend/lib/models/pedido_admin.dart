@@ -137,7 +137,6 @@ class PedidoAdmin {
     required this.fecha,
     required this.items,
     required this.notas,
-    this.ecoFriendly = false,
     this.fragancia,
     this.cantidadAproximada,
     this.pesoConfirmado,
@@ -167,7 +166,6 @@ class PedidoAdmin {
   final String fecha;
   List<PedidoItem> items;
   List<NotaPedido> notas;
-  bool ecoFriendly;
   String? fragancia;
   int? cantidadAproximada;
   double? pesoConfirmado;

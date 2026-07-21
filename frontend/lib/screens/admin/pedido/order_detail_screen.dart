@@ -276,11 +276,6 @@ class OrderDetailScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildRowDetail(
-                      'Eco-friendly',
-                      currentPedido.ecoFriendly ? 'Activado' : 'Desactivado',
-                    ),
-                    const Divider(color: AppColors.surfaceVariant, height: 24),
                     _buildRowDetail('Fragancia', currentPedido.fragancia ?? 'No especificada'),
                     if (currentPedido.cantidadAproximada != null) ...[
                       const Divider(color: AppColors.surfaceVariant, height: 24),

@@ -80,7 +80,6 @@ public class PedidosController : ControllerBase
                 ["franja_horaria"] = request.FranjaHoraria ?? "Tarde",
                 ["direccion"] = request.Direccion ?? "Sin dirección",
                 ["instrucciones"] = request.Instrucciones ?? string.Empty,
-                ["eco_friendly"] = request.EcoFriendly ?? false,
                 ["fragancia"] = request.Fragancia,
                 ["cantidad_aproximada"] = request.CantidadAproximada,
                 ["metodo_pago"] = request.MetodoPago,
@@ -209,7 +208,6 @@ public class PedidosController : ControllerBase
         FranjaHoraria = S(row, "franja_horaria"),
         Direccion = S(row, "direccion"),
         Instrucciones = S(row, "instrucciones"),
-        EcoFriendly = B(row, "eco_friendly"),
         Fragancia = S(row, "fragancia"),
         CantidadAproximada = I(row, "cantidad_aproximada"),
         MetodoPago = S(row, "metodo_pago"),
@@ -250,7 +248,6 @@ public class CrearPedidoRequest
     public string? FranjaHoraria { get; set; }
     public string? Direccion { get; set; }
     public string? Instrucciones { get; set; }
-    public bool? EcoFriendly { get; set; }
     public string? Fragancia { get; set; }
     public int? CantidadAproximada { get; set; }
     public string? MetodoPago { get; set; }
@@ -282,7 +279,6 @@ public class PedidoDto
     public string? FranjaHoraria { get; set; }
     public string? Direccion { get; set; }
     public string? Instrucciones { get; set; }
-    public bool EcoFriendly { get; set; }
     public string? Fragancia { get; set; }
     public int? CantidadAproximada { get; set; }
     public string? MetodoPago { get; set; }

@@ -14,7 +14,7 @@ const _secciones = [
   _Seccion(
     titulo: '1. Información que Recopilamos',
     contenido:
-        'Recopilamos los datos que nos proporcionas al crear tu cuenta (nombre, correo, teléfono), tus direcciones de recolección y entrega, tus métodos de pago guardados, y los detalles de cada pedido que realizas (servicio, fecha, preferencias como fragancia o eco-friendly).',
+        'Recopilamos los datos que nos proporcionas al crear tu cuenta (nombre, correo, teléfono), tus direcciones de recolección y entrega, tus métodos de pago guardados, y los detalles de cada pedido que realizas (servicio, fecha, preferencias como fragancia).',
   ),
   _Seccion(
     titulo: '2. Uso de tu Información',

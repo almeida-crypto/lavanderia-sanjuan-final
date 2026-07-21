@@ -389,18 +389,7 @@ class _PreferenciasCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.eco_outlined, color: AppColors.primary, size: 20),
-              const SizedBox(width: 12),
-              Text(
-                pedido.ecoFriendly ? 'Eco-friendly activado' : 'Eco-friendly desactivado',
-                style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurface),
-              ),
-            ],
-          ),
           if (pedido.fragancia != null) ...[
-            const SizedBox(height: 12),
             Row(
               children: [
                 const Icon(Icons.spa_outlined, color: AppColors.primary, size: 20),

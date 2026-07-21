@@ -1,6 +1,5 @@
-/// Un beneficio/ventaja que el admin describe para un servicio (ej. "Eco
-/// Friendly — Detergentes biodegradables"), mostrado en la pantalla de
-/// detalle de ese servicio para el cliente.
+/// Un beneficio/ventaja que el admin describe para un servicio, mostrado
+/// en la pantalla de detalle de ese servicio para el cliente.
 class BeneficioServicio {
   const BeneficioServicio({required this.icono, required this.titulo, required this.descripcion});
 

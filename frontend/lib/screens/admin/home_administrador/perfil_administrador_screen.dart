@@ -6,6 +6,7 @@ import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../models/usuario.dart';
 import '../../../utils/app_colors.dart';
+import '../repartidores/repartidores_config_screen.dart';
 
 class PerfilAdministradorScreen extends StatelessWidget {
   const PerfilAdministradorScreen({super.key});
@@ -140,6 +141,39 @@ class PerfilAdministradorScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.surfaceVariant),
+                ),
+                tileColor: AppColors.surfaceContainerLowest,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryFixed,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.two_wheeler_rounded, color: AppColors.primary),
+                ),
+                title: Text(
+                  'Configuración de Repartidores',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.onSurface),
+                ),
+                subtitle: Text(
+                  'Gestiona el personal de entregas y recolecciones',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const RepartidoresConfigScreen(),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(

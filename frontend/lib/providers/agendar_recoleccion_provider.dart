@@ -17,13 +17,11 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
     TipoServicio? servicioInicial,
     this.servicioReal,
     OpcionAcabado? opcionAcabadoInicial,
-    bool ecoFriendlyInicial = false,
     String fraganciaInicial = 'Lavanda',
     int cantidadInicial = 1,
   }) : fechasDisponibles = _generarFechas(),
        _servicio = servicioInicial ?? TipoServicio.lavadoYPlegado,
        _opcionAcabado = opcionAcabadoInicial,
-       _ecoFriendly = ecoFriendlyInicial,
        _fragancia = fraganciaInicial,
        _cantidad = cantidadInicial < 1 ? 1 : cantidadInicial {
     _fechaSeleccionada = fechasDisponibles.first;
@@ -45,17 +43,6 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
   /// confirma cuando el pedido se pesa/verifica en la recolección.
   final int _cantidad;
   int get cantidad => _cantidad;
-
-  /// Preferencias del pedido: arrancan con el valor predeterminado del
-  /// cliente (Ajustes), pero se pueden cambiar solo para este pedido sin
-  /// afectar su preferencia guardada.
-  bool _ecoFriendly;
-  bool get ecoFriendly => _ecoFriendly;
-
-  void alternarEcoFriendly(bool valor) {
-    _ecoFriendly = valor;
-    notifyListeners();
-  }
 
   String _fragancia;
   String get fragancia => _fragancia;
@@ -235,7 +222,6 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
         'franjaHoraria': franjaEtiqueta,
         'direccion': direccionSeleccionada?.titulo ?? 'Dirección no definida',
         'instrucciones': instruccionesController.text.trim(),
-        'ecoFriendly': _ecoFriendly,
         'fragancia': _fragancia,
         'cantidadAproximada': _cantidad,
         'metodoPago': metodoPago,

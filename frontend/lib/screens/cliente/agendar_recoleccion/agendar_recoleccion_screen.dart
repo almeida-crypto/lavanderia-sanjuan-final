@@ -52,7 +52,6 @@ class AgendarRecoleccionScreen extends StatelessWidget {
             servicioInicial: servicioInicial,
             servicioReal: servicioReal,
             opcionAcabadoInicial: opcionAcabadoInicial,
-            ecoFriendlyInicial: preferencias.ecoFriendly,
             fraganciaInicial: preferencias.fragancia,
             cantidadInicial: cantidadInicial,
           ),
@@ -518,25 +517,6 @@ class _PreferenciasPedidoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.eco_outlined, color: AppColors.primary, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Eco-friendly',
-                  style: GoogleFonts.inter(fontSize: 15, color: AppColors.onSurface),
-                ),
-              ),
-              Switch(
-                value: provider.ecoFriendly,
-                onChanged: provider.alternarEcoFriendly,
-                activeThumbColor: Colors.white,
-                activeTrackColor: AppColors.primary,
-              ),
-            ],
-          ),
-          const Divider(height: 24),
           Text(
             'Fragancia',
             style: GoogleFonts.inter(

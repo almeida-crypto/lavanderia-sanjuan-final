@@ -87,7 +87,6 @@ create table if not exists public.pedidos (
   franja_horaria text not null default 'Tarde',
   direccion text not null default 'Sin dirección',
   instrucciones text not null default '',
-  eco_friendly boolean not null default false,
   fragancia text,
   cantidad_aproximada integer,
   metodo_pago text,
@@ -160,7 +159,7 @@ values (
   'Nuestro servicio premium de lavado por kilo está diseñado para el cuidado diario de tu ropa. Incluye clasificación profesional por colores y tejidos, lavado profundo con detergentes de alta calidad y suavizantes, secado a temperatura controlada para evitar encogimiento, y un doblado meticuloso para que tus prendas lleguen listas para guardar.',
   '24 horas',
   '[]'::jsonb,
-  '[{"icono":"eco","titulo":"Eco-friendly","descripcion":"Detergentes biodegradables de bajo impacto."},{"icono":"sanitizer","titulo":"Sanitizado","descripcion":"Elimina el 99.9% de bacterias y ácaros."},{"icono":"checkroom","titulo":"Protección de Tejidos","descripcion":"Ciclos suaves que prolongan la vida útil."}]'::jsonb,
+  '[{"icono":"clean_hands","titulo":"Cuidado Profesional","descripcion":"Detergentes de alta calidad de bajo impacto."},{"icono":"sanitizer","titulo":"Sanitizado","descripcion":"Elimina el 99.9% de bacterias y ácaros."},{"icono":"checkroom","titulo":"Protección de Tejidos","descripcion":"Ciclos suaves que prolongan la vida útil."}]'::jsonb,
   jsonb_build_array(
     jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado Estándar'), 'precioAdicional', 0),
     jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado en Gancho'), 'precioAdicional', 0.5),

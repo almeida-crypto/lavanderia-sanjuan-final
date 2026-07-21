@@ -12,13 +12,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PreferenciasProvider extends ChangeNotifier {
   String? _userId;
 
-  bool _ecoFriendly = false;
-  bool get ecoFriendly => _ecoFriendly;
-
   String _fragancia = 'Lavanda';
   String get fragancia => _fragancia;
 
-  String _claveEco(String userId) => 'preferencias_eco_friendly_$userId';
   String _claveFragancia(String userId) => 'preferencias_fragancia_$userId';
 
   /// Carga las preferencias guardadas del usuario que acaba de iniciar
@@ -26,7 +22,6 @@ class PreferenciasProvider extends ChangeNotifier {
   Future<void> cargarParaUsuario(String userId) async {
     _userId = userId;
     final prefs = await SharedPreferences.getInstance();
-    _ecoFriendly = prefs.getBool(_claveEco(userId)) ?? false;
     _fragancia = prefs.getString(_claveFragancia(userId)) ?? 'Lavanda';
     notifyListeners();
   }
@@ -36,18 +31,8 @@ class PreferenciasProvider extends ChangeNotifier {
   /// preferencias sigan ahí).
   void limpiar() {
     _userId = null;
-    _ecoFriendly = false;
     _fragancia = 'Lavanda';
     notifyListeners();
-  }
-
-  Future<void> alternarEcoFriendly(bool valor) async {
-    _ecoFriendly = valor;
-    notifyListeners();
-    final userId = _userId;
-    if (userId == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_claveEco(userId), valor);
   }
 
   Future<void> establecerFragancia(String valor) async {

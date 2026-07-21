@@ -88,7 +88,6 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
   Widget build(BuildContext context) {
     final usuario = context.watch<AuthProvider>().currentUser;
     final preferencias = context.watch<PreferenciasProvider>();
-    final ecoFriendly = preferencias.ecoFriendly;
     final fragancia = preferencias.fragancia;
 
     return DobleBackParaSalir(
@@ -230,13 +229,6 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
                     label: 'Notificaciones',
                     value: _notificaciones,
                     onChanged: (value) => setState(() => _notificaciones = value),
-                  ),
-                  _SwitchItem(
-                    icon: Icons.eco_outlined,
-                    label: 'Eco-friendly',
-                    value: ecoFriendly,
-                    onChanged: (value) =>
-                        context.read<PreferenciasProvider>().alternarEcoFriendly(value),
                   ),
                   _MenuItem(
                     icon: Icons.air_rounded,

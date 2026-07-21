@@ -7,6 +7,7 @@ import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../pedido/order_detail_screen.dart';
+import '../repartidores/repartidores_config_screen.dart';
 
 class DashboardView extends StatelessWidget {
   const DashboardView({super.key, this.onViewOrdersTap});
@@ -194,7 +195,60 @@ class DashboardView extends StatelessWidget {
                     );
             },
           ),
-          const SizedBox(height: 32),
+          // Shortcut Banner: Configuración de Repartidores
+          InkWell(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const RepartidoresConfigScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primaryFixed,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Configuración de Repartidores',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        Text(
+                          'Gestiona tu equipo de recolecciones y entregas',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.primary),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
 
           // Recent Orders Header
           Row(

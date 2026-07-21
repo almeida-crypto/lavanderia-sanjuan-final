@@ -6,7 +6,6 @@ import '../../../models/servicio.dart';
 import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
 import '../../../providers/opciones_catalogo_provider.dart';
-import '../../../providers/preferencias_provider.dart';
 import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
@@ -18,8 +17,7 @@ import '../mis_pedidos/mis_pedidos_screen.dart';
 import '../notificaciones/notificaciones_screen.dart';
 import 'servicios_screen.dart';
 
-const _preferencias = ['Sin aroma', 'Jabón ecológico', 'Acabado con almidón', 'Envoltura de regalo'];
-const _preferenciaEcoFriendly = 'Jabón ecológico';
+const _preferencias = ['Sin aroma', 'Acabado con almidón', 'Envoltura de regalo'];
 
 class OpcionesDobladoScreen extends StatefulWidget {
   const OpcionesDobladoScreen({super.key});
@@ -37,16 +35,6 @@ class _OpcionesDobladoScreenState extends State<OpcionesDobladoScreen> {
 
   void _decrementarKilos() {
     if (_kilos > 1) setState(() => _kilos--);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // Si el cliente ya activó "Eco-friendly" en Ajustes, no se lo volvemos a
-    // preguntar aquí: arrancamos con "Jabón ecológico" preseleccionado.
-    if (context.read<PreferenciasProvider>().ecoFriendly) {
-      _preferenciasElegidas.add(_preferenciaEcoFriendly);
-    }
   }
 
   void _onTabSelected(AppBottomTab tab) {

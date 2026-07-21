@@ -226,7 +226,6 @@ class AdminProvider extends ChangeNotifier {
           PedidoItem(nombre: opcionAcabado, precio: precioAcabado ?? 0, descripcion: 'Opción elegida por el cliente'),
       ],
       notas: notas,
-      ecoFriendly: json['ecoFriendly'] == true,
       fragancia: json['fragancia']?.toString(),
       cantidadAproximada: int.tryParse(json['cantidadAproximada']?.toString() ?? ''),
       pesoConfirmado: double.tryParse(json['pesoConfirmado']?.toString() ?? ''),

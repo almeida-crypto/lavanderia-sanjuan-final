@@ -1,15 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/usuario.dart';
 import '../services/auth_service.dart';
 import '../utils/api_config.dart';
-import 'admin_provider.dart';
-import 'direcciones_provider.dart';
-import 'metodos_pago_provider.dart';
-import 'preferencias_provider.dart';
 
 class AuthProvider extends ChangeNotifier {
   static const String _userKey = 'saved_logged_user';

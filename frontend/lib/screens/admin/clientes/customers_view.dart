@@ -6,6 +6,7 @@ import '../../../models/usuario.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../repartidores/repartidores_config_screen.dart';
 
 class Customer {
   Customer({
@@ -652,19 +653,37 @@ class _CustomersViewState extends State<CustomersView> {
               ),
               if (_selectedTabIndex == 1) ...[
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showAddEmpleadoDialog(context),
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: Text('Agregar Cuenta', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showAddEmpleadoDialog(context),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: Text('Agregar Cuenta', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const RepartidoresConfigScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.two_wheeler_rounded, size: 18, color: AppColors.primary),
+                      label: Text('Configurar Repartidores', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                      ),
+                    ),
+                  ],
                 ),
               ],
               const SizedBox(height: 4),
