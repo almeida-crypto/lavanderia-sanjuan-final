@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/pedido.dart';
+import '../../../models/pedido_admin.dart';
 import '../../../services/pedido_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
@@ -18,33 +19,54 @@ import 'seguimiento_en_vivo_screen.dart';
 enum _PasoEstado { completado, actual, pendiente }
 
 class _PasoPedido {
-  const _PasoPedido({required this.titulo, required this.descripcion, required this.estado});
+  const _PasoPedido({
+    required this.titulo,
+    required this.descripcion,
+    required this.estado,
+  });
 
   final String titulo;
   final String descripcion;
   final _PasoEstado estado;
 }
 
+String _descripcionPaso(Pedido pedido, PedidoEstado estado) {
+  if (estado != PedidoEstado.recibido) return subtituloParaEstado(estado);
+
+  final cita = pedido.franjaHoraria.isEmpty
+      ? pedido.fechaFormateada
+      : '${pedido.franjaHoraria}, ${pedido.fechaFormateada}';
+  return 'Pedido confirmado para $cita.';
+}
+
 List<_PasoPedido> _pasosPara(Pedido pedido) {
-  final confirmado = _PasoPedido(
-    titulo: 'Pedido Confirmado',
-    descripcion: 'Programado para ${pedido.franjaHoraria.isEmpty ? pedido.fechaFormateada : '${pedido.franjaHoraria}, ${pedido.fechaFormateada}'}.',
-    estado: _PasoEstado.completado,
-  );
+  final actual = pedido.estadoOperativo;
+  const flujoNormal = [
+    PedidoEstado.recibido,
+    PedidoEstado.asignado,
+    PedidoEstado.enPlanta,
+    PedidoEstado.lavando,
+    PedidoEstado.secandoDoblado,
+    PedidoEstado.enCamino,
+    PedidoEstado.listo,
+    PedidoEstado.entregado,
+  ];
+  final indiceActual = flujoNormal.indexOf(actual);
 
-  final enProceso = _PasoPedido(
-    titulo: 'En Proceso',
-    descripcion: 'Tu pedido está siendo atendido en planta.',
-    estado: pedido.estado == EstadoPedido.entregado ? _PasoEstado.completado : _PasoEstado.actual,
-  );
+  return PedidoEstado.values.map((estado) {
+    final indice = flujoNormal.indexOf(estado);
+    final estadoVisual = estado == actual
+        ? _PasoEstado.actual
+        : indiceActual >= 0 && indice >= 0 && indice < indiceActual
+            ? _PasoEstado.completado
+            : _PasoEstado.pendiente;
 
-  final entregado = _PasoPedido(
-    titulo: 'Entregado',
-    descripcion: 'Tu ropa fue entregada.',
-    estado: pedido.estado == EstadoPedido.entregado ? _PasoEstado.completado : _PasoEstado.pendiente,
-  );
-
-  return [confirmado, enProceso, entregado];
+    return _PasoPedido(
+      titulo: estadoToString(estado),
+      descripcion: _descripcionPaso(pedido, estado),
+      estado: estadoVisual,
+    );
+  }).toList();
 }
 
 class PedidoScreen extends StatefulWidget {
@@ -65,7 +87,10 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _actualizador = Timer.periodic(const Duration(seconds: 20), (_) => _refrescar());
+    _actualizador = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => _refrescar(),
+    );
   }
 
   @override
@@ -121,12 +146,10 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
     final cancelado = pedido.estado == EstadoPedido.cancelado;
     final puedeReportar = !cancelado;
     final puedeCancelar = pedido.puedeCancelar;
-    final (chipColor, chipTexto) = switch (pedido.estado) {
-      EstadoPedido.enProceso => (AppColors.primary, 'En Proceso'),
-      EstadoPedido.atencion => (AppColors.error, 'Atención requerida'),
-      EstadoPedido.entregado => (AppColors.primary, 'Entregado'),
-      EstadoPedido.cancelado => (AppColors.error, 'Cancelado'),
-    };
+    final chipColor = necesitaAtencion || cancelado
+        ? AppColors.error
+        : AppColors.primary;
+    final chipTexto = estadoToString(pedido.estadoOperativo);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -161,7 +184,10 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: BoxDecoration(color: chipColor, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: chipColor,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Text(

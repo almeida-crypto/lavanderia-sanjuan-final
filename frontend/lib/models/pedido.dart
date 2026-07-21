@@ -1,3 +1,4 @@
+import 'pedido_admin.dart';
 import 'servicio_lavanderia.dart';
 
 enum EstadoPedido { enProceso, atencion, entregado, cancelado }
@@ -84,9 +85,16 @@ class Pedido {
   final String? instrucciones;
   final double total;
   final EstadoPedido estado;
+
   /// Estado exacto que manda el backend. No se reduce a "en proceso" porque
   /// las reglas de cancelación dependen de la etapa real del pedido.
   final String estadoDetalle;
+
+  /// La etapa operativa exacta que comparte con el panel administrador.
+  /// [estado] se conserva para las reglas generales de la interfaz, mientras
+  /// que este valor permite mostrar las diez opciones reales del flujo.
+  PedidoEstado get estadoOperativo => pedidoEstadoFromString(estadoDetalle);
+
   final String? fragancia;
   final int? cantidadAproximada;
   final String? metodoPago;

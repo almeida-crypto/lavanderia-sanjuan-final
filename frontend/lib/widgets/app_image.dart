@@ -29,6 +29,46 @@ class AppImage extends StatelessWidget {
   }
 }
 
+/// Avatar de red que nunca deja el ícono roto si la foto fue eliminada,
+/// cambió de permiso o tarda en responder.
+class AppAvatar extends StatelessWidget {
+  const AppAvatar({
+    super.key,
+    required this.radius,
+    this.url,
+  });
+
+  final double radius;
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = url?.trim();
+    final fallback = CircleAvatar(
+      radius: radius,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      child: Icon(
+        Icons.person_rounded,
+        size: radius,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
+
+    if (value == null || value.isEmpty) return fallback;
+    return ClipOval(
+      child: Image.network(
+        value,
+        width: radius * 2,
+        height: radius * 2,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : fallback,
+        errorBuilder: (context, error, stackTrace) => fallback,
+      ),
+    );
+  }
+}
+
 String imagenPredeterminadaServicio(String nombre) {
   final normalizado = nombre.toLowerCase();
   if (normalizado.contains('tintorer')) return 'assets/images/servicio_tintoreria.png';

@@ -204,25 +204,6 @@ on conflict (nombre) do update set descripcion = excluded.descripcion;
 insert into public.servicios
   (nombre, icono, precio, unidad, descripcion, activo, como_funciona, tiempo_estimado, items_sugeridos, beneficios, opciones_acabado)
 values (
-  'Lavado y Doblado', 'local_laundry_service', 1.50, 'kg', 'Lavado, secado y doblado profesional.', true,
-  'Nuestro servicio premium de lavado por kilo está diseñado para el cuidado diario de tu ropa. Incluye clasificación profesional por colores y tejidos, lavado profundo con detergentes de alta calidad y suavizantes, secado a temperatura controlada para evitar encogimiento, y un doblado meticuloso para que tus prendas lleguen listas para guardar.',
-  '24 horas',
-  '[]'::jsonb,
-  '[{"icono":"clean_hands","titulo":"Cuidado Profesional","descripcion":"Detergentes de alta calidad de bajo impacto."},{"icono":"sanitizer","titulo":"Sanitizado","descripcion":"Elimina el 99.9% de bacterias y ácaros."},{"icono":"checkroom","titulo":"Protección de Tejidos","descripcion":"Ciclos suaves que prolongan la vida útil."}]'::jsonb,
-  jsonb_build_array(
-    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado Estándar'), 'precioAdicional', 0),
-    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado en Gancho'), 'precioAdicional', 0.5),
-    jsonb_build_object('opcionId', (select id from public.opciones where nombre = 'Doblado Especial'), 'precioAdicional', 3)
-  )
-)
-on conflict (nombre) do update set
-  icono = excluded.icono, precio = excluded.precio, unidad = excluded.unidad, descripcion = excluded.descripcion,
-  como_funciona = excluded.como_funciona, tiempo_estimado = excluded.tiempo_estimado,
-  items_sugeridos = excluded.items_sugeridos, beneficios = excluded.beneficios, opciones_acabado = excluded.opciones_acabado;
-
-insert into public.servicios
-  (nombre, icono, precio, unidad, descripcion, activo, como_funciona, tiempo_estimado, items_sugeridos, beneficios, opciones_acabado)
-values (
   'Tintorería', 'dry_cleaning', 5.00, 'prenda', 'Limpieza en seco para prendas delicadas.', true,
   'Cuidado experto para tus prendas más delicadas. Revisamos cada prenda para identificar manchas y áreas de cuidado especial, aplicamos solventes biodegradables y técnicas de desmanchado artesanal, y terminamos con planchado profesional al vapor y empaque en fundas protectoras transpirables.',
   '24-48 horas',

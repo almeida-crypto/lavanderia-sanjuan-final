@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/imagen_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 import '../../../widgets/labeled_text_field.dart';
 
 class EditarPerfilScreen extends StatefulWidget {
@@ -100,12 +101,22 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       ),
     );
     if (source == null) return;
-    final archivo = await ImagePicker().pickImage(
-      source: source,
-      imageQuality: 82,
-      maxWidth: 1200,
-      maxHeight: 1200,
-    );
+    XFile? archivo;
+    try {
+      archivo = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 82,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir la cámara o la galería. Revisa los permisos de la aplicación.')),
+        );
+      }
+      return;
+    }
     if (archivo == null || !mounted) return;
     setState(() => _subiendoFoto = true);
     try {
@@ -155,16 +166,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
               Center(
                 child: Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 64,
-                      backgroundColor: AppColors.surfaceContainer,
-                      backgroundImage: (_fotoUrl?.isNotEmpty ?? false)
-                          ? NetworkImage(_fotoUrl!)
-                          : null,
-                      child: (_fotoUrl?.isNotEmpty ?? false)
-                          ? null
-                          : const Icon(Icons.person_rounded, size: 64, color: AppColors.onSurfaceVariant),
-                    ),
+                    AppAvatar(radius: 64, url: _fotoUrl),
                     Positioned(
                       right: 0,
                       bottom: 0,

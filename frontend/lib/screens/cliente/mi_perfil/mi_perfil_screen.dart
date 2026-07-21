@@ -7,6 +7,7 @@ import '../../../providers/direcciones_provider.dart';
 import '../../../providers/metodos_pago_provider.dart';
 import '../../../providers/preferencias_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../../../widgets/doble_back_para_salir.dart';
 import '../../auth/login/bienvenida_screen.dart';
@@ -139,16 +140,7 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
                   children: [
                     Stack(
                       children: [
-                        CircleAvatar(
-                          radius: 48,
-                          backgroundColor: AppColors.surfaceContainer,
-                          backgroundImage: (usuario?.fotoUrl?.isNotEmpty ?? false)
-                              ? NetworkImage(usuario!.fotoUrl!)
-                              : null,
-                          child: (usuario?.fotoUrl?.isNotEmpty ?? false)
-                              ? null
-                              : const Icon(Icons.person_rounded, size: 48, color: AppColors.onSurfaceVariant),
-                        ),
+                        AppAvatar(radius: 48, url: usuario?.fotoUrl),
                         Positioned(
                           right: 0,
                           bottom: 0,

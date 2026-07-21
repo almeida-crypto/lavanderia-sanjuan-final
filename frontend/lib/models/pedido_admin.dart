@@ -17,6 +17,10 @@ enum PedidoEstado {
 /// enProceso/entregado/cancelado, pero el admin necesita las etapas
 /// intermedias). Cualquier valor desconocido cae en "recibido".
 PedidoEstado pedidoEstadoFromString(String? value) {
+  // El backend usa ambos textos para la misma etapa según si la asignación
+  // provino del botón rápido o del selector completo del administrador.
+  if (value == 'Asignado') return PedidoEstado.asignado;
+
   return PedidoEstado.values.firstWhere(
     (e) => estadoToString(e) == value,
     orElse: () => PedidoEstado.recibido,

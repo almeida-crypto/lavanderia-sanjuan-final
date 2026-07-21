@@ -125,6 +125,7 @@ class AdminProvider extends ChangeNotifier {
   /// Trae los pedidos reales desde el backend (todos, sin filtrar por
   /// cliente, ya que este es el panel de administrador).
   Future<void> cargarPedidos() async {
+    if (_isLoading) return;
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -303,15 +304,6 @@ class AdminProvider extends ChangeNotifier {
   // Catálogo persistente. La lista inicial sirve solo mientras carga Supabase.
 
   final List<Servicio> _servicios = [
-    Servicio(
-      id: 'S-001',
-      nombre: 'Lavado y Doblado',
-      icono: 'local_laundry_service',
-      precio: 1.50,
-      unidad: 'kg',
-      descripcion: 'Servicio estándar para ropa de uso diario. Incluye lavado, secado y doblado profesional.',
-      activo: true,
-    ),
     Servicio(
       id: 'S-002',
       nombre: 'Tintorería',

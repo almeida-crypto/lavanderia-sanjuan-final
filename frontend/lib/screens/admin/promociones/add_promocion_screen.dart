@@ -146,7 +146,21 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
       ),
     );
     if (source == null) return;
-    final archivo = await ImagePicker().pickImage(source: source, maxWidth: 1600, imageQuality: 82);
+    XFile? archivo;
+    try {
+      archivo = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1600,
+        imageQuality: 82,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir la cámara o la galería. Revisa los permisos de la aplicación.')),
+        );
+      }
+      return;
+    }
     if (archivo == null || !mounted) return;
     setState(() => _subiendoImagen = true);
     try {
@@ -154,6 +168,12 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
       if (mounted) setState(() => _imagenUrl = url);
     } on ImagenException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo subir la imagen. Verifica tu conexión e intenta nuevamente.')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _subiendoImagen = false);
     }

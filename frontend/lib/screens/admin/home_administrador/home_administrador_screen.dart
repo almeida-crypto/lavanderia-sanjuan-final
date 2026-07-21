@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/doble_back_para_salir.dart';
-import 'dashboard_view.dart';
-import '../pedidos/orders_view.dart';
 import '../clientes/customers_view.dart';
+import '../notificaciones/notificaciones_admin_screen.dart';
+import '../pedidos/orders_view.dart';
 import '../servicios/services_view.dart';
+import 'dashboard_view.dart';
 import 'perfil_administrador_screen.dart';
 
 class HomeAdministradorScreen extends StatefulWidget {
@@ -94,6 +96,57 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
           ],
         ),
         actions: [
+          Consumer<AdminProvider>(
+            builder: (context, admin, _) {
+              final pendientes = admin.pedidos
+                  .where((p) =>
+                      p.estado == PedidoEstado.recibido ||
+                      p.estado == PedidoEstado.atencion)
+                  .length;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    tooltip: 'Notificaciones',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificacionesAdminScreen(),
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.notifications_outlined,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  if (pendientes > 0)
+                    Positioned(
+                      right: 5,
+                      top: 4,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 17),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          pendientes > 9 ? '9+' : '$pendientes',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           IconButton(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const PerfilAdministradorScreen()),
