@@ -48,14 +48,13 @@ public class CodigosPostalesController : ControllerBase
                 .OrderBy(c => c)
                 .ToList();
 
+            var municipio = Limpio(primero["municipio"]?.ToString());
             return Ok(new
             {
                 codigoPostal = cpLimpio,
-                estado = primero["estado"]?.ToString(),
-                municipio = primero["municipio"]?.ToString(),
-                ciudad = string.IsNullOrWhiteSpace(primero["ciudad"]?.ToString())
-                    ? primero["municipio"]?.ToString()
-                    : primero["ciudad"]?.ToString(),
+                estado = Limpio(primero["estado"]?.ToString()),
+                municipio,
+                ciudad = Limpio(primero["ciudad"]?.ToString()) ?? municipio,
                 colonias
             });
         }
@@ -64,4 +63,12 @@ public class CodigosPostalesController : ControllerBase
             return StatusCode(ex.StatusCode >= 400 && ex.StatusCode < 600 ? ex.StatusCode : 502, new { message = ex.Message });
         }
     }
+
+    /// El CSV de SEPOMEX importado trae la palabra literal "NULL" como texto
+    /// en vez de un valor vacío para muchas filas de "ciudad" (no es un dato
+    /// real). Se trata igual que si no hubiera valor.
+    private static string? Limpio(string? valor) =>
+        string.IsNullOrWhiteSpace(valor) || valor.Trim().Equals("NULL", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : valor;
 }

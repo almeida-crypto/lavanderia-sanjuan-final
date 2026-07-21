@@ -6,6 +6,7 @@ import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../../auth/login/bienvenida_screen.dart';
 import '../notificaciones/notificaciones_repartidor_screen.dart';
 
 class HomeRepartidorScreen extends StatefulWidget {
@@ -17,6 +18,37 @@ class HomeRepartidorScreen extends StatefulWidget {
 
 class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
   int _selectedTab = 0; // 0: Recolecciones, 1: Entregas, 2: Completados
+
+  Future<void> _cerrarSesion(BuildContext context) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Cerrar Sesión'),
+        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Cerrar Sesión'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true || !context.mounted) return;
+
+    context.read<AdminProvider>().limpiar();
+    await context.read<AuthProvider>().logout(context);
+    if (!context.mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const BienvenidaScreen()),
+      (route) => false,
+    );
+  }
 
   @override
   void initState() {
@@ -250,9 +282,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.error),
             tooltip: 'Cerrar Sesión',
-            onPressed: () {
-              context.read<AuthProvider>().logout(context);
-            },
+            onPressed: () => _cerrarSesion(context),
           ),
           const SizedBox(width: 8),
         ],
