@@ -219,7 +219,7 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
                         controller: _etiquetaController,
                         hintText: 'Ej. Casa, Oficina',
                         icon: Icons.label_outline_rounded,
-                        validator: _validarColonia,
+                        validator: _requerido,
                       ),
                       const SizedBox(height: 16),
                       _CampoDireccion(
@@ -242,7 +242,7 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
                         controller: _coloniaController,
                         hintText: 'Ej. Centro',
                         icon: Icons.holiday_village_outlined,
-                        validator: _requerido,
+                        validator: _validarColonia,
                       ),
                       if (_coloniasSugeridas.length > 1) ...[
                         const SizedBox(height: 8),
