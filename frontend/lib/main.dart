@@ -55,6 +55,21 @@ class MyApp extends StatelessWidget {
           scaffoldBackgroundColor: AppColors.surface,
           textTheme: GoogleFonts.interTextTheme(),
         ),
+        // La app está diseñada con tamaños de texto fijos (no usa unidades
+        // relativas). Si el teléfono tiene configurado un tamaño de fuente u
+        // "pantalla" del sistema distinto al que se usó para diseñar (muy
+        // común entre celulares distintos), Android escala el texto y eso
+        // desborda las tarjetas/columnas de ancho fijo, viéndose amontonado.
+        // Limitar el rango evita que un ajuste de accesibilidad del sistema
+        // rompa el diseño, sin bloquear la accesibilidad por completo.
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          final textScaler = mediaQuery.textScaler.clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15);
+          return MediaQuery(
+            data: mediaQuery.copyWith(textScaler: textScaler),
+            child: child!,
+          );
+        },
         home: const AuthWrapper(),
       ),
     );

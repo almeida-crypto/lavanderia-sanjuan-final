@@ -218,6 +218,30 @@ class OrderDetailScreen extends StatelessWidget {
                               color: AppColors.onSurface,
                             ),
                           ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryFixed,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.local_laundry_service_rounded, size: 14, color: AppColors.primary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  currentPedido.servicioNombre,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
                           Text(
                             currentPedido.clienteEmail,
                             style: GoogleFonts.inter(
@@ -275,6 +299,7 @@ class OrderDetailScreen extends StatelessWidget {
                   border: Border.all(color: AppColors.surfaceVariant),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildRowDetail('Fragancia', currentPedido.fragancia ?? 'No especificada'),
                     if (currentPedido.cantidadAproximada != null) ...[
@@ -282,6 +307,34 @@ class OrderDetailScreen extends StatelessWidget {
                       _buildRowDetail(
                         'Cantidad aproximada',
                         '${currentPedido.cantidadAproximada}',
+                      ),
+                    ],
+                    if (currentPedido.detallesAdicionales != null) ...[
+                      const Divider(color: AppColors.surfaceVariant, height: 24),
+                      Text(
+                        'Instrucciones especiales',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondaryContainer,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          currentPedido.detallesAdicionales!,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.onSecondaryContainer,
+                          ),
+                        ),
                       ),
                     ],
                   ],
