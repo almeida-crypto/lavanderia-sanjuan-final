@@ -120,10 +120,7 @@ class _PromocionCard extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   height: 120,
-                  child: AppImage(
-                    url: promocion.imagenUrl,
-                    fallbackAsset: 'assets/images/promocion_default.png',
-                  ),
+                  child: AppImage(url: promocion.imagenUrl),
                 ),
               ),
               const SizedBox(height: 14),

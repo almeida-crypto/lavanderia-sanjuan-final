@@ -8,6 +8,7 @@ import '../../../models/servicio_lavanderia.dart';
 import '../../../providers/opciones_catalogo_provider.dart';
 import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 import '../../../widgets/quantity_selector.dart';
 import '../agendar_recoleccion/agendar_recoleccion_screen.dart';
 
@@ -88,7 +89,7 @@ class _PlanchadoScreenState extends State<PlanchadoScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _HeroSection(),
+              _HeroSection(imagenUrl: servicio?.imagenUrl),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                 child: Column(
@@ -220,31 +221,56 @@ class _PlanchadoScreenState extends State<PlanchadoScreen> {
 }
 
 class _HeroSection extends StatelessWidget {
-  const _HeroSection();
+  const _HeroSection({this.imagenUrl});
+
+  final String? imagenUrl;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Container(
-          width: double.infinity,
-          height: 280,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppColors.primaryFixed, AppColors.background],
+        if (imagenUrl != null)
+          SizedBox(
+            width: double.infinity,
+            height: 280,
+            child: AppImage(url: imagenUrl),
+          )
+        else
+          Container(
+            width: double.infinity,
+            height: 280,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [AppColors.primaryFixed, AppColors.background],
+              ),
+            ),
+            child: Align(
+              alignment: const Alignment(0, -0.5),
+              child: Icon(
+                Icons.iron_rounded,
+                size: 88,
+                color: AppColors.primary.withValues(alpha: 0.35),
+              ),
             ),
           ),
-          child: Align(
-            alignment: const Alignment(0, -0.5),
-            child: Icon(
-              Icons.iron_rounded,
-              size: 88,
-              color: AppColors.primary.withValues(alpha: 0.35),
+        if (imagenUrl != null)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 140,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppColors.background.withValues(alpha: 0), AppColors.background],
+                ),
+              ),
             ),
           ),
-        ),
         Positioned(
           left: 20,
           right: 20,

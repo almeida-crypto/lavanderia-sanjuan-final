@@ -168,10 +168,7 @@ class ServicesView extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   height: 120,
-                  child: AppImage(
-                    url: servicio.imagenUrl,
-                    fallbackAsset: imagenPredeterminadaServicio(servicio.nombre),
-                  ),
+                  child: AppImage(url: servicio.imagenUrl),
                 ),
               ),
               const SizedBox(height: 16),

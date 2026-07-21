@@ -11,18 +11,21 @@ import '../../../services/notificaciones_store.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/notificacion_filtro_menu.dart';
 import '../../../widgets/notificacion_swipe_tile.dart';
-import '../pedido/order_detail_screen.dart';
+import '../../admin/pedido/order_detail_screen.dart';
 
-class NotificacionesAdminScreen extends StatefulWidget {
-  const NotificacionesAdminScreen({super.key});
+/// Notificaciones para empleado: mismos pedidos que necesitan trabajo
+/// (nuevos, en atención) que ve el admin, ya que el empleado comparte esas
+/// responsabilidades de operación.
+class NotificacionesEmpleadoScreen extends StatefulWidget {
+  const NotificacionesEmpleadoScreen({super.key});
 
   @override
-  State<NotificacionesAdminScreen> createState() =>
-      _NotificacionesAdminScreenState();
+  State<NotificacionesEmpleadoScreen> createState() =>
+      _NotificacionesEmpleadoScreenState();
 }
 
-class _NotificacionesAdminScreenState
-    extends State<NotificacionesAdminScreen> with WidgetsBindingObserver {
+class _NotificacionesEmpleadoScreenState
+    extends State<NotificacionesEmpleadoScreen> with WidgetsBindingObserver {
   Timer? _actualizador;
   NotificacionesStore? _store;
   VistaNotificaciones _vista = VistaNotificaciones.activas;
@@ -41,7 +44,7 @@ class _NotificacionesAdminScreenState
 
   Future<void> _cargarStore() async {
     final usuarioId = context.read<AuthProvider>().currentUser?.id;
-    final store = NotificacionesStore(namespace: 'admin', usuarioId: usuarioId);
+    final store = NotificacionesStore(namespace: 'empleado', usuarioId: usuarioId);
     await store.cargar();
     if (!mounted) return;
     setState(() => _store = store);

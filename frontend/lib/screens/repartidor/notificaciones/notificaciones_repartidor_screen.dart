@@ -11,18 +11,22 @@ import '../../../services/notificaciones_store.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/notificacion_filtro_menu.dart';
 import '../../../widgets/notificacion_swipe_tile.dart';
-import '../pedido/order_detail_screen.dart';
+import '../../admin/pedido/order_detail_screen.dart';
 
-class NotificacionesAdminScreen extends StatefulWidget {
-  const NotificacionesAdminScreen({super.key});
+/// Notificaciones para repartidor: recolecciones y entregas pendientes.
+/// Como los pedidos no tienen un repartidor_id propio (solo un texto libre
+/// "repartidor"), se muestran todas las recolecciones/entregas pendientes,
+/// igual que ya hace HomeRepartidorScreen.
+class NotificacionesRepartidorScreen extends StatefulWidget {
+  const NotificacionesRepartidorScreen({super.key});
 
   @override
-  State<NotificacionesAdminScreen> createState() =>
-      _NotificacionesAdminScreenState();
+  State<NotificacionesRepartidorScreen> createState() =>
+      _NotificacionesRepartidorScreenState();
 }
 
-class _NotificacionesAdminScreenState
-    extends State<NotificacionesAdminScreen> with WidgetsBindingObserver {
+class _NotificacionesRepartidorScreenState
+    extends State<NotificacionesRepartidorScreen> with WidgetsBindingObserver {
   Timer? _actualizador;
   NotificacionesStore? _store;
   VistaNotificaciones _vista = VistaNotificaciones.activas;
@@ -41,7 +45,7 @@ class _NotificacionesAdminScreenState
 
   Future<void> _cargarStore() async {
     final usuarioId = context.read<AuthProvider>().currentUser?.id;
-    final store = NotificacionesStore(namespace: 'admin', usuarioId: usuarioId);
+    final store = NotificacionesStore(namespace: 'repartidor', usuarioId: usuarioId);
     await store.cargar();
     if (!mounted) return;
     setState(() => _store = store);
@@ -62,6 +66,12 @@ class _NotificacionesAdminScreenState
   }
 
   String _claveDe(PedidoAdmin pedido) => 'pedido_${pedido.id}_${pedido.estado.name}';
+
+  bool _esRecoleccion(PedidoAdmin p) =>
+      p.estado == PedidoEstado.recibido || p.estado == PedidoEstado.asignado;
+
+  bool _esEntrega(PedidoAdmin p) =>
+      p.estado == PedidoEstado.listo || p.estado == PedidoEstado.enCamino;
 
   void _abrir(PedidoAdmin pedido) {
     _store?.marcarLeida(_claveDe(pedido));
@@ -118,16 +128,12 @@ class _NotificacionesAdminScreenState
   Widget build(BuildContext context) {
     final admin = context.watch<AdminProvider>();
     final store = _store;
-    final pedidos = [...admin.pedidos]
-      ..sort(
-        (a, b) => (b.creadoEn ?? DateTime(0)).compareTo(
-          a.creadoEn ?? DateTime(0),
-        ),
-      );
+    final pendientes = admin.pedidos.where((p) => _esRecoleccion(p) || _esEntrega(p)).toList()
+      ..sort((a, b) => (b.creadoEn ?? DateTime(0)).compareTo(a.creadoEn ?? DateTime(0)));
 
     final activos = store == null
-        ? pedidos
-        : pedidos.where((p) {
+        ? pendientes
+        : pendientes.where((p) {
             final clave = _claveDe(p);
             return !store.eliminadas.contains(clave) && !store.archivadas.contains(clave);
           }).toList();
@@ -136,7 +142,7 @@ class _NotificacionesAdminScreenState
         : activos.where((p) => store.leidas.contains(_claveDe(p))).toList();
     final archivados = store == null
         ? <PedidoAdmin>[]
-        : pedidos.where((p) {
+        : pendientes.where((p) {
             final clave = _claveDe(p);
             return !store.eliminadas.contains(clave) && store.archivadas.contains(clave);
           }).toList();
@@ -196,7 +202,7 @@ class _NotificacionesAdminScreenState
                         child: Text(switch (_vista) {
                           VistaNotificaciones.archivadas => 'No hay notificaciones archivadas',
                           VistaNotificaciones.leidas => 'No hay notificaciones leídas',
-                          VistaNotificaciones.activas => 'No hay actividad de pedidos',
+                          VistaNotificaciones.activas => 'No hay recolecciones ni entregas pendientes',
                         }),
                       ),
                     ],
@@ -212,6 +218,7 @@ class _NotificacionesAdminScreenState
                       if (esVistaArchivadas) {
                         return _NotificacionArchivadaCard(
                           pedido: pedido,
+                          esRecoleccion: _esRecoleccion(pedido),
                           onRestaurar: () {
                             _store?.desarchivar(_claveDe(pedido));
                             setState(() {});
@@ -230,6 +237,7 @@ class _NotificacionesAdminScreenState
                         },
                         child: _NotificacionPedidoCard(
                           pedido: pedido,
+                          esRecoleccion: _esRecoleccion(pedido),
                           leida: leida,
                           onTap: () => _abrir(pedido),
                         ),
@@ -242,22 +250,22 @@ class _NotificacionesAdminScreenState
 }
 
 class _NotificacionPedidoCard extends StatelessWidget {
-  const _NotificacionPedidoCard({required this.pedido, required this.leida, required this.onTap});
+  const _NotificacionPedidoCard({
+    required this.pedido,
+    required this.esRecoleccion,
+    required this.leida,
+    required this.onTap,
+  });
 
   final PedidoAdmin pedido;
+  final bool esRecoleccion;
   final bool leida;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final urgente = pedido.estado == PedidoEstado.atencion;
-    final nuevo = pedido.estado == PedidoEstado.recibido;
-    final color = urgente ? AppColors.error : AppColors.primary;
-    final icono = urgente
-        ? Icons.warning_amber_rounded
-        : nuevo
-            ? Icons.fiber_new_rounded
-            : iconoParaEstado(pedido.estado);
+    final color = esRecoleccion ? AppColors.primary : Colors.green.shade700;
+    final icono = esRecoleccion ? Icons.assignment_return_outlined : Icons.local_shipping_outlined;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -266,11 +274,7 @@ class _NotificacionPedidoCard extends StatelessWidget {
       color: AppColors.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: urgente
-              ? AppColors.error.withValues(alpha: 0.45)
-              : (leida ? AppColors.surfaceVariant : AppColors.primary.withValues(alpha: 0.3)),
-        ),
+        side: BorderSide(color: leida ? AppColors.surfaceVariant : AppColors.primary.withValues(alpha: 0.3)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -301,11 +305,9 @@ class _NotificacionPedidoCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              urgente
-                                  ? 'Pedido ${pedido.numero} requiere atención'
-                                  : nuevo
-                                      ? 'Nuevo pedido ${pedido.numero}'
-                                      : 'Pedido ${pedido.numero}: ${estadoToString(pedido.estado)}',
+                              esRecoleccion
+                                  ? 'Recolección pendiente: pedido ${pedido.numero}'
+                                  : 'Entrega pendiente: pedido ${pedido.numero}',
                               style: GoogleFonts.inter(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -314,20 +316,13 @@ class _NotificacionPedidoCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              urgente && pedido.warningMessage != null
-                                  ? pedido.warningMessage!
-                                  : '${pedido.clienteNombre} • ${pedido.servicioNombre}',
+                              '${pedido.clienteNombre} • ${pedido.clienteDireccion}',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 color: AppColors.onSurfaceVariant,
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              subtituloParaEstado(pedido.estado),
-                              style: GoogleFonts.inter(fontSize: 12, color: color),
                             ),
                           ],
                         ),
@@ -349,9 +344,14 @@ class _NotificacionPedidoCard extends StatelessWidget {
 }
 
 class _NotificacionArchivadaCard extends StatelessWidget {
-  const _NotificacionArchivadaCard({required this.pedido, required this.onRestaurar});
+  const _NotificacionArchivadaCard({
+    required this.pedido,
+    required this.esRecoleccion,
+    required this.onRestaurar,
+  });
 
   final PedidoAdmin pedido;
+  final bool esRecoleccion;
   final VoidCallback onRestaurar;
 
   @override
@@ -368,14 +368,19 @@ class _NotificacionArchivadaCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(iconoParaEstado(pedido.estado), color: AppColors.primary),
+            Icon(
+              esRecoleccion ? Icons.assignment_return_outlined : Icons.local_shipping_outlined,
+              color: AppColors.primary,
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pedido ${pedido.numero}: ${estadoToString(pedido.estado)}',
+                    esRecoleccion
+                        ? 'Recolección: pedido ${pedido.numero}'
+                        : 'Entrega: pedido ${pedido.numero}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.onSurface),

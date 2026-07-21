@@ -6,6 +6,7 @@ import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../notificaciones/notificaciones_repartidor_screen.dart';
 
 class HomeRepartidorScreen extends StatefulWidget {
   const HomeRepartidorScreen({super.key});
@@ -198,6 +199,47 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
           ],
         ),
         actions: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                tooltip: 'Notificaciones',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const NotificacionesRepartidorScreen(),
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: AppColors.primary,
+                ),
+              ),
+              if (recolecciones.length + entregas.length > 0)
+                Positioned(
+                  right: 5,
+                  top: 4,
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 17),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      recolecciones.length + entregas.length > 9
+                          ? '9+'
+                          : '${recolecciones.length + entregas.length}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
             tooltip: 'Actualizar pedidos',

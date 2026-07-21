@@ -214,19 +214,33 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     height: 180,
-                    child: AppImage(
-                      url: _imagenUrl,
-                      fallbackAsset: 'assets/images/promocion_default.png',
-                    ),
+                    child: AppImage(url: _imagenUrl),
                   ),
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _subiendoImagen ? null : _elegirImagen,
-                  icon: _subiendoImagen
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.add_a_photo_outlined),
-                  label: Text(_imagenUrl == null ? 'Agregar imagen' : 'Cambiar imagen'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _subiendoImagen ? null : _elegirImagen,
+                        icon: _subiendoImagen
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.add_a_photo_outlined),
+                        label: Text(_imagenUrl == null ? 'Agregar imagen' : 'Cambiar imagen'),
+                      ),
+                    ),
+                    if (_imagenUrl != null) ...[
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: _subiendoImagen ? null : () => setState(() => _imagenUrl = null),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                          side: const BorderSide(color: AppColors.error),
+                        ),
+                        child: const Icon(Icons.delete_outline),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 20),
                 Text(
