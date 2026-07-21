@@ -57,6 +57,7 @@ class Servicio {
     required this.precio,
     required this.unidad,
     required this.descripcion,
+    this.imagenUrl,
     this.activo = true,
     this.comoFunciona = '',
     this.tiempoEstimado = '',
@@ -73,6 +74,7 @@ class Servicio {
   double precio;
   String unidad;
   String descripcion;
+  String? imagenUrl;
   bool activo;
 
   /// Explicación de cómo funciona el servicio (el texto largo que antes
@@ -100,6 +102,7 @@ class Servicio {
     precio: double.tryParse(json['precio']?.toString() ?? '0') ?? 0,
     unidad: json['unidad']?.toString() ?? 'kg',
     descripcion: json['descripcion']?.toString() ?? '',
+    imagenUrl: json['imagenUrl']?.toString(),
     activo: json['activo'] != false,
     comoFunciona: json['comoFunciona']?.toString() ?? '',
     tiempoEstimado: json['tiempoEstimado']?.toString() ?? '',
@@ -120,6 +123,7 @@ class Servicio {
     'precio': precio,
     'unidad': unidad,
     'descripcion': descripcion,
+    'imagenUrl': imagenUrl,
     'activo': activo,
     'comoFunciona': comoFunciona,
     'tiempoEstimado': tiempoEstimado,
@@ -137,6 +141,7 @@ class Servicio {
     double? precio,
     String? unidad,
     String? descripcion,
+    String? imagenUrl,
     bool? activo,
     String? comoFunciona,
     String? tiempoEstimado,
@@ -150,6 +155,7 @@ class Servicio {
     precio: precio ?? this.precio,
     unidad: unidad ?? this.unidad,
     descripcion: descripcion ?? this.descripcion,
+    imagenUrl: imagenUrl ?? this.imagenUrl,
     activo: activo ?? this.activo,
     comoFunciona: comoFunciona ?? this.comoFunciona,
     tiempoEstimado: tiempoEstimado ?? this.tiempoEstimado,

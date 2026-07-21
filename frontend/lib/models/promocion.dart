@@ -11,6 +11,7 @@ class Promocion {
     this.activa = true,
     this.usosPorCliente,
     this.cantidadMinima,
+    this.imagenUrl,
   });
 
   final String id;
@@ -31,6 +32,7 @@ class Promocion {
   /// Cantidad mínima de prendas/kg para que el código aplique (null = sin
   /// mínimo), ej. "50% en más de 10 prendas".
   int? cantidadMinima;
+  String? imagenUrl;
 
   /// Vigente = activada por el admin y dentro de la ventana de fechas que él
   /// configuró. Es lo único que determina si el cliente puede usarla.
@@ -60,6 +62,7 @@ class Promocion {
     activa: json['activa'] != false,
     usosPorCliente: json['usosPorCliente'] == null ? null : int.tryParse(json['usosPorCliente'].toString()),
     cantidadMinima: json['cantidadMinima'] == null ? null : int.tryParse(json['cantidadMinima'].toString()),
+    imagenUrl: json['imagenUrl']?.toString(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -73,6 +76,7 @@ class Promocion {
     'activa': activa,
     'usosPorCliente': usosPorCliente,
     'cantidadMinima': cantidadMinima,
+    'imagenUrl': imagenUrl,
   };
 
   /// Descripción legible de las condiciones extra que el admin haya

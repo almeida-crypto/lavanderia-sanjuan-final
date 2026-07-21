@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../models/opcion_catalogo.dart';
 import '../../../models/servicio.dart';
 import '../../../models/servicio_display.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../services/imagen_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 import '../opciones/opciones_catalogo_screen.dart';
 
 class _BeneficioFormItem {
@@ -79,6 +82,9 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
   final List<String> _sugeridos = [];
   final List<_BeneficioFormItem> _beneficios = [];
   final List<_OpcionFormItem> _opciones = [];
+  final _imagenService = ImagenService();
+  String? _imagenUrl;
+  bool _subiendoImagen = false;
 
   final List<String> _units = ['kg', 'prenda', 'pieza'];
   final List<(String, IconData)> _availableIcons = [
@@ -98,6 +104,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
     _descriptionController = TextEditingController(text: s?.descripcion ?? '');
     _comoFuncionaController = TextEditingController(text: s?.comoFunciona ?? '');
     _tiempoEstimadoController = TextEditingController(text: s?.tiempoEstimado ?? '');
+    _imagenUrl = s?.imagenUrl;
     if (s != null) {
       _selectedUnit = s.unidad;
       _selectedIcon = s.icono;
@@ -142,6 +149,42 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
 
   void _quitarOpcion(int index) => setState(() => _opciones.removeAt(index).dispose());
 
+  Future<void> _elegirImagen() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Elegir de la galería'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_camera_outlined),
+            title: const Text('Tomar una foto'),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+        ]),
+      ),
+    );
+    if (source == null) return;
+    final archivo = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1600,
+      imageQuality: 82,
+    );
+    if (archivo == null || !mounted) return;
+    setState(() => _subiendoImagen = true);
+    try {
+      final url = await _imagenService.subir(archivo, carpeta: 'servicios');
+      if (mounted) setState(() => _imagenUrl = url);
+    } on ImagenException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _subiendoImagen = false);
+    }
+  }
+
   Future<void> _save(BuildContext context) async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -152,6 +195,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
       precio: double.tryParse(_priceController.text.trim()) ?? 0.0,
       unidad: _selectedUnit,
       descripcion: _descriptionController.text.trim(),
+      imagenUrl: _imagenUrl,
       activo: widget.servicio?.activo ?? true,
       comoFunciona: _comoFuncionaController.text.trim(),
       tiempoEstimado: _tiempoEstimadoController.text.trim(),
@@ -225,6 +269,28 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _SeccionTitulo('Imagen del Servicio'),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 180,
+                    child: AppImage(
+                      url: _imagenUrl,
+                      fallbackAsset: imagenPredeterminadaServicio(_nameController.text),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _subiendoImagen ? null : _elegirImagen,
+                  icon: _subiendoImagen
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.add_a_photo_outlined),
+                  label: Text(_imagenUrl == null ? 'Agregar imagen' : 'Cambiar imagen'),
+                ),
+                const SizedBox(height: 24),
                 _SeccionTitulo('Ícono del Servicio'),
                 const SizedBox(height: 12),
                 Container(

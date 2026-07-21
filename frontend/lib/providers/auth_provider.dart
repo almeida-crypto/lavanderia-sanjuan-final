@@ -122,6 +122,7 @@ class AuthProvider extends ChangeNotifier {
     required String nombre,
     required String correo,
     String? telefono,
+    String? fotoUrl,
   }) async {
     final actual = _currentUser;
     if (actual == null) return false;
@@ -132,7 +133,14 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final actualizado = await _authService.actualizarPerfil(
-        Usuario(id: actual.id, nombre: nombre, correo: correo, telefono: telefono, rol: actual.rol),
+        Usuario(
+          id: actual.id,
+          nombre: nombre,
+          correo: correo,
+          telefono: telefono,
+          rol: actual.rol,
+          fotoUrl: fotoUrl ?? actual.fotoUrl,
+        ),
       );
       // El endpoint de perfil no reenvía el access token (solo /auth/login lo
       // hace), así que hay que conservar el de la sesión actual o se perdería
@@ -145,6 +153,7 @@ class AuthProvider extends ChangeNotifier {
         rol: actualizado.rol,
         activo: actualizado.activo,
         accessToken: actual.accessToken,
+        fotoUrl: actualizado.fotoUrl ?? actual.fotoUrl,
       );
       await _guardarUsuarioLocal(_currentUser!);
       return true;

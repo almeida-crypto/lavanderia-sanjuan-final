@@ -28,6 +28,7 @@ class Usuario {
     this.telefono,
     this.activo = true,
     this.accessToken,
+    this.fotoUrl,
   });
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
@@ -39,6 +40,7 @@ class Usuario {
       rol: userRoleFromString(json['rol'] as String? ?? json['role'] as String?),
       activo: json['activa'] != false,
       accessToken: json['accessToken'] as String?,
+      fotoUrl: json['fotoUrl'] as String? ?? json['foto_url'] as String?,
     );
   }
 
@@ -51,6 +53,7 @@ class Usuario {
       'rol': rol.name,
       'activa': activo,
       'accessToken': accessToken,
+      'fotoUrl': fotoUrl,
     };
   }
 
@@ -65,4 +68,5 @@ class Usuario {
   /// perfil (SharedPreferences) para que la sesión sobreviva a un reinicio de
   /// la app sin tener que iniciar sesión de nuevo.
   final String? accessToken;
+  final String? fotoUrl;
 }

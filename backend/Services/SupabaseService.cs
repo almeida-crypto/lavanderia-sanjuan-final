@@ -99,7 +99,8 @@ public class SupabaseService
         return new AuthOperationResult(true, StatusCodes.Status201Created, null, MapUser(user), null);
     }
 
-    public async Task<UsuarioOperationResult> UpdateProfileAsync(string id, string? nombre, string? correo, string? telefono)
+    public async Task<UsuarioOperationResult> UpdateProfileAsync(
+        string id, string? nombre, string? correo, string? telefono, string? fotoUrl = null)
     {
         var currentUserResponse = await SendAsync(HttpMethod.Get, $"/auth/v1/admin/users/{id}", useServiceRole: true);
         if (!currentUserResponse.IsSuccessStatusCode)
@@ -127,6 +128,10 @@ public class SupabaseService
         if (!string.IsNullOrWhiteSpace(telefono))
         {
             metadata["telefono"] = telefono;
+        }
+        if (!string.IsNullOrWhiteSpace(fotoUrl))
+        {
+            metadata["foto_url"] = fotoUrl;
         }
 
         var payload = new JsonObject
@@ -464,6 +469,7 @@ public class SupabaseService
             Nombre = metadata?["nombre"]?.GetValue<string>() ?? correo,
             Correo = correo,
             Telefono = metadata?["telefono"]?.GetValue<string>() ?? userNode["phone"]?.GetValue<string>(),
+            FotoUrl = metadata?["foto_url"]?.GetValue<string>(),
             Rol = metadata?["rol"]?.GetValue<string>() ?? "cliente",
             Activa = activa
         };

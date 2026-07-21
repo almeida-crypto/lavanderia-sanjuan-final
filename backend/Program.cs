@@ -23,6 +23,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<SupabaseService>();
 builder.Services.AddSingleton<SupabaseDataService>();
+builder.Services.AddSingleton<SupabaseStorageService>();
 builder.Services.AddSingleton<PromocionValidationService>();
 
 // Cada petición protegida trae "Authorization: Bearer <token>"; este esquema

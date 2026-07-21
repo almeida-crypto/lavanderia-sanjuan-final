@@ -113,6 +113,7 @@ class AuthService {
         'nombre': usuario.nombre,
         'correo': usuario.correo,
         'telefono': usuario.telefono,
+        'fotoUrl': usuario.fotoUrl,
       }),
     ));
 

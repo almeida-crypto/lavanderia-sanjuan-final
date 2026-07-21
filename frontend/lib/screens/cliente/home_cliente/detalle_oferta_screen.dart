@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../models/promocion.dart';
 import '../../../models/servicio_display.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 import '../../auth/terminos_condiciones/terminos_condiciones_screen.dart';
 import '../agendar_recoleccion/agendar_recoleccion_screen.dart';
 
@@ -64,7 +65,7 @@ class _DetalleOfertaScreenState extends State<DetalleOfertaScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _HeroBanner(),
+              _HeroBanner(promocion: widget.promocion),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                 child: Column(
@@ -190,7 +191,9 @@ class _DetalleOfertaScreenState extends State<DetalleOfertaScreen> {
 }
 
 class _HeroBanner extends StatelessWidget {
-  const _HeroBanner();
+  const _HeroBanner({required this.promocion});
+
+  final Promocion promocion;
 
   @override
   Widget build(BuildContext context) {
@@ -205,14 +208,13 @@ class _HeroBanner extends StatelessWidget {
         ),
       ),
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          Center(
-            child: Icon(
-              Icons.checkroom_rounded,
-              size: 96,
-              color: AppColors.primary.withValues(alpha: 0.35),
-            ),
+          AppImage(
+            url: promocion.imagenUrl,
+            fallbackAsset: 'assets/images/promocion_default.png',
           ),
+          Container(color: AppColors.primary.withValues(alpha: 0.16)),
           Positioned(
             left: 20,
             bottom: 16,

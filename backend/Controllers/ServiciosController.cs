@@ -68,6 +68,7 @@ public class ServiciosController : ControllerBase
         ["precio"] = request.Precio,
         ["unidad"] = request.Unidad ?? "kg",
         ["descripcion"] = request.Descripcion ?? string.Empty,
+        ["imagen_url"] = request.ImagenUrl,
         ["activo"] = request.Activo,
         ["como_funciona"] = request.ComoFunciona ?? string.Empty,
         ["tiempo_estimado"] = request.TiempoEstimado ?? string.Empty,
@@ -84,6 +85,7 @@ public class ServiciosController : ControllerBase
         Precio = double.TryParse(row["precio"]?.ToString(), out var precio) ? precio : 0,
         Unidad = row["unidad"]?.ToString() ?? "kg",
         Descripcion = row["descripcion"]?.ToString() ?? string.Empty,
+        ImagenUrl = row["imagen_url"]?.ToString(),
         Activo = row["activo"]?.GetValue<bool>() ?? true,
         ComoFunciona = row["como_funciona"]?.ToString() ?? string.Empty,
         TiempoEstimado = row["tiempo_estimado"]?.ToString() ?? string.Empty,
@@ -103,6 +105,7 @@ public class ServicioRequest
     public double Precio { get; set; }
     public string? Unidad { get; set; }
     public string? Descripcion { get; set; }
+    public string? ImagenUrl { get; set; }
     public bool Activo { get; set; } = true;
     public string? ComoFunciona { get; set; }
     public string? TiempoEstimado { get; set; }
@@ -119,6 +122,7 @@ public class ServicioDto
     public double Precio { get; set; }
     public string Unidad { get; set; } = string.Empty;
     public string Descripcion { get; set; } = string.Empty;
+    public string? ImagenUrl { get; set; }
     public bool Activo { get; set; }
     public string ComoFunciona { get; set; } = string.Empty;
     public string TiempoEstimado { get; set; } = string.Empty;

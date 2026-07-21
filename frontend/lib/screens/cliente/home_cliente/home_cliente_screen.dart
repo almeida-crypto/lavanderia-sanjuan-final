@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +14,7 @@ import '../../../services/pedido_service.dart';
 import '../../../services/promocion_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
+import '../../../widgets/app_image.dart';
 import '../../../widgets/doble_back_para_salir.dart';
 import '../mi_perfil/mi_perfil_screen.dart';
 import '../mis_pedidos/mis_pedidos_screen.dart';
@@ -32,25 +35,40 @@ class HomeClienteScreen extends StatefulWidget {
   @override
   State<HomeClienteScreen> createState() => _HomeClienteScreenState();
 }
-class _HomeClienteScreenState extends State<HomeClienteScreen> {
+class _HomeClienteScreenState extends State<HomeClienteScreen> with WidgetsBindingObserver {
   final _pedidoService = PedidoService();
   final _promocionService = PromocionService();
   bool _isLoading = true;
   Pedido? _pedidoActivo;
   List<Promocion> _promocionesVigentes = [];
+  Timer? _actualizador;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _cargarTodo();
+    _actualizador = Timer.periodic(const Duration(seconds: 30), (_) => _cargarTodo(silencioso: true));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _cargarTodo(silencioso: true);
+  }
+
+  @override
+  void dispose() {
+    _actualizador?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   /// Se llama al abrir la pantalla y también al deslizar hacia abajo para
   /// refrescar: sin esto, un cambio de precio/promoción del admin no se
   /// veía aquí hasta cerrar y volver a abrir la app.
-  Future<void> _cargarTodo() {
+  Future<void> _cargarTodo({bool silencioso = false}) {
     return Future.wait([
-      _cargarPedidoActivo(),
+      _cargarPedidoActivo(silencioso: silencioso),
       _cargarPromocionVigente(),
       context.read<ServiciosProvider>().cargar(),
     ]);
@@ -66,9 +84,9 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
     }
   }
 
-  Future<void> _cargarPedidoActivo() async {
+  Future<void> _cargarPedidoActivo({bool silencioso = false}) async {
     final auth = context.read<AuthProvider>();
-    setState(() => _isLoading = true);
+    if (!silencioso && mounted) setState(() => _isLoading = true);
     try {
       final data = await _pedidoService.listarPedidos(clienteId: auth.currentUser?.id);
       final pedidos = data.map(Pedido.fromJson);
@@ -156,29 +174,11 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_outlined, color: AppColors.secondary),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
-                  ),
-                ),
-                Positioned(
-                  right: 10,
-                  top: 10,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.surface, width: 2),
-                    ),
-                  ),
-                ),
-              ],
+            child: IconButton(
+              icon: const Icon(Icons.notifications_outlined, color: AppColors.secondary),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
+              ),
             ),
           ),
         ],
@@ -645,6 +645,7 @@ class _ServicesSection extends StatelessWidget {
               icon: servicio.icon,
               title: servicio.nombre,
               subtitle: servicio.precioTexto,
+              imagenUrl: servicio.imagenUrl,
               onTap: () => onServicioTap(servicio.tipo),
             );
           },
@@ -660,12 +661,14 @@ class _ServiceCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.imagenUrl,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final String? imagenUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -682,14 +685,16 @@ class _ServiceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.primaryFixed,
-                borderRadius: BorderRadius.circular(12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: double.infinity,
+                height: 64,
+                child: AppImage(
+                  url: imagenUrl,
+                  fallbackAsset: imagenPredeterminadaServicio(title),
+                ),
               ),
-              child: Icon(icon, color: AppColors.primary),
             ),
             const Spacer(),
             Text(
@@ -774,14 +779,16 @@ class _WeeklyOfferBanner extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Container(
-              width: 56,
-              height: 56,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceContainerLowest,
-                shape: BoxShape.circle,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: AppImage(
+                  url: promocion.imagenUrl,
+                  fallbackAsset: 'assets/images/promocion_default.png',
+                ),
               ),
-              child: const Icon(Icons.sell_rounded, color: AppColors.primary, size: 28),
             ),
           ],
         ),

@@ -109,6 +109,7 @@ public class PromocionesController : ControllerBase
         ["codigo"] = request.Codigo?.Trim().ToUpperInvariant(),
         ["titulo"] = request.Titulo?.Trim(),
         ["descripcion"] = request.Descripcion ?? string.Empty,
+        ["imagen_url"] = request.ImagenUrl,
         ["descuento_porcentaje"] = request.DescuentoPorcentaje,
         ["servicio_aplicable"] = string.IsNullOrWhiteSpace(request.ServicioAplicable) ? null : request.ServicioAplicable!.Trim(),
         ["fecha_inicio"] = request.FechaInicio ?? DateTime.UtcNow.ToString("O"),
@@ -124,6 +125,7 @@ public class PromocionesController : ControllerBase
         Codigo = row["codigo"]?.ToString() ?? string.Empty,
         Titulo = row["titulo"]?.ToString() ?? string.Empty,
         Descripcion = row["descripcion"]?.ToString() ?? string.Empty,
+        ImagenUrl = row["imagen_url"]?.ToString(),
         DescuentoPorcentaje = double.TryParse(row["descuento_porcentaje"]?.ToString(), out var descuento) ? descuento : 0,
         ServicioAplicable = row["servicio_aplicable"]?.ToString(),
         FechaInicio = row["fecha_inicio"]?.ToString() ?? string.Empty,
@@ -142,6 +144,7 @@ public class PromocionRequest
     public string? Codigo { get; set; }
     public string? Titulo { get; set; }
     public string? Descripcion { get; set; }
+    public string? ImagenUrl { get; set; }
     public double DescuentoPorcentaje { get; set; }
     public string? ServicioAplicable { get; set; }
     public string? FechaInicio { get; set; }
@@ -169,6 +172,7 @@ public class PromocionDto
     public string Codigo { get; set; } = string.Empty;
     public string Titulo { get; set; } = string.Empty;
     public string Descripcion { get; set; } = string.Empty;
+    public string? ImagenUrl { get; set; }
     public double DescuentoPorcentaje { get; set; }
     public string? ServicioAplicable { get; set; }
     public string FechaInicio { get; set; } = string.Empty;

@@ -7,6 +7,7 @@ import '../../../models/servicio_lavanderia.dart';
 import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
+import '../../../widgets/app_image.dart';
 import '../../../widgets/doble_back_para_salir.dart';
 import '../home_cliente/home_cliente_screen.dart';
 import '../mi_perfil/mi_perfil_screen.dart';
@@ -212,16 +213,16 @@ class _ServicioCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: servicio.destacado
-                    ? AppColors.primaryFixed
-                    : AppColors.surfaceContainerHigh,
-                shape: BoxShape.circle,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 140,
+                child: AppImage(
+                  url: servicio.imagenUrl,
+                  fallbackAsset: imagenPredeterminadaServicio(servicio.nombre),
+                ),
               ),
-              child: Icon(servicio.icon, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
             Text(

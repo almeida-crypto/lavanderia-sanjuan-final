@@ -123,6 +123,7 @@ public class UsuarioDto
     public string? Password { get; set; }
     public string? Rol { get; set; }
     public bool Activa { get; set; } = true;
+    public string? FotoUrl { get; set; }
 
     /// Solo se llena en la respuesta de /auth/login: el token de Supabase que
     /// el cliente debe reenviar como "Authorization: Bearer" en el resto de

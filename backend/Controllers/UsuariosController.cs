@@ -33,7 +33,8 @@ public class UsuariosController : ControllerBase
             return Forbid();
         }
 
-        var update = await _supabaseService.UpdateProfileAsync(id, request.Nombre, request.Correo, request.Telefono);
+        var update = await _supabaseService.UpdateProfileAsync(
+            id, request.Nombre, request.Correo, request.Telefono, request.FotoUrl);
         if (!update.Success)
         {
             return StatusCode(update.StatusCode, new { message = update.ErrorMessage ?? "No se pudo actualizar el perfil" });
@@ -75,6 +76,7 @@ public class ActualizarPerfilRequest
     public string? Nombre { get; set; }
     public string? Correo { get; set; }
     public string? Telefono { get; set; }
+    public string? FotoUrl { get; set; }
 }
 
 public class CambiarPasswordRequest

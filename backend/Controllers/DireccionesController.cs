@@ -48,6 +48,9 @@ public class DireccionesController : ControllerBase
 
         try
         {
+            var errorUbicacion = await ValidarUbicacionAsync(request);
+            if (errorUbicacion is not null) return BadRequest(new { message = errorUbicacion });
+
             if (request.Predeterminada)
                 await QuitarPredeterminada(request.UsuarioId);
 
@@ -81,6 +84,9 @@ public class DireccionesController : ControllerBase
 
         try
         {
+            var errorUbicacion = await ValidarUbicacionAsync(request);
+            if (errorUbicacion is not null) return BadRequest(new { message = errorUbicacion });
+
             var existente = await _data.FindOneAsync("direcciones", $"id=eq.{E(id)}&limit=1");
             if (existente is null) return NotFound(new { message = "Dirección no encontrada" });
             if (existente["usuario_id"]?.ToString() != CallerId) return NotFound(new { message = "Dirección no encontrada" });
@@ -113,6 +119,31 @@ public class DireccionesController : ControllerBase
         "direcciones",
         $"usuario_id=eq.{E(usuarioId)}&predeterminada=eq.true",
         new JsonObject { ["predeterminada"] = false });
+
+    private async Task<string?> ValidarUbicacionAsync(CrearDireccionRequest request)
+    {
+        var cp = request.CodigoPostal?.Trim() ?? string.Empty;
+        if (cp.Length != 5 || !cp.All(char.IsDigit))
+            return "El código postal debe tener 5 dígitos";
+
+        var registros = await _data.ListAsync(
+            "codigos_postales",
+            $"codigo_postal=eq.{E(cp)}&select=estado,municipio,ciudad,colonia&limit=500");
+        var filas = registros.OfType<JsonObject>().ToList();
+        if (filas.Count == 0) return "El código postal no existe";
+
+        static bool Igual(string? a, string? b) =>
+            string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        if (!filas.Any(f => Igual(f["colonia"]?.ToString(), request.Colonia)))
+            return "La colonia no corresponde al código postal";
+        if (!filas.Any(f => Igual(f["estado"]?.ToString(), request.Estado)))
+            return "El estado no corresponde al código postal";
+        if (!filas.Any(f => Igual(f["municipio"]?.ToString(), request.Ciudad) ||
+                          Igual(f["ciudad"]?.ToString(), request.Ciudad)))
+            return "La ciudad o municipio no corresponde al código postal";
+        return null;
+    }
 
     private static JsonObject Payload(CrearDireccionRequest request) => new()
     {

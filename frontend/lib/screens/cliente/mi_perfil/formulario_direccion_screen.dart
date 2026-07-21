@@ -29,6 +29,7 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
   final _codigoPostalService = CodigoPostalService();
 
   bool _buscandoCp = false;
+  bool _cpValidado = false;
   String? _cpErrorMensaje;
   List<String> _coloniasSugeridas = [];
 
@@ -47,6 +48,9 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
       _ciudadController.text = existente.ciudad;
       _estadoController.text = existente.estado;
       _cpController.text = existente.codigoPostal;
+      // La dirección ya fue guardada anteriormente; se vuelve a consultar si
+      // el usuario modifica el código postal.
+      _cpValidado = true;
     }
   }
 
@@ -75,6 +79,7 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
     final cp = value.trim();
     if (cp.length != 5) {
       setState(() {
+        _cpValidado = false;
         _cpErrorMensaje = null;
         _coloniasSugeridas = [];
       });
@@ -89,6 +94,7 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
       final info = await _codigoPostalService.buscar(cp);
       if (!mounted) return;
       setState(() {
+        _cpValidado = true;
         _estadoController.text = info.estado;
         _ciudadController.text = info.ciudad;
         _coloniasSugeridas = info.colonias;
@@ -99,12 +105,17 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
     } on CodigoPostalException catch (e) {
       if (!mounted) return;
       setState(() {
+        _cpValidado = false;
         _cpErrorMensaje = e.message;
         _coloniasSugeridas = [];
       });
     } catch (_) {
-      // Sin conexión al catálogo: no bloquea, el cliente puede seguir
-      // llenando el resto a mano.
+      if (!mounted) return;
+      setState(() {
+        _cpValidado = false;
+        _cpErrorMensaje = 'No se pudo validar el código postal. Revisa tu conexión e inténtalo de nuevo.';
+        _coloniasSugeridas = [];
+      });
     } finally {
       if (mounted) setState(() => _buscandoCp = false);
     }
@@ -130,6 +141,25 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
     );
 
     Navigator.of(context).pop(direccion);
+  }
+
+  String? _validarCodigoPostal(String? value) {
+    final cp = value?.trim() ?? '';
+    if (cp.isEmpty) return 'Campo obligatorio';
+    if (!RegExp(r'^\d{5}$').hasMatch(cp)) return 'Escribe los 5 dígitos';
+    if (_buscandoCp) return 'Espera a que termine la validación';
+    if (!_cpValidado) return _cpErrorMensaje ?? 'El código postal debe existir';
+    return null;
+  }
+
+  String? _validarColonia(String? value) {
+    final requerido = _requerido(value);
+    if (requerido != null) return requerido;
+    if (_coloniasSugeridas.isNotEmpty &&
+        !_coloniasSugeridas.any((c) => c.toLowerCase() == value!.trim().toLowerCase())) {
+      return 'Selecciona una colonia correspondiente a este código postal';
+    }
+    return null;
   }
 
   @override
@@ -189,7 +219,7 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
                         controller: _etiquetaController,
                         hintText: 'Ej. Casa, Oficina',
                         icon: Icons.label_outline_rounded,
-                        validator: _requerido,
+                        validator: _validarColonia,
                       ),
                       const SizedBox(height: 16),
                       _CampoDireccion(
@@ -246,7 +276,7 @@ class _FormularioDireccionScreenState extends State<FormularioDireccionScreen> {
                               controller: _cpController,
                               hintText: '54000',
                               keyboardType: TextInputType.number,
-                              validator: _requerido,
+                              validator: _validarCodigoPostal,
                               onChanged: _buscarCodigoPostal,
                               helperError: _cpErrorMensaje,
                               suffixIcon: _buscandoCp

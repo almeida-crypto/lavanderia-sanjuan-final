@@ -80,6 +80,7 @@ alter table public.servicios add column if not exists tiempo_estimado text not n
 alter table public.servicios add column if not exists items_sugeridos jsonb not null default '[]'::jsonb;
 alter table public.servicios add column if not exists beneficios jsonb not null default '[]'::jsonb;
 alter table public.servicios add column if not exists opciones_acabado jsonb not null default '[]'::jsonb;
+alter table public.servicios add column if not exists imagen_url text;
 
 -- Catálogo global de opciones (ej. "Doblado en Gancho"): se definen UNA vez
 -- aquí y cada servicio en "servicios.opciones_acabado" solo guarda una
@@ -159,6 +160,23 @@ create table if not exists public.promociones (
 -- validan de verdad en el backend, no solo en la pantalla del cliente.
 alter table public.promociones add column if not exists usos_por_cliente integer check (usos_por_cliente is null or usos_por_cliente > 0);
 alter table public.promociones add column if not exists cantidad_minima integer check (cantidad_minima is null or cantidad_minima > 0);
+alter table public.promociones add column if not exists imagen_url text;
+
+-- Imágenes públicas de perfil, servicios y promociones. Las escrituras se
+-- hacen únicamente desde el backend autenticado con service role; el celular
+-- solo recibe la URL pública resultante.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'app-images',
+  'app-images',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 create unique index if not exists una_direccion_principal_por_usuario
   on public.direcciones(usuario_id) where predeterminada;

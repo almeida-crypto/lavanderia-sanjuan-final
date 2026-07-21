@@ -73,6 +73,7 @@ public class PedidosController : ControllerBase
         }
 
         string? codigoPromocion = null;
+        JsonObject? promocionAplicada = null;
         if (!string.IsNullOrWhiteSpace(request.CodigoPromocion))
         {
             // Se vuelve a validar aquí (vigencia, cantidad mínima, usos por
@@ -89,12 +90,43 @@ public class PedidosController : ControllerBase
                     return BadRequest(new { message = validacion.ErrorMessage });
                 }
                 codigoPromocion = request.CodigoPromocion.Trim().ToUpperInvariant();
+                promocionAplicada = validacion.Promocion;
             }
             catch (SupabaseDataException ex) { return DataError(ex); }
         }
 
         try
         {
+            // El celular muestra una estimación, pero el servidor vuelve a
+            // calcular precio, acabado y descuento con la configuración real.
+            var servicio = await _data.FindOneAsync(
+                "servicios", $"nombre=eq.{E(request.Servicio)}&activo=eq.true&limit=1");
+            if (servicio is null)
+                return BadRequest(new { message = "El servicio seleccionado ya no está disponible" });
+
+            var precioBase = M(servicio, "precio") ?? 0m;
+            var cantidad = Math.Max(request.CantidadAproximada ?? 1, 1);
+            var precioAcabado = 0m;
+            if (!string.IsNullOrWhiteSpace(request.OpcionAcabado))
+            {
+                var opcion = await _data.FindOneAsync(
+                    "opciones", $"nombre=eq.{E(request.OpcionAcabado)}&activa=eq.true&limit=1");
+                var opcionId = opcion?["id"]?.ToString();
+                var referencias = servicio["opciones_acabado"] as JsonArray;
+                var referencia = referencias?.OfType<JsonObject>().FirstOrDefault(r =>
+                    string.Equals(r["opcionId"]?.ToString(), opcionId, StringComparison.OrdinalIgnoreCase));
+                if (opcion is null || referencia is null)
+                    return BadRequest(new { message = "La opción de acabado ya no está disponible para este servicio" });
+                precioAcabado = M(referencia, "precioAdicional") ?? 0m;
+            }
+
+            var subtotal = precioBase * cantidad + precioAcabado;
+            var descuento = promocionAplicada is null
+                ? 0m
+                : Math.Clamp(M(promocionAplicada, "descuento_porcentaje") ?? 0m, 0m, 100m);
+            var totalCalculado = Math.Round(
+                subtotal * (1m - descuento / 100m), 2, MidpointRounding.AwayFromZero);
+
             var row = await _data.InsertAsync("pedidos", new JsonObject
             {
                 ["cliente_id"] = request.ClienteId,
@@ -110,9 +142,9 @@ public class PedidosController : ControllerBase
                 ["cantidad_aproximada"] = request.CantidadAproximada,
                 ["metodo_pago"] = request.MetodoPago,
                 ["opcion_acabado"] = request.OpcionAcabado,
-                ["precio_acabado"] = request.PrecioAcabado,
+                ["precio_acabado"] = precioAcabado,
                 ["codigo_promocion"] = codigoPromocion,
-                ["total"] = request.Total ?? 0m,
+                ["total"] = totalCalculado,
                 ["estado"] = "Recibido"
             });
             var dto = Map(row);
@@ -156,6 +188,26 @@ public class PedidosController : ControllerBase
     {
         var bloqueado = await BloqueadoSiNoEsPropioAsync(id);
         if (bloqueado is not null) return bloqueado;
+
+        try
+        {
+            var actual = await _data.FindOneAsync("pedidos", $"id=eq.{E(id)}&limit=1");
+            if (actual is null) return NotFound(new { message = "Pedido no encontrado" });
+            var estado = actual["estado"]?.ToString() ?? string.Empty;
+            var cancelables = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Recibido", "Asignado", "Repartidor Asignado"
+            };
+            if (!cancelables.Contains(estado))
+            {
+                return Conflict(new
+                {
+                    message = "Este pedido ya está en una etapa avanzada y no puede cancelarse desde la app. Comunícate con la lavandería."
+                });
+            }
+        }
+        catch (SupabaseDataException ex) { return DataError(ex); }
+
         return await UpdatePedido(id, new JsonObject
         {
             ["estado"] = "Cancelado",

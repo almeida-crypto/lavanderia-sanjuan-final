@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../providers/auth_provider.dart';
+import '../../../services/imagen_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/labeled_text_field.dart';
 
@@ -18,6 +20,9 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
   late final TextEditingController _nombreController;
   late final TextEditingController _correoController;
   late final TextEditingController _telefonoController;
+  final _imagenService = ImagenService();
+  String? _fotoUrl;
+  bool _subiendoFoto = false;
 
   @override
   void initState() {
@@ -26,6 +31,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
     _nombreController = TextEditingController(text: usuario?.nombre ?? '');
     _correoController = TextEditingController(text: usuario?.correo ?? '');
     _telefonoController = TextEditingController(text: usuario?.telefono ?? '');
+    _fotoUrl = usuario?.fotoUrl;
   }
 
   @override
@@ -58,6 +64,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       nombre: _nombreController.text.trim(),
       correo: _correoController.text.trim(),
       telefono: telefono.isEmpty ? null : telefono,
+      fotoUrl: _fotoUrl,
     );
 
     if (!mounted) return;
@@ -68,6 +75,50 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(auth.errorMessage ?? 'No se pudo actualizar el perfil')),
       );
+    }
+  }
+
+  Future<void> _elegirFoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tomar foto'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Elegir de la galería'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final archivo = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 82,
+      maxWidth: 1200,
+      maxHeight: 1200,
+    );
+    if (archivo == null || !mounted) return;
+    setState(() => _subiendoFoto = true);
+    try {
+      final url = await _imagenService.subir(archivo, carpeta: 'perfil');
+      if (mounted) setState(() => _fotoUrl = url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _subiendoFoto = false);
     }
   }
 
@@ -102,19 +153,30 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(
-                child: Container(
-                  width: 128,
-                  height: 128,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainer,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.surfaceContainerHigh, width: 2),
-                  ),
-                  child: const Icon(
-                    Icons.person_rounded,
-                    size: 64,
-                    color: AppColors.onSurfaceVariant,
-                  ),
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 64,
+                      backgroundColor: AppColors.surfaceContainer,
+                      backgroundImage: (_fotoUrl?.isNotEmpty ?? false)
+                          ? NetworkImage(_fotoUrl!)
+                          : null,
+                      child: (_fotoUrl?.isNotEmpty ?? false)
+                          ? null
+                          : const Icon(Icons.person_rounded, size: 64, color: AppColors.onSurfaceVariant),
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: IconButton.filled(
+                        onPressed: _subiendoFoto ? null : _elegirFoto,
+                        tooltip: 'Cambiar foto',
+                        icon: _subiendoFoto
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.camera_alt_outlined),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),

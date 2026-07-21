@@ -139,19 +139,15 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
                   children: [
                     Stack(
                       children: [
-                        Container(
-                          width: 96,
-                          height: 96,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceContainer,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.surfaceContainerHigh, width: 4),
-                          ),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            size: 48,
-                            color: AppColors.onSurfaceVariant,
-                          ),
+                        CircleAvatar(
+                          radius: 48,
+                          backgroundColor: AppColors.surfaceContainer,
+                          backgroundImage: (usuario?.fotoUrl?.isNotEmpty ?? false)
+                              ? NetworkImage(usuario!.fotoUrl!)
+                              : null,
+                          child: (usuario?.fotoUrl?.isNotEmpty ?? false)
+                              ? null
+                              : const Icon(Icons.person_rounded, size: 48, color: AppColors.onSurfaceVariant),
                         ),
                         Positioned(
                           right: 0,

@@ -420,6 +420,9 @@ class AdminProvider extends ChangeNotifier {
       fechaInicio: actual.fechaInicio,
       fechaFin: actual.fechaFin,
       activa: !actual.activa,
+      usosPorCliente: actual.usosPorCliente,
+      cantidadMinima: actual.cantidadMinima,
+      imagenUrl: actual.imagenUrl,
     );
     _promociones[index] = await _promocionService.actualizar(editada);
     notifyListeners();

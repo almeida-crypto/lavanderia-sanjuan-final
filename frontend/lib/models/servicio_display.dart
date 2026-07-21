@@ -62,6 +62,7 @@ class ServicioDisplay {
     required this.precioTexto,
     required this.icon,
     required this.destacado,
+    this.imagenUrl,
   });
 
   factory ServicioDisplay.fromReal(Servicio servicio) {
@@ -73,6 +74,7 @@ class ServicioDisplay {
       precioTexto: 'Desde \$${servicio.precio.toStringAsFixed(2)}/${servicio.unidad}',
       icon: infoEstaticaParaTipo(tipo).icon,
       destacado: tipo == TipoServicio.lavadoYPlegado,
+      imagenUrl: servicio.imagenUrl,
     );
   }
 
@@ -83,6 +85,7 @@ class ServicioDisplay {
     precioTexto: info.precioTexto,
     icon: info.icon,
     destacado: info.destacado,
+    imagenUrl: null,
   );
 
   final TipoServicio tipo;
@@ -91,6 +94,7 @@ class ServicioDisplay {
   final String precioTexto;
   final IconData icon;
   final bool destacado;
+  final String? imagenUrl;
 }
 
 /// Catálogo listo para mostrar: usa el real si ya cargó (y tiene servicios

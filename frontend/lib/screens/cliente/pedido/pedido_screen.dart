@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -54,9 +56,29 @@ class PedidoScreen extends StatefulWidget {
   State<PedidoScreen> createState() => _PedidoScreenState();
 }
 
-class _PedidoScreenState extends State<PedidoScreen> {
+class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver {
   final _pedidoService = PedidoService();
   late Pedido _pedido = widget.pedido;
+  Timer? _actualizador;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _actualizador = Timer.periodic(const Duration(seconds: 20), (_) => _refrescar());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refrescar();
+  }
+
+  @override
+  void dispose() {
+    _actualizador?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   /// Trae el pedido tal como está ahora en el backend, para que un cambio de
   /// estado hecho por el admin/empleado se vea al deslizar hacia abajo, sin
@@ -98,7 +120,7 @@ class _PedidoScreenState extends State<PedidoScreen> {
     final activo = pedido.estado == EstadoPedido.enProceso || necesitaAtencion;
     final cancelado = pedido.estado == EstadoPedido.cancelado;
     final puedeReportar = !cancelado;
-    final puedeCancelar = activo;
+    final puedeCancelar = pedido.puedeCancelar;
     final (chipColor, chipTexto) = switch (pedido.estado) {
       EstadoPedido.enProceso => (AppColors.primary, 'En Proceso'),
       EstadoPedido.atencion => (AppColors.error, 'Atención requerida'),

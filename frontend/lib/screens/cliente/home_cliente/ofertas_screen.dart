@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/promocion.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 import 'detalle_oferta_screen.dart';
 
 /// Lista completa de ofertas vigentes. Antes de esta pantalla, Inicio solo
@@ -75,14 +76,14 @@ class _OfertaCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: const BoxDecoration(color: AppColors.primaryFixed, shape: BoxShape.circle),
-              child: Center(
-                child: Text(
-                  '${promocion.descuentoPorcentaje.round()}%',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 68,
+                height: 68,
+                child: AppImage(
+                  url: promocion.imagenUrl,
+                  fallbackAsset: 'assets/images/promocion_default.png',
                 ),
               ),
             ),

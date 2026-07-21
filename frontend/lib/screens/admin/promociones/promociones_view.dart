@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../models/promocion.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 import 'add_promocion_screen.dart';
 
 class PromocionesScreen extends StatefulWidget {
@@ -114,6 +115,18 @@ class _PromocionCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 120,
+                  child: AppImage(
+                    url: promocion.imagenUrl,
+                    fallbackAsset: 'assets/images/promocion_default.png',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

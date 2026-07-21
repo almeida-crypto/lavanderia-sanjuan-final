@@ -29,6 +29,7 @@ class Pedido {
     required this.instrucciones,
     required this.total,
     required this.estado,
+    required this.estadoDetalle,
     this.fragancia,
     this.cantidadAproximada,
     this.metodoPago,
@@ -59,6 +60,7 @@ class Pedido {
       instrucciones: (instrucciones == null || instrucciones.isEmpty) ? null : instrucciones,
       total: double.tryParse(json['total']?.toString() ?? '0') ?? 0,
       estado: estadoPedidoFromString(json['estado']?.toString()),
+      estadoDetalle: json['estado']?.toString() ?? 'Recibido',
       fragancia: json['fragancia']?.toString(),
       cantidadAproximada: int.tryParse(json['cantidadAproximada']?.toString() ?? ''),
       metodoPago: json['metodoPago']?.toString(),
@@ -82,6 +84,9 @@ class Pedido {
   final String? instrucciones;
   final double total;
   final EstadoPedido estado;
+  /// Estado exacto que manda el backend. No se reduce a "en proceso" porque
+  /// las reglas de cancelación dependen de la etapa real del pedido.
+  final String estadoDetalle;
   final String? fragancia;
   final int? cantidadAproximada;
   final String? metodoPago;
@@ -101,6 +106,15 @@ class Pedido {
   double get precioFinal => totalConfirmado ?? total;
 
   bool get precioConfirmado => totalConfirmado != null;
+
+  /// El cliente puede cancelar mientras el pedido todavía no ha entrado a
+  /// planta. Después de eso el botón desaparece y el backend también lo
+  /// rechaza, aunque alguien intente llamar la API directamente.
+  bool get puedeCancelar => const {
+    'Recibido',
+    'Asignado',
+    'Repartidor Asignado',
+  }.contains(estadoDetalle);
 
   static const _meses = [
     'ene',

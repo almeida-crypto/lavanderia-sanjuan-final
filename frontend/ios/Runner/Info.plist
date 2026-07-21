@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>FreshClean usa la cámara para elegir tu foto de perfil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FreshClean usa tu galería para elegir imágenes de perfil, servicios y promociones.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

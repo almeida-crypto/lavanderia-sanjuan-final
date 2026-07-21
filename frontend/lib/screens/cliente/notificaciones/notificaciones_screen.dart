@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -73,22 +75,37 @@ class NotificacionesScreen extends StatefulWidget {
   State<NotificacionesScreen> createState() => _NotificacionesScreenState();
 }
 
-class _NotificacionesScreenState extends State<NotificacionesScreen> {
+class _NotificacionesScreenState extends State<NotificacionesScreen> with WidgetsBindingObserver {
   final _pedidoService = PedidoService();
   final _promocionService = PromocionService();
   final List<Notificacion> _notificaciones = [];
   Set<String> _leidas = {};
   bool _isLoading = true;
   String? _prefsKey;
+  Timer? _actualizador;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _cargar();
+    _actualizador = Timer.periodic(const Duration(seconds: 30), (_) => _cargar(silencioso: true));
   }
 
-  Future<void> _cargar() async {
-    setState(() => _isLoading = true);
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _cargar(silencioso: true);
+  }
+
+  @override
+  void dispose() {
+    _actualizador?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _cargar({bool silencioso = false}) async {
+    if (!silencioso && mounted) setState(() => _isLoading = true);
 
     final auth = context.read<AuthProvider>();
     final usuarioId = auth.currentUser?.id ?? 'anonimo';
@@ -268,7 +285,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
             : RefreshIndicator(
-                onRefresh: _cargar,
+                onRefresh: () => _cargar(),
                 color: AppColors.primary,
                 child: _notificaciones.isEmpty
                     ? LayoutBuilder(

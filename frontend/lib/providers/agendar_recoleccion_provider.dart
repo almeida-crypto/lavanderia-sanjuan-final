@@ -153,10 +153,9 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
   double get _precioUnitario =>
       (servicioReal?.precio ?? servicioInfo.totalEstimado);
 
-  double get totalEstimado => _precioUnitario * _cantidad;
+  double get montoOpcionAcabado => _opcionAcabado?.precioAdicional ?? 0;
 
-  /// Ya no hay cargos adicionales por opciones de acabado (precio único)
-  double get montoOpcionAcabado => 0;
+  double get totalEstimado => _precioUnitario * _cantidad + montoOpcionAcabado;
 
   double get descuento => totalEstimado * tasaDescuento;
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -23,34 +25,52 @@ class MisPedidosScreen extends StatefulWidget {
   State<MisPedidosScreen> createState() => _MisPedidosScreenState();
 }
 
-class _MisPedidosScreenState extends State<MisPedidosScreen> {
+class _MisPedidosScreenState extends State<MisPedidosScreen> with WidgetsBindingObserver {
   final _pedidoService = PedidoService();
   bool _isLoading = true;
   String? _error;
   final List<Pedido> _pedidos = [];
+  Timer? _actualizador;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _cargarPedidos();
+    _actualizador = Timer.periodic(const Duration(seconds: 30), (_) => _cargarPedidos(silencioso: true));
   }
 
-  Future<void> _cargarPedidos() async {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _cargarPedidos(silencioso: true);
+  }
+
+  @override
+  void dispose() {
+    _actualizador?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _cargarPedidos({bool silencioso = false}) async {
     final auth = context.read<AuthProvider>();
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    if (!silencioso && mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final data = await _pedidoService.listarPedidos(clienteId: auth.currentUser?.id);
+      if (!mounted) return;
       setState(() {
         _pedidos
           ..clear()
           ..addAll(data.map(Pedido.fromJson));
       });
     } catch (_) {
-      setState(() => _error = 'No se pudieron cargar los pedidos');
+      if (mounted && !silencioso) setState(() => _error = 'No se pudieron cargar los pedidos');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -134,7 +154,7 @@ class _MisPedidosScreenState extends State<MisPedidosScreen> {
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
-          onRefresh: _cargarPedidos,
+          onRefresh: () => _cargarPedidos(),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),

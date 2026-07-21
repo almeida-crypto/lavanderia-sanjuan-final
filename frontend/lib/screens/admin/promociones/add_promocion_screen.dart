@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../models/promocion.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../services/imagen_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 
 class AddPromocionScreen extends StatefulWidget {
   const AddPromocionScreen({super.key, this.promocion});
@@ -29,6 +32,9 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
   DateTime? _fechaFin;
   bool _activa = true;
   bool _isSaving = false;
+  final _imagenService = ImagenService();
+  String? _imagenUrl;
+  bool _subiendoImagen = false;
 
   @override
   void initState() {
@@ -44,6 +50,7 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
     _fechaInicio = p?.fechaInicio ?? DateTime.now();
     _fechaFin = p?.fechaFin;
     _activa = p?.activa ?? true;
+    _imagenUrl = p?.imagenUrl;
 
     if (p == null) {
       context.read<AdminProvider>().cargarServicios();
@@ -95,6 +102,7 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
       activa: _activa,
       usosPorCliente: int.tryParse(_usosPorClienteController.text.trim()),
       cantidadMinima: int.tryParse(_cantidadMinimaController.text.trim()),
+      imagenUrl: _imagenUrl,
     );
 
     setState(() => _isSaving = true);
@@ -116,6 +124,38 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _elegirImagen() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Elegir de la galería'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_camera_outlined),
+            title: const Text('Tomar una foto'),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+        ]),
+      ),
+    );
+    if (source == null) return;
+    final archivo = await ImagePicker().pickImage(source: source, maxWidth: 1600, imageQuality: 82);
+    if (archivo == null || !mounted) return;
+    setState(() => _subiendoImagen = true);
+    try {
+      final url = await _imagenService.subir(archivo, carpeta: 'promociones');
+      if (mounted) setState(() => _imagenUrl = url);
+    } on ImagenException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _subiendoImagen = false);
     }
   }
 
@@ -149,6 +189,26 @@ class _AddPromocionScreenState extends State<AddPromocionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 180,
+                    child: AppImage(
+                      url: _imagenUrl,
+                      fallbackAsset: 'assets/images/promocion_default.png',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _subiendoImagen ? null : _elegirImagen,
+                  icon: _subiendoImagen
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.add_a_photo_outlined),
+                  label: Text(_imagenUrl == null ? 'Agregar imagen' : 'Cambiar imagen'),
+                ),
+                const SizedBox(height: 20),
                 Text(
                   'Esto es lo que verá el cliente en Inicio y al agendar un pedido.',
                   style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),

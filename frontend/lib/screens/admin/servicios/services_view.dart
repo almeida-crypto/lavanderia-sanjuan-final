@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../models/servicio.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 import '../opciones/opciones_catalogo_screen.dart';
 import '../promociones/promociones_view.dart';
 import 'add_service_screen.dart';
@@ -162,6 +163,18 @@ class ServicesView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 120,
+                  child: AppImage(
+                    url: servicio.imagenUrl,
+                    fallbackAsset: imagenPredeterminadaServicio(servicio.nombre),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               // Card Top: Icon & Switch
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
