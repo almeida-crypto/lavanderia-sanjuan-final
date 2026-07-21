@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/pedido.dart';
+import '../../../models/pedido_admin.dart';
 import '../../../models/promocion.dart';
 import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
@@ -99,7 +100,7 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> with WidgetsBindi
       }
       if (mounted) setState(() => _pedidoActivo = activo);
     } catch (_) {
-      if (mounted) setState(() => _pedidoActivo = null);
+      // Conserva el último pedido visible ante una falla temporal.
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -386,7 +387,7 @@ class _ActiveOrderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final necesitaAtencion = pedido.estado == EstadoPedido.atencion;
+    final necesitaAtencion = pedido.tieneReporteAbierto;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -505,7 +506,7 @@ class _ActiveOrderSection extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      necesitaAtencion ? 'Atención requerida' : 'En proceso',
+                      estadoToString(pedido.estadoOperativo),
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -518,7 +519,7 @@ class _ActiveOrderSection extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    value: 0.5,
+                    value: progresoParaEstado(pedido.estadoOperativo),
                     minHeight: 8,
                     backgroundColor: AppColors.surfaceVariant,
                     valueColor: AlwaysStoppedAnimation(

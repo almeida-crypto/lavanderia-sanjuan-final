@@ -43,7 +43,7 @@ class _HomeEmpleadoScreenState extends State<HomeEmpleadoScreen> {
     final store = NotificacionesStore(namespace: 'empleado', usuarioId: usuarioId);
     await store.cargar();
     final pedidos = context.read<AdminProvider>().pedidos.where(
-          (p) => p.estado == PedidoEstado.recibido || p.estado == PedidoEstado.atencion,
+          (p) => p.estado == PedidoEstado.recibido || p.tieneReporteAbierto,
         );
     final cantidad = pedidos.where((pedido) {
       final clave = _claveDe(pedido);

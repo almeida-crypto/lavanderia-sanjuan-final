@@ -20,7 +20,7 @@ class OrderDetailScreen extends StatelessWidget {
           orElse: () => pedido,
         );
 
-    final isWarning = currentPedido.estado == PedidoEstado.atencion &&
+    final isWarning = currentPedido.tieneReporteAbierto &&
         currentPedido.warningMessage != null;
 
     final esFinal = currentPedido.estado == PedidoEstado.entregado ||
@@ -350,33 +350,46 @@ class OrderDetailScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.error),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.warning, color: AppColors.error, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Requiere Atención Especial',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.error,
-                              ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.warning, color: AppColors.error, size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Reporte del cliente · ${currentPedido.reporteEstado ?? 'Abierto'}',
+                                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.error),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(currentPedido.warningMessage!, style: GoogleFonts.inter(fontSize: 13, color: AppColors.error)),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              currentPedido.warningMessage!,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppColors.error,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          if (currentPedido.reporteEstado != 'En revisión')
+                            OutlinedButton(
+                              onPressed: () => context.read<AdminProvider>().actualizarReporte(
+                                currentPedido.id,
+                                estado: 'En revisión',
                               ),
+                              child: const Text('Tomar reporte'),
                             ),
-                          ],
-                        ),
+                          ElevatedButton(
+                            onPressed: () => _mostrarRespuestaReporte(context, currentPedido),
+                            child: const Text('Responder y resolver'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -729,6 +742,55 @@ class OrderDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _mostrarRespuestaReporte(BuildContext context, PedidoAdmin pedido) async {
+    final controller = TextEditingController(text: pedido.reporteRespuesta);
+    final respuesta = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Responder al cliente'),
+        content: TextField(
+          controller: controller,
+          minLines: 3,
+          maxLines: 6,
+          decoration: const InputDecoration(
+            labelText: 'Respuesta o solución',
+            hintText: 'Explica qué se revisó y cómo quedó resuelto.',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) Navigator.pop(dialogContext, value);
+            },
+            child: const Text('Resolver'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (respuesta == null || !context.mounted) return;
+    try {
+      await context.read<AdminProvider>().actualizarReporte(
+        pedido.id,
+        estado: 'Resuelto',
+        respuesta: respuesta,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Respuesta enviada al cliente.')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo resolver el reporte.')),
+        );
+      }
+    }
   }
 
   Widget _buildRowDetail(String label, String value, {Widget? trailing}) {

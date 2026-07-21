@@ -166,7 +166,9 @@ class AdminProvider extends ChangeNotifier {
 
     final reporteTipo = json['reporteTipo']?.toString();
     final reporteDetalles = json['reporteDetalles']?.toString();
-    final warningMessage = estado == PedidoEstado.atencion && (reporteTipo?.isNotEmpty ?? false)
+    final reporteEstado = json['reporteEstado']?.toString();
+    final reporteRespuesta = json['reporteRespuesta']?.toString();
+    final warningMessage = (reporteTipo?.isNotEmpty ?? false) && reporteEstado?.toLowerCase() != 'resuelto'
         ? (reporteDetalles?.isNotEmpty ?? false ? '$reporteTipo: $reporteDetalles' : reporteTipo)
         : null;
 
@@ -236,6 +238,10 @@ class AdminProvider extends ChangeNotifier {
       repartidorNombre: (repartidor == null || repartidor.isEmpty) ? null : repartidor,
       repartidorId: json['repartidorId']?.toString(),
       warningMessage: warningMessage,
+      reporteTipo: reporteTipo,
+      reporteDetalles: reporteDetalles,
+      reporteEstado: reporteEstado,
+      reporteRespuesta: reporteRespuesta,
       opcionAcabado: opcionAcabado,
       creadoEn: creadoEn,
       detallesAdicionales: (instrucciones == null || instrucciones.isEmpty) ? null : instrucciones,
@@ -251,28 +257,7 @@ class AdminProvider extends ChangeNotifier {
     return 'local_laundry_service';
   }
 
-  double _progresoParaEstado(PedidoEstado estado) {
-    switch (estado) {
-      case PedidoEstado.recibido:
-        return 0.1;
-      case PedidoEstado.asignado:
-        return 0.3;
-      case PedidoEstado.enPlanta:
-        return 0.4;
-      case PedidoEstado.lavando:
-        return 0.6;
-      case PedidoEstado.secandoDoblado:
-        return 0.8;
-      case PedidoEstado.enCamino:
-        return 0.9;
-      case PedidoEstado.listo:
-      case PedidoEstado.entregado:
-        return 1.0;
-      case PedidoEstado.atencion:
-      case PedidoEstado.cancelado:
-        return 0.0;
-    }
-  }
+  double _progresoParaEstado(PedidoEstado estado) => progresoParaEstado(estado);
 
   Future<void> updatePedidoEstado(String id, PedidoEstado nuevoEstado) async {
     final index = _pedidos.indexWhere((p) => p.id == id);
@@ -292,6 +277,23 @@ class AdminProvider extends ChangeNotifier {
     final actualizado = await _pedidoService.asignarRepartidor(
       pedidoId,
       repartidorId: repartidor.id,
+    );
+    final index = _pedidos.indexWhere((pedido) => pedido.id == pedidoId);
+    if (index != -1) {
+      _pedidos[index] = _mapPedido(actualizado);
+      notifyListeners();
+    }
+  }
+
+  Future<void> actualizarReporte(
+    String pedidoId, {
+    required String estado,
+    String? respuesta,
+  }) async {
+    final actualizado = await _pedidoService.actualizarReporte(
+      pedidoId,
+      estado: estado,
+      respuesta: respuesta,
     );
     final index = _pedidos.indexWhere((pedido) => pedido.id == pedidoId);
     if (index != -1) {

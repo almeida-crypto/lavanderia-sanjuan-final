@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -6,13 +7,17 @@ import '../models/usuario.dart';
 import '../services/auth_service.dart';
 import '../utils/api_config.dart';
 
-class AuthProvider extends ChangeNotifier {
+class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const String _userKey = 'saved_logged_user';
 
   AuthProvider({AuthService? authService})
-    : _authService = authService ?? AuthService();
+    : _authService = authService ?? AuthService() {
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   final AuthService _authService;
+  Timer? _renovacionTimer;
+  bool _renovando = false;
 
   Usuario? _currentUser;
   Usuario? get currentUser => _currentUser;
@@ -36,6 +41,8 @@ class AuthProvider extends ChangeNotifier {
         final Map<String, dynamic> map = jsonDecode(userStr);
         _currentUser = Usuario.fromJson(map);
         ApiConfig.authToken = _currentUser?.accessToken;
+        await renovarSesion(silencioso: true);
+        _programarRenovacion();
       }
     } catch (_) {
       _currentUser = null;
@@ -69,6 +76,7 @@ class AuthProvider extends ChangeNotifier {
       if (_currentUser != null) {
         ApiConfig.authToken = _currentUser!.accessToken;
         await _guardarUsuarioLocal(_currentUser!);
+        _programarRenovacion();
       }
       return true;
     } on AuthException catch (e) {
@@ -152,7 +160,8 @@ class AuthProvider extends ChangeNotifier {
         telefono: actualizado.telefono,
         rol: actualizado.rol,
         activo: actualizado.activo,
-        accessToken: actual.accessToken,
+          accessToken: actual.accessToken,
+          refreshToken: actual.refreshToken,
         fotoUrl: actualizado.fotoUrl ?? actual.fotoUrl,
       );
       await _guardarUsuarioLocal(_currentUser!);
@@ -170,6 +179,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout([BuildContext? context]) async {
+    _renovacionTimer?.cancel();
     _currentUser = null;
     _isLoading = false;
     _errorMessage = null;
@@ -179,5 +189,49 @@ class AuthProvider extends ChangeNotifier {
     if (context != null && context.mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
+  }
+
+  void _programarRenovacion() {
+    _renovacionTimer?.cancel();
+    if (_currentUser?.refreshToken == null) return;
+    _renovacionTimer = Timer.periodic(
+      const Duration(minutes: 40),
+      (_) => renovarSesion(silencioso: true),
+    );
+  }
+
+  Future<bool> renovarSesion({bool silencioso = false}) async {
+    final actual = _currentUser;
+    final token = actual?.refreshToken;
+    if (actual == null || token == null || token.isEmpty || _renovando) return false;
+    _renovando = true;
+    try {
+      final renovado = await _authService.renovarSesion(token);
+      _currentUser = renovado;
+      ApiConfig.authToken = renovado.accessToken;
+      await _guardarUsuarioLocal(renovado);
+      if (!silencioso) notifyListeners();
+      return true;
+    } catch (_) {
+      // Un fallo temporal de red no elimina la sesión guardada. La próxima
+      // reanudación o el temporizador vuelve a intentarlo automáticamente.
+      return false;
+    } finally {
+      _renovando = false;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      renovarSesion(silencioso: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _renovacionTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 }

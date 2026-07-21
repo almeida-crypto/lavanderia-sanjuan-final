@@ -250,7 +250,7 @@ class _NotificacionPedidoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final urgente = pedido.estado == PedidoEstado.atencion;
+    final urgente = pedido.tieneReporteAbierto;
     final nuevo = pedido.estado == PedidoEstado.recibido;
     final color = urgente ? AppColors.error : AppColors.primary;
     final icono = urgente

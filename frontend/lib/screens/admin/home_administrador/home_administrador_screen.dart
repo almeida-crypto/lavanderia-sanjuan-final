@@ -47,7 +47,7 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
     final store = NotificacionesStore(namespace: 'admin', usuarioId: usuarioId);
     await store.cargar();
     final pedidos = context.read<AdminProvider>().pedidos.where(
-          (p) => p.estado == PedidoEstado.recibido || p.estado == PedidoEstado.atencion,
+          (p) => p.estado == PedidoEstado.recibido || p.tieneReporteAbierto,
         );
     final cantidad = pedidos.where((pedido) {
       final clave = _claveDe(pedido);

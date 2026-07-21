@@ -6,12 +6,23 @@ enum PedidoEstado {
   enPlanta,
   lavando,
   secandoDoblado,
-  enCamino,
   listo,
+  enCamino,
   entregado,
   atencion,
   cancelado,
 }
+
+const estadosOperativos = <PedidoEstado>[
+  PedidoEstado.recibido,
+  PedidoEstado.asignado,
+  PedidoEstado.enPlanta,
+  PedidoEstado.lavando,
+  PedidoEstado.secandoDoblado,
+  PedidoEstado.listo,
+  PedidoEstado.enCamino,
+  PedidoEstado.entregado,
+];
 
 /// El backend guarda el estado como texto libre (el cliente solo distingue
 /// enProceso/entregado/cancelado, pero el admin necesita las etapas
@@ -19,7 +30,18 @@ enum PedidoEstado {
 PedidoEstado pedidoEstadoFromString(String? value) {
   // El backend usa ambos textos para la misma etapa según si la asignación
   // provino del botón rápido o del selector completo del administrador.
-  if (value == 'Asignado') return PedidoEstado.asignado;
+  final normalizado = value?.trim();
+  if (normalizado == 'Recibido' || normalizado == 'Pedido recibido') {
+    return PedidoEstado.recibido;
+  }
+  if (normalizado == 'Asignado' ||
+      normalizado == 'Repartidor Asignado' ||
+      normalizado == 'Recolector asignado') {
+    return PedidoEstado.asignado;
+  }
+  if (normalizado == 'Listo' || normalizado == 'Repartidor asignado') {
+    return PedidoEstado.listo;
+  }
 
   return PedidoEstado.values.firstWhere(
     (e) => estadoToString(e) == value,
@@ -30,19 +52,19 @@ PedidoEstado pedidoEstadoFromString(String? value) {
 String estadoToString(PedidoEstado estado) {
   switch (estado) {
     case PedidoEstado.recibido:
-      return 'Recibido';
+      return 'Pedido recibido';
     case PedidoEstado.asignado:
-      return 'Repartidor Asignado';
+      return 'Recolector asignado';
     case PedidoEstado.enPlanta:
       return 'En Planta';
     case PedidoEstado.lavando:
       return 'Lavando';
     case PedidoEstado.secandoDoblado:
       return 'Secando y Doblado';
+    case PedidoEstado.listo:
+      return 'Repartidor asignado';
     case PedidoEstado.enCamino:
       return 'En camino';
-    case PedidoEstado.listo:
-      return 'Listo';
     case PedidoEstado.entregado:
       return 'Entregado';
     case PedidoEstado.atencion:
@@ -50,6 +72,13 @@ String estadoToString(PedidoEstado estado) {
     case PedidoEstado.cancelado:
       return 'Cancelado';
   }
+}
+
+double progresoParaEstado(PedidoEstado estado) {
+  if (estado == PedidoEstado.entregado) return 1;
+  if (estado == PedidoEstado.cancelado || estado == PedidoEstado.atencion) return 0;
+  final index = estadosOperativos.indexOf(estado);
+  return index < 0 ? 0 : (index + 1) / estadosOperativos.length;
 }
 
 IconData iconoParaEstado(PedidoEstado estado) {
@@ -67,7 +96,7 @@ IconData iconoParaEstado(PedidoEstado estado) {
     case PedidoEstado.enCamino:
       return Icons.local_shipping_outlined;
     case PedidoEstado.listo:
-      return Icons.check_circle_outline_rounded;
+      return Icons.person_pin_circle_outlined;
     case PedidoEstado.entregado:
       return Icons.task_alt_rounded;
     case PedidoEstado.atencion:
@@ -80,9 +109,9 @@ IconData iconoParaEstado(PedidoEstado estado) {
 String subtituloParaEstado(PedidoEstado estado) {
   switch (estado) {
     case PedidoEstado.recibido:
-      return 'Pedido recibido o recogido del cliente.';
+      return 'Solicitud recibida; la lavandería preparará la recolección.';
     case PedidoEstado.asignado:
-      return 'Repartidor asignado en camino a recolección.';
+      return 'Recolector asignado para buscar las prendas.';
     case PedidoEstado.enPlanta:
       return 'Recibido en las instalaciones.';
     case PedidoEstado.lavando:
@@ -92,7 +121,7 @@ String subtituloParaEstado(PedidoEstado estado) {
     case PedidoEstado.enCamino:
       return 'El repartidor está en ruta de entrega.';
     case PedidoEstado.listo:
-      return 'Listo para entrega o recogida.';
+      return 'Repartidor asignado para entregar las prendas.';
     case PedidoEstado.entregado:
       return 'Pedido completado y entregado.';
     case PedidoEstado.atencion:
@@ -147,6 +176,10 @@ class PedidoAdmin {
     this.totalConfirmado,
     this.metodoPago,
     this.warningMessage,
+    this.reporteTipo,
+    this.reporteDetalles,
+    this.reporteEstado,
+    this.reporteRespuesta,
     this.repartidorNombre,
     this.repartidorId,
     this.detallesAdicionales,
@@ -177,6 +210,10 @@ class PedidoAdmin {
   double? totalConfirmado;
   String? metodoPago;
   String? warningMessage;
+  String? reporteTipo;
+  String? reporteDetalles;
+  String? reporteEstado;
+  String? reporteRespuesta;
   String? repartidorNombre;
   String? repartidorId;
   String? detallesAdicionales;
@@ -195,4 +232,8 @@ class PedidoAdmin {
   double get precioFinal => totalConfirmado ?? total;
 
   bool get precioConfirmado => totalConfirmado != null;
+
+  bool get tieneReporte => reporteTipo != null && reporteTipo!.trim().isNotEmpty;
+  bool get tieneReporteAbierto =>
+      tieneReporte && reporteEstado?.trim().toLowerCase() != 'resuelto';
 }

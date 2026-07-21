@@ -44,19 +44,40 @@ public class SupabaseService
                 ? StatusCodes.Status401Unauthorized
                 : (int)response.StatusCode;
 
-            return new AuthOperationResult(false, statusCode, message, null, null);
+            return new AuthOperationResult(false, statusCode, message, null, null, null);
         }
 
         var root = await ReadJsonAsync(response);
         var user = root?["user"];
         var accessToken = root?["access_token"]?.GetValue<string>();
+        var refreshToken = root?["refresh_token"]?.GetValue<string>();
 
         if (user is null || string.IsNullOrWhiteSpace(accessToken))
         {
-            return new AuthOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null, null);
+            return new AuthOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null, null, null);
         }
 
-        return new AuthOperationResult(true, StatusCodes.Status200OK, null, MapUser(user), accessToken);
+        return new AuthOperationResult(true, StatusCodes.Status200OK, null, MapUser(user), accessToken, refreshToken);
+    }
+
+    public async Task<AuthOperationResult> RefreshSessionAsync(string refreshToken)
+    {
+        var payload = new JsonObject { ["refresh_token"] = refreshToken };
+        var response = await SendAsync(HttpMethod.Post, "/auth/v1/token?grant_type=refresh_token", payload);
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = await ExtractErrorMessageAsync(response, "La sesión venció");
+            return new AuthOperationResult(false, (int)response.StatusCode, message, null, null, null);
+        }
+
+        var root = await ReadJsonAsync(response);
+        var user = root?["user"];
+        var accessToken = root?["access_token"]?.GetValue<string>();
+        var nextRefreshToken = root?["refresh_token"]?.GetValue<string>();
+        if (user is null || string.IsNullOrWhiteSpace(accessToken))
+            return new AuthOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null, null, null);
+
+        return new AuthOperationResult(true, StatusCodes.Status200OK, null, MapUser(user), accessToken, nextRefreshToken);
     }
 
     public async Task<AuthOperationResult> RegisterAsync(string nombre, string apellido, string correo, string telefono, string password)
@@ -82,7 +103,7 @@ public class SupabaseService
                 ? StatusCodes.Status409Conflict
                 : (int)response.StatusCode;
 
-            return new AuthOperationResult(false, statusCode, message, null, null);
+            return new AuthOperationResult(false, statusCode, message, null, null, null);
         }
 
         var root = await ReadJsonAsync(response);
@@ -93,10 +114,10 @@ public class SupabaseService
         var user = root?["user"] ?? (root?["id"] is not null ? root : null);
         if (user is null)
         {
-            return new AuthOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null, null);
+            return new AuthOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null, null, null);
         }
 
-        return new AuthOperationResult(true, StatusCodes.Status201Created, null, MapUser(user), null);
+        return new AuthOperationResult(true, StatusCodes.Status201Created, null, MapUser(user), null, null);
     }
 
     public async Task<UsuarioOperationResult> UpdateProfileAsync(
@@ -227,16 +248,16 @@ public class SupabaseService
                 ? StatusCodes.Status409Conflict
                 : (int)response.StatusCode;
 
-            return new AuthOperationResult(false, statusCode, message, null, null);
+            return new AuthOperationResult(false, statusCode, message, null, null, null);
         }
 
         var root = await ReadJsonAsync(response);
         if (root is null)
         {
-            return new AuthOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null, null);
+            return new AuthOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null, null, null);
         }
 
-        return new AuthOperationResult(true, StatusCodes.Status201Created, null, MapUser(root), null);
+        return new AuthOperationResult(true, StatusCodes.Status201Created, null, MapUser(root), null, null);
     }
 
     public async Task<List<UsuarioDto>> ListStaffUsersAsync()
@@ -480,4 +501,4 @@ public record OperationResult(bool Success, int StatusCode, string? ErrorMessage
 
 public record UsuarioOperationResult(bool Success, int StatusCode, string? ErrorMessage, UsuarioDto? Usuario);
 
-public record AuthOperationResult(bool Success, int StatusCode, string? ErrorMessage, UsuarioDto? Usuario, string? AccessToken);
+public record AuthOperationResult(bool Success, int StatusCode, string? ErrorMessage, UsuarioDto? Usuario, string? AccessToken, string? RefreshToken);

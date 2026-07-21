@@ -28,6 +28,7 @@ class Usuario {
     this.telefono,
     this.activo = true,
     this.accessToken,
+    this.refreshToken,
     this.fotoUrl,
   });
 
@@ -40,6 +41,7 @@ class Usuario {
       rol: userRoleFromString(json['rol'] as String? ?? json['role'] as String?),
       activo: json['activa'] != false,
       accessToken: json['accessToken'] as String?,
+      refreshToken: json['refreshToken'] as String?,
       fotoUrl: json['fotoUrl'] as String? ?? json['foto_url'] as String?,
     );
   }
@@ -53,6 +55,7 @@ class Usuario {
       'rol': rol.name,
       'activa': activo,
       'accessToken': accessToken,
+      'refreshToken': refreshToken,
       'fotoUrl': fotoUrl,
     };
   }
@@ -68,5 +71,6 @@ class Usuario {
   /// perfil (SharedPreferences) para que la sesión sobreviva a un reinicio de
   /// la app sin tener que iniciar sesión de nuevo.
   final String? accessToken;
+  final String? refreshToken;
   final String? fotoUrl;
 }

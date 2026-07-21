@@ -52,7 +52,7 @@ class _OrdersViewState extends State<OrdersView> {
         case 'Entregados':
           return pedido.estado == PedidoEstado.entregado;
         case 'Atención':
-          return pedido.estado == PedidoEstado.atencion;
+          return pedido.tieneReporteAbierto;
         case 'Cancelados':
           return pedido.estado == PedidoEstado.cancelado;
         case 'Todos':
@@ -235,12 +235,12 @@ class _OrdersViewState extends State<OrdersView> {
       case PedidoEstado.recibido:
         tagBg = AppColors.primaryFixed;
         tagText = AppColors.onPrimaryFixedVariant;
-        tagLabel = 'Recibido';
+        tagLabel = 'Pedido recibido';
         break;
       case PedidoEstado.asignado:
         tagBg = AppColors.secondaryContainer;
         tagText = AppColors.onSecondaryContainer;
-        tagLabel = 'Repartidor Asignado';
+        tagLabel = 'Recolector asignado';
         break;
       case PedidoEstado.listo:
       case PedidoEstado.enCamino:
@@ -274,7 +274,7 @@ class _OrdersViewState extends State<OrdersView> {
       }
     }
 
-    final isWarning = pedido.estado == PedidoEstado.atencion && pedido.warningMessage != null;
+    final isWarning = pedido.tieneReporteAbierto && pedido.warningMessage != null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),

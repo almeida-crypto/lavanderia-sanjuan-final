@@ -124,6 +124,9 @@ create table if not exists public.pedidos (
   resena text,
   reporte_tipo text,
   reporte_detalles text,
+  reporte_estado text,
+  reporte_respuesta text,
+  reporte_actualizado_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -132,6 +135,20 @@ create table if not exists public.pedidos (
 alter table public.pedidos add column if not exists opcion_acabado text;
 alter table public.pedidos add column if not exists precio_acabado numeric(10,2);
 alter table public.pedidos add column if not exists repartidor_id text;
+alter table public.pedidos add column if not exists reporte_estado text;
+alter table public.pedidos add column if not exists reporte_respuesta text;
+alter table public.pedidos add column if not exists reporte_actualizado_at timestamptz;
+
+-- Los reportes son incidencias separadas del avance del pedido. Versiones
+-- anteriores reemplazaban la etapa por "Atención" y el pedido parecía quedar
+-- sin terminar; se recuperan como solicitudes abiertas sin bloquear el flujo.
+update public.pedidos
+set reporte_estado = 'Abierto'
+where reporte_tipo is not null and reporte_estado is null;
+
+update public.pedidos
+set estado = 'Pedido recibido'
+where estado = 'Atención' and reporte_tipo is not null;
 
 -- Número de orden corto y legible (1, 2, 3...) en vez del uuid interno, que
 -- es horrible de mostrarle al cliente/admin. "bigserial" ya lo asigna solo

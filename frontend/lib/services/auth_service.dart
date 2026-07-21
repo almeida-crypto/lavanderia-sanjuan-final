@@ -63,6 +63,18 @@ class AuthService {
     return Usuario.fromJson(jsonDecode(response.body));
   }
 
+  Future<Usuario> renovarSesion(String refreshToken) async {
+    final response = await _conTimeout(http.post(
+      Uri.parse('$_baseUrl/auth/refresh'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refreshToken': refreshToken}),
+    ));
+    if (response.statusCode != 200) {
+      throw AuthException('La sesión venció');
+    }
+    return Usuario.fromJson(jsonDecode(response.body));
+  }
+
   /// Llama al endpoint de registro del backend.
   ///
   /// El backend valida que el correo no esté ya registrado y crea el nuevo

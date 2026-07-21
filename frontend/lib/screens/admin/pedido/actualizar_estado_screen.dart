@@ -38,7 +38,7 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
         break;
       }
     }
-    if (_seleccionado == PedidoEstado.asignado && repartidor == null) {
+    if ((_seleccionado == PedidoEstado.asignado || _seleccionado == PedidoEstado.listo) && repartidor == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona un repartidor activo antes de asignar el pedido.')),
       );
@@ -233,9 +233,9 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
                   shrinkWrap: true,
                   padding: EdgeInsets.zero,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: PedidoEstado.values.length,
+                  itemCount: estadosOperativos.length,
                   itemBuilder: (context, index) {
-                    final estado = PedidoEstado.values[index];
+                    final estado = estadosOperativos[index];
                     final isSelected = _seleccionado == estado;
                     return Column(
                       children: [
@@ -271,7 +271,7 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
                             style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
                           ),
                         ),
-                        if (index < PedidoEstado.values.length - 1)
+                        if (index < estadosOperativos.length - 1)
                           const Divider(color: AppColors.surfaceVariant, height: 1),
                       ],
                     );

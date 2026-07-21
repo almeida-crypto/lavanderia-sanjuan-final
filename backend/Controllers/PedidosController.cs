@@ -164,7 +164,7 @@ public class PedidosController : ControllerBase
                 ["precio_acabado"] = precioAcabado,
                 ["codigo_promocion"] = codigoPromocion,
                 ["total"] = totalCalculado,
-                ["estado"] = "Recibido"
+                ["estado"] = "Pedido recibido"
             });
             var dto = Map(row);
             return CreatedAtAction(nameof(Obtener), new { id = dto.Id }, dto);
@@ -196,8 +196,8 @@ public class PedidosController : ControllerBase
             }
 
             var estadoActual = actual["estado"]?.ToString();
-            var transicionValida = (estadoActual is "Asignado" or "Repartidor Asignado") && estado == "En Planta"
-                || estadoActual == "Listo" && estado == "En camino"
+            var transicionValida = (estadoActual is "Asignado" or "Repartidor Asignado" or "Recolector asignado") && estado == "En Planta"
+                || (estadoActual is "Listo" or "Repartidor asignado") && estado == "En camino"
                 || estadoActual == "En camino" && estado == "Entregado";
             if (!transicionValida)
             {
@@ -238,7 +238,11 @@ public class PedidosController : ControllerBase
                 ["repartidor"] = repartidor.Nombre,
                 ["repartidor_id"] = repartidor.Id,
             };
-            if (current["estado"]?.ToString() == "Recibido") payload["estado"] = "Asignado";
+            var estadoActual = current["estado"]?.ToString();
+            if (estadoActual is "Recibido" or "Pedido recibido")
+                payload["estado"] = "Recolector asignado";
+            else if (estadoActual == "Secando y Doblado")
+                payload["estado"] = "Repartidor asignado";
             var row = await _data.UpdateAsync("pedidos", $"id=eq.{E(id)}", payload);
             return Ok(Map(row!));
         }
@@ -267,7 +271,7 @@ public class PedidosController : ControllerBase
             var estado = actual["estado"]?.ToString() ?? string.Empty;
             var cancelables = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "Recibido", "Asignado", "Repartidor Asignado"
+                "Recibido", "Pedido recibido", "Asignado", "Repartidor Asignado", "Recolector asignado"
             };
             if (!cancelables.Contains(estado))
             {
@@ -308,8 +312,28 @@ public class PedidosController : ControllerBase
         {
             ["reporte_tipo"] = request.Tipo ?? "Otro problema",
             ["reporte_detalles"] = request.Detalles ?? string.Empty,
-            ["estado"] = "Atención"
+            ["reporte_estado"] = "Abierto",
+            ["reporte_respuesta"] = null,
+            ["reporte_actualizado_at"] = DateTime.UtcNow.ToString("O")
         }, "No se pudo guardar el reporte");
+    }
+
+    [HttpPut("{id}/reporte")]
+    [Authorize(Roles = "administrador,empleado")]
+    public async Task<IActionResult> ActualizarReporte(string id, [FromBody] ActualizarReporteRequest request)
+    {
+        var estado = request.Estado?.Trim();
+        if (estado is not ("En revisión" or "Resuelto"))
+            return BadRequest(new { message = "El estado del reporte no es válido" });
+        if (estado == "Resuelto" && string.IsNullOrWhiteSpace(request.Respuesta))
+            return BadRequest(new { message = "Escribe una respuesta para el cliente" });
+
+        return await UpdatePedido(id, new JsonObject
+        {
+            ["reporte_estado"] = estado,
+            ["reporte_respuesta"] = request.Respuesta?.Trim(),
+            ["reporte_actualizado_at"] = DateTime.UtcNow.ToString("O")
+        }, "No se pudo actualizar el reporte");
     }
 
     /// Un cliente solo puede cancelar/calificar/reportar SUS PROPIOS pedidos;
@@ -376,6 +400,8 @@ public class PedidosController : ControllerBase
         Resena = S(row, "resena"),
         ReporteTipo = S(row, "reporte_tipo"),
         ReporteDetalles = S(row, "reporte_detalles"),
+        ReporteEstado = S(row, "reporte_estado"),
+        ReporteRespuesta = S(row, "reporte_respuesta"),
         CreatedAt = S(row, "created_at")
     };
 
@@ -415,6 +441,7 @@ public class ConfirmarPrecioRequest { public double? PesoConfirmado { get; set; 
 public class CancelarPedidoRequest { public string? Razon { get; set; } public string? Comentarios { get; set; } }
 public class CalificarPedidoRequest { public int CalificacionGeneral { get; set; } public string? Resena { get; set; } }
 public class ReportarPedidoRequest { public string? Tipo { get; set; } public string? Detalles { get; set; } }
+public class ActualizarReporteRequest { public string? Estado { get; set; } public string? Respuesta { get; set; } }
 
 public class PedidoDto
 {
@@ -450,6 +477,8 @@ public class PedidoDto
     public string? Resena { get; set; }
     public string? ReporteTipo { get; set; }
     public string? ReporteDetalles { get; set; }
+    public string? ReporteEstado { get; set; }
+    public string? ReporteRespuesta { get; set; }
 
     /// Cuándo se creó el pedido (distinto de [Fecha], que es la fecha de
     /// recolección que eligió el cliente). Es lo que define si un pedido

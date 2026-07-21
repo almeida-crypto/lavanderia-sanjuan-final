@@ -37,6 +37,10 @@ class Pedido {
     this.totalConfirmado,
     this.repartidorNombre,
     this.opcionAcabado,
+    this.reporteTipo,
+    this.reporteDetalles,
+    this.reporteEstado,
+    this.reporteRespuesta,
     this.creadoEn,
   });
 
@@ -69,6 +73,10 @@ class Pedido {
       repartidorNombre: _cleanRepartidor(json['repartidor']?.toString()),
       opcionAcabado: json['opcionAcabado']?.toString(),
       creadoEn: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
+      reporteTipo: json['reporteTipo']?.toString(),
+      reporteDetalles: json['reporteDetalles']?.toString(),
+      reporteEstado: json['reporteEstado']?.toString(),
+      reporteRespuesta: json['reporteRespuesta']?.toString(),
     );
   }
 
@@ -102,6 +110,14 @@ class Pedido {
   final String? repartidorNombre;
   final String? opcionAcabado;
   final DateTime? creadoEn;
+  final String? reporteTipo;
+  final String? reporteDetalles;
+  final String? reporteEstado;
+  final String? reporteRespuesta;
+
+  bool get tieneReporte => reporteTipo != null && reporteTipo!.trim().isNotEmpty;
+  bool get tieneReporteAbierto =>
+      tieneReporte && reporteEstado?.trim().toLowerCase() != 'resuelto';
 
   /// Folio corto y legible en vez del uuid interno (que es horrible de
   /// mostrar). Si por alguna razón el backend no lo mandó todavía (base sin
@@ -120,8 +136,10 @@ class Pedido {
   /// rechaza, aunque alguien intente llamar la API directamente.
   bool get puedeCancelar => const {
     'Recibido',
+    'Pedido recibido',
     'Asignado',
     'Repartidor Asignado',
+    'Recolector asignado',
   }.contains(estadoDetalle);
 
   static const _meses = [

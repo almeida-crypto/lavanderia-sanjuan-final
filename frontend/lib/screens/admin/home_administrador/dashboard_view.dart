@@ -419,7 +419,7 @@ class DashboardView extends StatelessWidget {
         tagLabel = estadoToString(pedido.estado);
     }
 
-    final isWarning = pedido.estado == PedidoEstado.atencion && pedido.warningMessage != null;
+    final isWarning = pedido.tieneReporteAbierto && pedido.warningMessage != null;
 
     IconData getServiceIcon(String iconName) {
       switch (iconName) {

@@ -38,9 +38,25 @@ public class AuthController : ControllerBase
         if (login.Usuario is not null)
         {
             login.Usuario.AccessToken = login.AccessToken;
+            login.Usuario.RefreshToken = login.RefreshToken;
         }
 
         return Ok(login.Usuario);
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshSessionRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+            return BadRequest(new { message = "Refresh token requerido" });
+
+        var result = await _supabaseService.RefreshSessionAsync(request.RefreshToken);
+        if (!result.Success || result.Usuario is null)
+            return StatusCode(result.StatusCode, new { message = result.ErrorMessage ?? "La sesión venció" });
+
+        result.Usuario.AccessToken = result.AccessToken;
+        result.Usuario.RefreshToken = result.RefreshToken;
+        return Ok(result.Usuario);
     }
 
     [HttpPost("registro")]
@@ -100,6 +116,8 @@ public class LoginRequest
     public string? Password { get; set; }
 }
 
+public class RefreshSessionRequest { public string? RefreshToken { get; set; } }
+
 public class RegistroRequest
 {
     public string? Nombre { get; set; }
@@ -130,4 +148,5 @@ public class UsuarioDto
     /// sus peticiones. En cualquier otra respuesta (listar empleados, etc.)
     /// queda null a propósito.
     public string? AccessToken { get; set; }
+    public string? RefreshToken { get; set; }
 }

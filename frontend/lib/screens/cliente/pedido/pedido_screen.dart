@@ -41,19 +41,10 @@ String _descripcionPaso(Pedido pedido, PedidoEstado estado) {
 
 List<_PasoPedido> _pasosPara(Pedido pedido) {
   final actual = pedido.estadoOperativo;
-  const flujoNormal = [
-    PedidoEstado.recibido,
-    PedidoEstado.asignado,
-    PedidoEstado.enPlanta,
-    PedidoEstado.lavando,
-    PedidoEstado.secandoDoblado,
-    PedidoEstado.enCamino,
-    PedidoEstado.listo,
-    PedidoEstado.entregado,
-  ];
+  const flujoNormal = estadosOperativos;
   final indiceActual = flujoNormal.indexOf(actual);
 
-  return PedidoEstado.values.map((estado) {
+  return flujoNormal.map((estado) {
     final indice = flujoNormal.indexOf(estado);
     final estadoVisual = estado == actual
         ? _PasoEstado.actual
@@ -141,10 +132,10 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     final pedido = _pedido;
-    final necesitaAtencion = pedido.estado == EstadoPedido.atencion;
-    final activo = pedido.estado == EstadoPedido.enProceso || necesitaAtencion;
+    final necesitaAtencion = pedido.tieneReporteAbierto;
+    final activo = pedido.estado == EstadoPedido.enProceso;
     final cancelado = pedido.estado == EstadoPedido.cancelado;
-    final puedeReportar = !cancelado;
+    final puedeReportar = !cancelado && !pedido.tieneReporteAbierto;
     final puedeCancelar = pedido.puedeCancelar;
     final chipColor = necesitaAtencion || cancelado
         ? AppColors.error
@@ -217,8 +208,8 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
               if (cancelado)
                 _PedidoCanceladoCard(pedido: pedido)
               else ...[
-                if (necesitaAtencion) ...[
-                  const _AtencionBanner(),
+                if (pedido.tieneReporte) ...[
+                  _AtencionBanner(pedido: pedido),
                   const SizedBox(height: 16),
                 ],
                 _EstimacionCard(
@@ -256,9 +247,12 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
                     if (puedeReportar)
                       Expanded(
                         child: TextButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => ReportarProblemaScreen(pedido: pedido)),
-                          ),
+                          onPressed: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => ReportarProblemaScreen(pedido: pedido)),
+                            );
+                            await _refrescar();
+                          },
                           icon: const Icon(Icons.flag_outlined, size: 18),
                           label: Text(
                             'Reportar un Problema',
@@ -337,7 +331,9 @@ class _PedidoCanceladoCard extends StatelessWidget {
 }
 
 class _AtencionBanner extends StatelessWidget {
-  const _AtencionBanner();
+  const _AtencionBanner({required this.pedido});
+
+  final Pedido pedido;
 
   @override
   Widget build(BuildContext context) {
@@ -358,7 +354,7 @@ class _AtencionBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tu pedido necesita atención',
+                  'Reporte: ${pedido.reporteEstado ?? 'Abierto'}',
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -367,7 +363,9 @@ class _AtencionBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Nuestro equipo está revisando algo en tu pedido y se pondrá en contacto contigo.',
+                  pedido.reporteRespuesta?.trim().isNotEmpty == true
+                      ? pedido.reporteRespuesta!
+                      : 'Nuestro equipo recibió tu reporte. Aquí verás la respuesta cuando lo atiendan.',
                   style: GoogleFonts.inter(fontSize: 13, color: AppColors.onErrorContainer),
                 ),
               ],
@@ -496,7 +494,7 @@ class _EstimacionCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: entregado ? 1.0 : 0.5,
+              value: progresoParaEstado(pedido.estadoOperativo),
               minHeight: 8,
               backgroundColor: AppColors.secondaryContainer,
               valueColor: const AlwaysStoppedAnimation(AppColors.primary),
