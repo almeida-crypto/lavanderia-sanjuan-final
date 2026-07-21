@@ -23,7 +23,8 @@ class AppImage extends StatelessWidget {
       fit: fit,
       loadingBuilder: (context, child, progress) =>
           progress == null ? child : Image.asset(fallbackAsset, fit: fit),
-      errorBuilder: (_, __, ___) => Image.asset(fallbackAsset, fit: fit),
+      errorBuilder: (context, error, stackTrace) =>
+          Image.asset(fallbackAsset, fit: fit),
     );
   }
 }
