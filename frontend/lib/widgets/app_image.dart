@@ -1,30 +1,59 @@
 import 'package:flutter/material.dart';
 
-/// Imagen administrable con respaldo local. Así ninguna tarjeta queda vacía
-/// si el admin no ha subido foto o si la red falla.
+import '../utils/app_colors.dart';
+
+/// Imagen administrable con respaldo en el logo de la marca. Así ninguna
+/// tarjeta queda vacía o rota si el admin no ha subido foto, la borró, o la
+/// red falla.
 class AppImage extends StatelessWidget {
   const AppImage({
     super.key,
     this.url,
-    required this.fallbackAsset,
+    this.fallbackAsset,
     this.fit = BoxFit.cover,
   });
 
   final String? url;
-  final String fallbackAsset;
+  final String? fallbackAsset;
   final BoxFit fit;
+
+  Widget _fallback() {
+    final asset = fallbackAsset;
+    if (asset != null) return Image.asset(asset, fit: fit);
+    return const AppLogoMark();
+  }
 
   @override
   Widget build(BuildContext context) {
     final value = url?.trim();
-    if (value == null || value.isEmpty) return Image.asset(fallbackAsset, fit: fit);
+    if (value == null || value.isEmpty) return _fallback();
     return Image.network(
       value,
       fit: fit,
-      loadingBuilder: (context, child, progress) =>
-          progress == null ? child : Image.asset(fallbackAsset, fit: fit),
-      errorBuilder: (context, error, stackTrace) =>
-          Image.asset(fallbackAsset, fit: fit),
+      loadingBuilder: (context, child, progress) => progress == null ? child : _fallback(),
+      errorBuilder: (context, error, stackTrace) => _fallback(),
+    );
+  }
+}
+
+/// Marca de FreshClean (el mismo cuadro con el ícono de lavandería que se ve
+/// en la pantalla de bienvenida y en las barras superiores), usada como
+/// respaldo cuando un servicio o promoción no tiene imagen asignada.
+class AppLogoMark extends StatelessWidget {
+  const AppLogoMark({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.primaryContainer,
+      alignment: Alignment.center,
+      child: FractionallySizedBox(
+        widthFactor: 0.4,
+        heightFactor: 0.4,
+        child: FittedBox(
+          child: Icon(Icons.local_laundry_service_rounded, color: AppColors.primary),
+        ),
+      ),
     );
   }
 }
@@ -67,11 +96,4 @@ class AppAvatar extends StatelessWidget {
       ),
     );
   }
-}
-
-String imagenPredeterminadaServicio(String nombre) {
-  final normalizado = nombre.toLowerCase();
-  if (normalizado.contains('tintorer')) return 'assets/images/servicio_tintoreria.png';
-  if (normalizado.contains('planch')) return 'assets/images/servicio_planchado.png';
-  return 'assets/images/servicio_lavanderia.png';
 }

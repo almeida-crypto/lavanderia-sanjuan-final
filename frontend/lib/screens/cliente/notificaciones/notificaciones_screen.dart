@@ -3,13 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../models/pedido.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../services/notificaciones_store.dart';
 import '../../../services/pedido_service.dart';
 import '../../../services/promocion_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/notificacion_filtro_menu.dart';
+import '../../../widgets/notificacion_swipe_tile.dart';
 import 'notificacion_detalle_screen.dart';
 
 enum TipoNotificacion { pedidoRecolectado, promocion, pedidoEntregado, informativa }
@@ -79,9 +81,9 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
   final _pedidoService = PedidoService();
   final _promocionService = PromocionService();
   final List<Notificacion> _notificaciones = [];
-  Set<String> _leidas = {};
+  NotificacionesStore? _store;
   bool _isLoading = true;
-  String? _prefsKey;
+  VistaNotificaciones _vista = VistaNotificaciones.activas;
   Timer? _actualizador;
 
   @override
@@ -89,7 +91,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _cargar();
-    _actualizador = Timer.periodic(const Duration(seconds: 30), (_) => _cargar(silencioso: true));
+    _actualizador = Timer.periodic(const Duration(seconds: 20), (_) => _cargar(silencioso: true));
   }
 
   @override
@@ -108,11 +110,10 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
     if (!silencioso && mounted) setState(() => _isLoading = true);
 
     final auth = context.read<AuthProvider>();
-    final usuarioId = auth.currentUser?.id ?? 'anonimo';
-    _prefsKey = 'notificaciones_leidas_$usuarioId';
-
-    final prefs = await SharedPreferences.getInstance();
-    _leidas = (prefs.getStringList(_prefsKey!) ?? []).toSet();
+    final usuarioId = auth.currentUser?.id;
+    final store = _store ?? NotificacionesStore(namespace: 'cliente', usuarioId: usuarioId);
+    await store.cargar();
+    _store = store;
 
     final generadas = <Notificacion>[];
 
@@ -131,19 +132,18 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
           descripcion:
               'Usa el código ${promocion.codigo} para obtener ${promocion.descuentoPorcentaje.toStringAsFixed(0)}% de descuento. ${promocion.descripcion}',
           momento: promocion.fechaInicio,
-          leida: _leidas.contains(clave),
+          leida: store.leidas.contains(clave),
         ));
-        break;
       }
     } catch (_) {
-      // Sin promoción disponible por ahora; no bloquea el resto de la lista.
+      // Sin promociones disponibles por ahora; no bloquea el resto de la lista.
     }
 
     try {
       final data = await _pedidoService.listarPedidos(clienteId: auth.currentUser?.id);
       for (final json in data) {
         final pedido = Pedido.fromJson(json);
-        final notificacion = _notificacionParaPedido(pedido);
+        final notificacion = _notificacionParaPedido(pedido, store);
         if (notificacion != null) generadas.add(notificacion);
       }
     } catch (_) {
@@ -161,7 +161,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
     });
   }
 
-  Notificacion? _notificacionParaPedido(Pedido pedido) {
+  Notificacion? _notificacionParaPedido(Pedido pedido, NotificacionesStore store) {
     final clave = 'pedido_${pedido.id}_${pedido.estado.name}';
     switch (pedido.estado) {
       case EstadoPedido.entregado:
@@ -174,7 +174,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
           titulo: 'Pedido ${pedido.numero} entregado',
           descripcion: 'Tu ropa fue entregada en tu puerta. ¡Gracias por elegir FreshClean!',
           momento: pedido.creadoEn,
-          leida: _leidas.contains(clave),
+          leida: store.leidas.contains(clave),
         );
       case EstadoPedido.cancelado:
         return Notificacion(
@@ -186,7 +186,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
           titulo: 'Pedido ${pedido.numero} cancelado',
           descripcion: 'Este pedido fue cancelado.',
           momento: pedido.creadoEn,
-          leida: _leidas.contains(clave),
+          leida: store.leidas.contains(clave),
         );
       case EstadoPedido.atencion:
         return Notificacion(
@@ -198,7 +198,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
           titulo: 'Pedido ${pedido.numero} necesita tu atención',
           descripcion: 'Hay un reporte pendiente sobre este pedido. Revisa los detalles en Mis Pedidos.',
           momento: pedido.creadoEn,
-          leida: _leidas.contains(clave),
+          leida: store.leidas.contains(clave),
         );
       case EstadoPedido.enProceso:
         return Notificacion(
@@ -210,42 +210,87 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
           titulo: 'Pedido ${pedido.numero} en proceso',
           descripcion: 'Tu pedido va en camino a nuestras instalaciones o ya está en proceso. Te avisaremos cuando haya novedades.',
           momento: pedido.creadoEn,
-          leida: _leidas.contains(clave),
+          leida: store.leidas.contains(clave),
         );
     }
   }
 
-  Future<void> _guardarLeidas() async {
-    if (_prefsKey == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_prefsKey!, _leidas.toList());
-  }
-
-  void _abrirNotificacion(int index) {
-    final clave = _notificaciones[index].clave;
-    setState(() => _notificaciones[index] = _notificaciones[index].copyWith(leida: true));
-    _leidas.add(clave);
-    _guardarLeidas();
+  void _abrirNotificacion(Notificacion notificacion) {
+    final store = _store;
+    if (store != null) store.marcarLeida(notificacion.clave);
+    setState(() {
+      final idx = _notificaciones.indexWhere((n) => n.clave == notificacion.clave);
+      if (idx != -1) _notificaciones[idx] = _notificaciones[idx].copyWith(leida: true);
+    });
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => NotificacionDetalleScreen(notificacion: _notificaciones[index]),
+        builder: (_) => NotificacionDetalleScreen(notificacion: notificacion.copyWith(leida: true)),
       ),
     );
   }
 
   void _marcarTodoLeido() {
+    final store = _store;
+    if (store == null) return;
+    store.marcarTodoLeido(_notificaciones.map((n) => n.clave));
     setState(() {
       for (var i = 0; i < _notificaciones.length; i++) {
         _notificaciones[i] = _notificaciones[i].copyWith(leida: true);
-        _leidas.add(_notificaciones[i].clave);
       }
     });
-    _guardarLeidas();
+  }
+
+  void _archivar(Notificacion n) {
+    final store = _store;
+    if (store == null) return;
+    store.archivar(n.clave);
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Notificación archivada'),
+      action: SnackBarAction(
+        label: 'Deshacer',
+        onPressed: () {
+          store.desarchivar(n.clave);
+          setState(() {});
+        },
+      ),
+    ));
+  }
+
+  void _eliminar(Notificacion n) {
+    final store = _store;
+    if (store == null) return;
+    store.eliminar(n.clave);
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Notificación eliminada'),
+      action: SnackBarAction(
+        label: 'Deshacer',
+        onPressed: () {
+          store.restaurar(n.clave);
+          setState(() {});
+        },
+      ),
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
-    final hayNoLeidas = _notificaciones.any((n) => !n.leida);
+    final store = _store;
+    final activas = store == null
+        ? _notificaciones
+        : _notificaciones.where((n) => !store.eliminadas.contains(n.clave) && !store.archivadas.contains(n.clave)).toList();
+    final leidas = activas.where((n) => n.leida).toList();
+    final archivadas = store == null
+        ? <Notificacion>[]
+        : _notificaciones.where((n) => !store.eliminadas.contains(n.clave) && store.archivadas.contains(n.clave)).toList();
+    final visibles = switch (_vista) {
+      VistaNotificaciones.activas => activas,
+      VistaNotificaciones.leidas => leidas,
+      VistaNotificaciones.archivadas => archivadas,
+    };
+    final hayNoLeidas = activas.any((n) => !n.leida);
+    final esVistaArchivadas = _vista == VistaNotificaciones.archivadas;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -258,7 +303,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
-          'Notificaciones',
+          tituloParaVista(_vista),
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -266,7 +311,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
           ),
         ),
         actions: [
-          if (hayNoLeidas)
+          if (_vista == VistaNotificaciones.activas && hayNoLeidas)
             TextButton(
               onPressed: _marcarTodoLeido,
               child: Text(
@@ -278,6 +323,10 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
                 ),
               ),
             ),
+          NotificacionFiltroMenu(
+            vista: _vista,
+            onChanged: (v) => setState(() => _vista = v),
+          ),
         ],
       ),
       body: SafeArea(
@@ -287,7 +336,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
             : RefreshIndicator(
                 onRefresh: () => _cargar(),
                 color: AppColors.primary,
-                child: _notificaciones.isEmpty
+                child: visibles.isEmpty
                     ? LayoutBuilder(
                         builder: (context, constraints) => SingleChildScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),
@@ -295,7 +344,11 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
                             constraints: BoxConstraints(minHeight: constraints.maxHeight),
                             child: Center(
                               child: Text(
-                                'No tienes notificaciones',
+                                switch (_vista) {
+                                  VistaNotificaciones.archivadas => 'No tienes notificaciones archivadas',
+                                  VistaNotificaciones.leidas => 'No tienes notificaciones leídas',
+                                  VistaNotificaciones.activas => 'No tienes notificaciones',
+                                },
                                 style: GoogleFonts.inter(fontSize: 14, color: AppColors.onSurfaceVariant),
                               ),
                             ),
@@ -307,12 +360,30 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> with Widget
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                         child: Column(
                           children: [
-                            for (var i = 0; i < _notificaciones.length; i++) ...[
-                              _NotificacionCard(
-                                notificacion: _notificaciones[i],
-                                onTap: () => _abrirNotificacion(i),
-                              ),
-                              if (i != _notificaciones.length - 1) const SizedBox(height: 16),
+                            for (var i = 0; i < visibles.length; i++) ...[
+                              esVistaArchivadas
+                                  ? _NotificacionArchivadaCard(
+                                      notificacion: visibles[i],
+                                      onRestaurar: () {
+                                        _store?.desarchivar(visibles[i].clave);
+                                        setState(() {});
+                                      },
+                                    )
+                                  : NotificacionSwipeTile(
+                                      notifKey: visibles[i].clave,
+                                      onSwipe: (direction) {
+                                        if (direction == DismissDirection.endToStart) {
+                                          _eliminar(visibles[i]);
+                                        } else {
+                                          _archivar(visibles[i]);
+                                        }
+                                      },
+                                      child: _NotificacionCard(
+                                        notificacion: visibles[i],
+                                        onTap: () => _abrirNotificacion(visibles[i]),
+                                      ),
+                                    ),
+                              if (i != visibles.length - 1) const SizedBox(height: 16),
                             ],
                           ],
                         ),
@@ -410,6 +481,63 @@ class _NotificacionCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificacionArchivadaCard extends StatelessWidget {
+  const _NotificacionArchivadaCard({required this.notificacion, required this.onRestaurar});
+
+  final Notificacion notificacion;
+  final VoidCallback onRestaurar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.surfaceVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: notificacion.iconBg, shape: BoxShape.circle),
+              child: Icon(notificacion.icon, color: notificacion.iconColor, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    notificacion.titulo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.onSurface),
+                  ),
+                  Text(
+                    notificacion.descripcion,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Restaurar',
+              icon: const Icon(Icons.unarchive_outlined, color: AppColors.primary),
+              onPressed: onRestaurar,
+            ),
+          ],
         ),
       ),
     );

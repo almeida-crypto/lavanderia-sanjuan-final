@@ -81,10 +81,7 @@ class _OfertaCard extends StatelessWidget {
               child: SizedBox(
                 width: 68,
                 height: 68,
-                child: AppImage(
-                  url: promocion.imagenUrl,
-                  fallbackAsset: 'assets/images/promocion_default.png',
-                ),
+                child: AppImage(url: promocion.imagenUrl),
               ),
             ),
             const SizedBox(width: 16),

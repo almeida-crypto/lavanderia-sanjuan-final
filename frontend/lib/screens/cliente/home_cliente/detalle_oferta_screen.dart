@@ -210,10 +210,7 @@ class _HeroBanner extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          AppImage(
-            url: promocion.imagenUrl,
-            fallbackAsset: 'assets/images/promocion_default.png',
-          ),
+          AppImage(url: promocion.imagenUrl),
           Container(color: AppColors.primary.withValues(alpha: 0.16)),
           Positioned(
             left: 20,

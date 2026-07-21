@@ -218,10 +218,7 @@ class _ServicioCard extends StatelessWidget {
               child: SizedBox(
                 width: double.infinity,
                 height: 140,
-                child: AppImage(
-                  url: servicio.imagenUrl,
-                  fallbackAsset: imagenPredeterminadaServicio(servicio.nombre),
-                ),
+                child: AppImage(url: servicio.imagenUrl),
               ),
             ),
             const SizedBox(height: 16),

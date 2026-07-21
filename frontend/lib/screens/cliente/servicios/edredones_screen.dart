@@ -7,6 +7,7 @@ import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
 import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 import '../agendar_recoleccion/agendar_recoleccion_screen.dart';
 
 class EdredonesScreen extends StatefulWidget {
@@ -71,7 +72,7 @@ class _EdredonesScreenState extends State<EdredonesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _HeroSection(),
+              _HeroSection(imagenUrl: servicio?.imagenUrl),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                 child: Column(
@@ -138,34 +139,54 @@ class _EdredonesScreenState extends State<EdredonesScreen> {
 }
 
 class _HeroSection extends StatelessWidget {
-  const _HeroSection();
+  const _HeroSection({this.imagenUrl});
+
+  final String? imagenUrl;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: 280,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      alignment: Alignment.bottomLeft,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [AppColors.inverseSurface, AppColors.onSurface],
-        ),
-      ),
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          Align(
-            alignment: const Alignment(0, -0.6),
-            child: Icon(
-              Icons.bed_rounded,
-              size: 88,
-              color: Colors.white.withValues(alpha: 0.15),
+          if (imagenUrl != null)
+            AppImage(url: imagenUrl)
+          else
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppColors.inverseSurface, AppColors.onSurface],
+                ),
+              ),
+            ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.75)],
+              ),
             ),
           ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.end,
+          if (imagenUrl == null)
+            Align(
+              alignment: const Alignment(0, -0.6),
+              child: Icon(
+                Icons.bed_rounded,
+                size: 88,
+                color: Colors.white.withValues(alpha: 0.15),
+              ),
+            ),
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 20,
+            child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
@@ -204,6 +225,7 @@ class _HeroSection extends StatelessWidget {
                 ),
               ),
             ],
+            ),
           ),
         ],
       ),

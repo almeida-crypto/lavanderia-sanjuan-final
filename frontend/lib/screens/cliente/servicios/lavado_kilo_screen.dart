@@ -8,6 +8,7 @@ import '../../../models/servicio_lavanderia.dart';
 import '../../../providers/servicios_provider.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
+import '../../../widgets/app_image.dart';
 import '../home_cliente/home_cliente_screen.dart';
 import '../mi_perfil/mi_perfil_screen.dart';
 import '../mis_pedidos/mis_pedidos_screen.dart';
@@ -88,7 +89,7 @@ class LavadoKiloScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _HeroBanner(),
+              _HeroBanner(imagenUrl: servicio?.imagenUrl),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Column(
@@ -175,10 +176,19 @@ class LavadoKiloScreen extends StatelessWidget {
 }
 
 class _HeroBanner extends StatelessWidget {
-  const _HeroBanner();
+  const _HeroBanner({this.imagenUrl});
+
+  final String? imagenUrl;
 
   @override
   Widget build(BuildContext context) {
+    if (imagenUrl != null) {
+      return SizedBox(
+        width: double.infinity,
+        height: 256,
+        child: AppImage(url: imagenUrl),
+      );
+    }
     return Container(
       width: double.infinity,
       height: 256,

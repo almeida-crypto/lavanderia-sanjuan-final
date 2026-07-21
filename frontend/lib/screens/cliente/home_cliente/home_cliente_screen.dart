@@ -690,10 +690,7 @@ class _ServiceCard extends StatelessWidget {
               child: SizedBox(
                 width: double.infinity,
                 height: 64,
-                child: AppImage(
-                  url: imagenUrl,
-                  fallbackAsset: imagenPredeterminadaServicio(title),
-                ),
+                child: AppImage(url: imagenUrl),
               ),
             ),
             const Spacer(),
@@ -784,10 +781,7 @@ class _WeeklyOfferBanner extends StatelessWidget {
               child: SizedBox(
                 width: 72,
                 height: 72,
-                child: AppImage(
-                  url: promocion.imagenUrl,
-                  fallbackAsset: 'assets/images/promocion_default.png',
-                ),
+                child: AppImage(url: promocion.imagenUrl),
               ),
             ),
           ],
