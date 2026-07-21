@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../services/notificaciones_store.dart';
 import '../../../utils/app_colors.dart';
 import '../../auth/login/bienvenida_screen.dart';
 import '../notificaciones/notificaciones_repartidor_screen.dart';
@@ -18,6 +19,30 @@ class HomeRepartidorScreen extends StatefulWidget {
 
 class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
   int _selectedTab = 0; // 0: Recolecciones, 1: Entregas, 2: Completados
+  int _notificacionesNoLeidas = 0;
+
+  String _claveDe(PedidoAdmin pedido) => 'pedido_${pedido.id}_${pedido.estado.name}';
+
+  bool _esPendiente(PedidoAdmin p) =>
+      p.estado == PedidoEstado.asignado ||
+      p.estado == PedidoEstado.listo ||
+      p.estado == PedidoEstado.enCamino;
+
+  Future<void> _actualizarNotificaciones() async {
+    final usuario = context.read<AuthProvider>().currentUser;
+    final store = NotificacionesStore(namespace: 'repartidor', usuarioId: usuario?.id);
+    await store.cargar();
+    final pedidos = context.read<AdminProvider>().pedidos.where(
+          (p) => usuario != null && p.repartidorId == usuario.id && _esPendiente(p),
+        );
+    final cantidad = pedidos.where((pedido) {
+      final clave = _claveDe(pedido);
+      return !store.leidas.contains(clave) &&
+          !store.archivadas.contains(clave) &&
+          !store.eliminadas.contains(clave);
+    }).length;
+    if (mounted) setState(() => _notificacionesNoLeidas = cantidad);
+  }
 
   Future<void> _cerrarSesion(BuildContext context) async {
     final confirmado = await showDialog<bool>(
@@ -54,7 +79,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<AdminProvider>().cargarPedidos();
+      if (mounted) context.read<AdminProvider>().cargarPedidos().whenComplete(_actualizarNotificaciones);
     });
   }
 
@@ -236,17 +261,20 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
             children: [
               IconButton(
                 tooltip: 'Notificaciones',
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const NotificacionesRepartidorScreen(),
-                  ),
-                ),
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificacionesRepartidorScreen(),
+                    ),
+                  );
+                  await _actualizarNotificaciones();
+                },
                 icon: const Icon(
                   Icons.notifications_outlined,
                   color: AppColors.primary,
                 ),
               ),
-              if (recolecciones.length + entregas.length > 0)
+              if (_notificacionesNoLeidas > 0)
                 Positioned(
                   right: 5,
                   top: 4,
@@ -258,9 +286,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: Text(
-                      recolecciones.length + entregas.length > 9
-                          ? '9+'
-                          : '${recolecciones.length + entregas.length}',
+                      _notificacionesNoLeidas > 9 ? '9+' : '$_notificacionesNoLeidas',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: Colors.white,
@@ -277,7 +303,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
             tooltip: 'Actualizar pedidos',
             onPressed: adminProvider.isLoading
                 ? null
-                : () => context.read<AdminProvider>().cargarPedidos(),
+                : () => context.read<AdminProvider>().cargarPedidos().whenComplete(_actualizarNotificaciones),
           ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.error),
@@ -468,6 +494,31 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
             ),
             const SizedBox(height: 8),
 
+            // Servicio (qué se va a recoger/entregar)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.local_laundry_service_rounded, size: 14, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    pedido.servicioNombre,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
             // Location / Address (Prominent requirement)
             Container(
               padding: const EdgeInsets.all(12),
@@ -541,6 +592,34 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
                   ),
               ],
             ),
+            if (pedido.detallesAdicionales != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.onSecondaryContainer),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        pedido.detallesAdicionales!,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             const Divider(color: AppColors.surfaceVariant, height: 1),
             const SizedBox(height: 16),

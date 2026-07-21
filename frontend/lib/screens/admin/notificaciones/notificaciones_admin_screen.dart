@@ -43,9 +43,6 @@ class _NotificacionesAdminScreenState
     final usuarioId = context.read<AuthProvider>().currentUser?.id;
     final store = NotificacionesStore(namespace: 'admin', usuarioId: usuarioId);
     await store.cargar();
-    await store.marcarTodoLeido(
-      context.read<AdminProvider>().pedidos.map(_claveDe),
-    );
     if (!mounted) return;
     setState(() => _store = store);
   }
