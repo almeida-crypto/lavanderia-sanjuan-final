@@ -64,10 +64,20 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Estado actualizado a: ${estadoToString(estadoFinal)}')),
       );
-    } catch (_) {
+    } catch (error) {
       if (!context.mounted) return;
+      final detalle = error
+          .toString()
+          .replaceFirst('Exception: ', '')
+          .trim();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo actualizar el estado, intenta de nuevo.')),
+        SnackBar(
+          content: Text(
+            detalle.isEmpty
+                ? 'No se pudo actualizar el estado. Intenta de nuevo.'
+                : detalle,
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);

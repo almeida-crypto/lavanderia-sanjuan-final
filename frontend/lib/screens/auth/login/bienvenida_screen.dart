@@ -28,17 +28,13 @@ class BienvenidaScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(
-                        Icons.local_laundry_service_rounded,
-                        color: Colors.white,
-                        size: 36,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/images/app_logo.png',
+                        width: 112,
+                        height: 112,
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),

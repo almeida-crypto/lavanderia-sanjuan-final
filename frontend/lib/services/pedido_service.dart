@@ -7,6 +7,19 @@ import '../utils/api_config.dart';
 class PedidoService {
   String get _baseUrl => ApiConfig.baseUrl;
 
+  String _mensajeError(http.Response response, String fallback) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message']?.toString().trim();
+        if (message != null && message.isNotEmpty) return message;
+      }
+    } catch (_) {
+      // Algunas respuestas de infraestructura no contienen JSON.
+    }
+    return fallback;
+  }
+
   Future<List<Map<String, dynamic>>> listarPedidos({String? clienteId}) async {
     final uri = Uri.parse('$_baseUrl/pedidos').replace(queryParameters: clienteId == null ? null : {'clienteId': clienteId});
     final response = await withTimeout(http.get(uri, headers: ApiConfig.authHeaders));
@@ -65,7 +78,7 @@ class PedidoService {
       body: jsonEncode({'repartidorId': repartidorId}),
     ));
     if (response.statusCode != 200) {
-      throw Exception('No se pudo asignar el repartidor');
+      throw Exception(_mensajeError(response, 'No se pudo asignar el repartidor'));
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
