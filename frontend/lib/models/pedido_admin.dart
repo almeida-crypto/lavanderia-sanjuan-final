@@ -148,6 +148,7 @@ class PedidoAdmin {
     this.metodoPago,
     this.warningMessage,
     this.repartidorNombre,
+    this.repartidorId,
     this.detallesAdicionales,
     this.opcionAcabado,
     this.creadoEn,
@@ -177,6 +178,7 @@ class PedidoAdmin {
   String? metodoPago;
   String? warningMessage;
   String? repartidorNombre;
+  String? repartidorId;
   String? detallesAdicionales;
   String? opcionAcabado;
 

@@ -55,6 +55,21 @@ class PedidoService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> asignarRepartidor(
+    String id, {
+    required String repartidorId,
+  }) async {
+    final response = await withTimeout(http.put(
+      Uri.parse('$_baseUrl/pedidos/$id/repartidor'),
+      headers: ApiConfig.jsonHeaders,
+      body: jsonEncode({'repartidorId': repartidorId}),
+    ));
+    if (response.statusCode != 200) {
+      throw Exception('No se pudo asignar el repartidor');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> confirmarPrecio(
     String id, {
     double? pesoConfirmado,

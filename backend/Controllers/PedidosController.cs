@@ -12,16 +12,22 @@ public class PedidosController : ControllerBase
 {
     private readonly SupabaseDataService _data;
     private readonly PromocionValidationService _validacionPromo;
+    private readonly SupabaseService? _supabaseService;
 
-    public PedidosController(SupabaseDataService data, PromocionValidationService validacionPromo)
+    public PedidosController(
+        SupabaseDataService data,
+        PromocionValidationService validacionPromo,
+        SupabaseService? supabaseService = null)
     {
         _data = data;
         _validacionPromo = validacionPromo;
+        _supabaseService = supabaseService;
     }
 
     private string? CallerId => User.FindFirstValue(ClaimTypes.NameIdentifier);
     private string? CallerRol => User.FindFirstValue(ClaimTypes.Role);
     private bool EsStaff => CallerRol is "administrador" or "empleado";
+    private bool EsRepartidor => CallerRol == "repartidor";
 
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery] string? clienteId)
@@ -31,10 +37,19 @@ public class PedidosController : ControllerBase
             // Un cliente solo puede listar sus propios pedidos, sin importar
             // qué clienteId haya mandado en la URL. Solo el staff puede ver
             // los de todos (o filtrar por cualquier cliente).
-            var idEfectivo = EsStaff ? clienteId : CallerId;
-            var filter = string.IsNullOrWhiteSpace(idEfectivo)
-                ? "order=created_at.desc"
-                : $"cliente_id=eq.{E(idEfectivo)}&order=created_at.desc";
+            string filter;
+            if (EsRepartidor)
+            {
+                if (string.IsNullOrWhiteSpace(CallerId)) return Forbid();
+                filter = $"repartidor_id=eq.{E(CallerId)}&order=created_at.desc";
+            }
+            else
+            {
+                var idEfectivo = EsStaff ? clienteId : CallerId;
+                filter = string.IsNullOrWhiteSpace(idEfectivo)
+                    ? "order=created_at.desc"
+                    : $"cliente_id=eq.{E(idEfectivo)}&order=created_at.desc";
+            }
             var rows = await _data.ListAsync("pedidos", filter);
             return Ok(rows.OfType<JsonObject>().Select(Map));
         }
@@ -48,7 +63,11 @@ public class PedidosController : ControllerBase
         {
             var row = await _data.FindOneAsync("pedidos", $"id=eq.{E(id)}&limit=1");
             if (row is null) return NotFound(new { message = "Pedido no encontrado" });
-            if (!EsStaff && row["cliente_id"]?.ToString() != CallerId)
+            var puedeConsultar = EsStaff ||
+                (EsRepartidor
+                    ? row["repartidor_id"]?.ToString() == CallerId
+                    : row["cliente_id"]?.ToString() == CallerId);
+            if (!puedeConsultar)
             {
                 return NotFound(new { message = "Pedido no encontrado" });
             }
@@ -154,19 +173,71 @@ public class PedidosController : ControllerBase
     }
 
     [HttpPut("{id}/estado")]
-    [Authorize(Roles = "administrador,empleado")]
-    public Task<IActionResult> ActualizarEstado(string id, [FromBody] ActualizarEstadoRequest request) =>
-        UpdatePedido(id, new JsonObject { ["estado"] = request.Estado }, "No se pudo actualizar el estado");
+    [Authorize(Roles = "administrador,empleado,repartidor")]
+    public async Task<IActionResult> ActualizarEstado(string id, [FromBody] ActualizarEstadoRequest request)
+    {
+        var estado = request.Estado?.Trim();
+        if (string.IsNullOrWhiteSpace(estado))
+        {
+            return BadRequest(new { message = "El estado es obligatorio" });
+        }
+
+        if (!EsRepartidor)
+        {
+            return await UpdatePedido(id, new JsonObject { ["estado"] = estado }, "No se pudo actualizar el estado");
+        }
+
+        try
+        {
+            var actual = await _data.FindOneAsync("pedidos", $"id=eq.{E(id)}&limit=1");
+            if (actual is null || actual["repartidor_id"]?.ToString() != CallerId)
+            {
+                return NotFound(new { message = "Pedido no encontrado" });
+            }
+
+            var estadoActual = actual["estado"]?.ToString();
+            var transicionValida = (estadoActual is "Asignado" or "Repartidor Asignado") && estado == "En Planta"
+                || estadoActual == "Listo" && estado == "En camino"
+                || estadoActual == "En camino" && estado == "Entregado";
+            if (!transicionValida)
+            {
+                return Conflict(new { message = "No puedes aplicar ese cambio de estado a este pedido" });
+            }
+
+            return await UpdatePedido(id, new JsonObject { ["estado"] = estado }, "No se pudo actualizar el estado");
+        }
+        catch (SupabaseDataException ex) { return DataError(ex); }
+    }
 
     [HttpPut("{id}/repartidor")]
     [Authorize(Roles = "administrador,empleado")]
     public async Task<IActionResult> AsignarRepartidor(string id, [FromBody] AsignarRepartidorRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.RepartidorId))
+        {
+            return BadRequest(new { message = "Selecciona un repartidor" });
+        }
+        if (_supabaseService is null || !_supabaseService.IsConfigured)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "No se pudo validar al repartidor" });
+        }
+
         try
         {
             var current = await _data.FindOneAsync("pedidos", $"id=eq.{E(id)}&limit=1");
             if (current is null) return NotFound(new { message = "Pedido no encontrado" });
-            var payload = new JsonObject { ["repartidor"] = request.Repartidor };
+            var repartidor = (await _supabaseService.ListStaffUsersAsync()).FirstOrDefault(usuario =>
+                usuario.Id == request.RepartidorId && usuario.Rol == "repartidor" && usuario.Activa);
+            if (repartidor is null)
+            {
+                return BadRequest(new { message = "El repartidor seleccionado no está disponible" });
+            }
+
+            var payload = new JsonObject
+            {
+                ["repartidor"] = repartidor.Nombre,
+                ["repartidor_id"] = repartidor.Id,
+            };
             if (current["estado"]?.ToString() == "Recibido") payload["estado"] = "Asignado";
             var row = await _data.UpdateAsync("pedidos", $"id=eq.{E(id)}", payload);
             return Ok(Map(row!));
@@ -294,6 +365,7 @@ public class PedidosController : ControllerBase
         PrecioAcabado = M(row, "precio_acabado"),
         CodigoPromocion = S(row, "codigo_promocion"),
         Repartidor = S(row, "repartidor"),
+        RepartidorId = S(row, "repartidor_id"),
         PesoConfirmado = N(row, "peso_confirmado"),
         TotalConfirmado = M(row, "total_confirmado"),
         Total = M(row, "total") ?? 0m,
@@ -338,7 +410,7 @@ public class CrearPedidoRequest
 }
 
 public class ActualizarEstadoRequest { public string? Estado { get; set; } }
-public class AsignarRepartidorRequest { public string? Repartidor { get; set; } }
+public class AsignarRepartidorRequest { public string? RepartidorId { get; set; } }
 public class ConfirmarPrecioRequest { public double? PesoConfirmado { get; set; } public decimal TotalConfirmado { get; set; } }
 public class CancelarPedidoRequest { public string? Razon { get; set; } public string? Comentarios { get; set; } }
 public class CalificarPedidoRequest { public int CalificacionGeneral { get; set; } public string? Resena { get; set; } }
@@ -367,6 +439,7 @@ public class PedidoDto
     public decimal? PrecioAcabado { get; set; }
     public string? CodigoPromocion { get; set; }
     public string? Repartidor { get; set; }
+    public string? RepartidorId { get; set; }
     public double? PesoConfirmado { get; set; }
     public decimal? TotalConfirmado { get; set; }
     public decimal Total { get; set; }

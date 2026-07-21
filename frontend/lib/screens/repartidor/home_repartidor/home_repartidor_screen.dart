@@ -17,6 +17,32 @@ class HomeRepartidorScreen extends StatefulWidget {
 class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
   int _selectedTab = 0; // 0: Recolecciones, 1: Entregas, 2: Completados
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AdminProvider>().cargarPedidos();
+    });
+  }
+
+  Future<void> _actualizarEstado(PedidoAdmin pedido, PedidoEstado nuevoEstado) async {
+    try {
+      await context.read<AdminProvider>().updatePedidoEstado(pedido.id, nuevoEstado);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pedido ${pedido.numero} actualizado con éxito'),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo actualizar el pedido. Intenta de nuevo.')),
+      );
+    }
+  }
+
   void _confirmarCambioEstado({
     required BuildContext context,
     required PedidoAdmin pedido,
@@ -50,18 +76,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(dialogContext);
-                await context.read<AdminProvider>().updatePedidoEstado(
-                      pedido.id,
-                      nuevoEstado,
-                    );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Pedido ${pedido.numero} actualizado con éxito'),
-                      backgroundColor: AppColors.primary,
-                    ),
-                  );
-                }
+                await _actualizarEstado(pedido, nuevoEstado);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorBoton,
@@ -79,24 +94,59 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
     );
   }
 
+  Widget _buildErrorState(BuildContext context, String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded, size: 52, color: AppColors.outline),
+            const SizedBox(height: 16),
+            Text(
+              'No se pudieron cargar tus pedidos',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => context.read<AdminProvider>().cargarPedidos(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final usuario = context.watch<AuthProvider>().currentUser;
     final adminProvider = context.watch<AdminProvider>();
     final todosPedidos = adminProvider.pedidos;
+    final pedidosAsignados = todosPedidos
+        .where((pedido) => usuario != null && pedido.repartidorId == usuario.id)
+        .toList();
 
-    // Recolecciones pendientes: recibido o asignado
-    final recolecciones = todosPedidos.where((p) {
-      return p.estado == PedidoEstado.recibido || p.estado == PedidoEstado.asignado;
+    // La API ya devuelve únicamente los pedidos del repartidor autenticado;
+    // este filtro adicional evita mostrar datos previos mientras se refresca
+    // una sesión que cambió de usuario en el mismo dispositivo.
+    final recolecciones = pedidosAsignados.where((p) {
+      return p.estado == PedidoEstado.asignado;
     }).toList();
 
-    // Entregas pendientes: listo o enCamino
-    final entregas = todosPedidos.where((p) {
+    final entregas = pedidosAsignados.where((p) {
       return p.estado == PedidoEstado.listo || p.estado == PedidoEstado.enCamino;
     }).toList();
 
-    // Completados: entregado
-    final completados = todosPedidos.where((p) {
+    final completados = pedidosAsignados.where((p) {
       return p.estado == PedidoEstado.entregado;
     }).toList();
 
@@ -149,6 +199,13 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+            tooltip: 'Actualizar pedidos',
+            onPressed: adminProvider.isLoading
+                ? null
+                : () => context.read<AdminProvider>().cargarPedidos(),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.error),
             tooltip: 'Cerrar Sesión',
             onPressed: () {
@@ -175,7 +232,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
                   children: [
                     _buildTabItem(0, 'Recoger (${recolecciones.length})', Icons.assignment_return_outlined),
                     _buildTabItem(1, 'Entregar (${entregas.length})', Icons.local_shipping_outlined),
-                    _buildTabItem(2, 'Listos (${completados.length})', Icons.check_circle_outline),
+                    _buildTabItem(2, 'Completados (${completados.length})', Icons.check_circle_outline),
                   ],
                 ),
               ),
@@ -183,7 +240,11 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
 
             // Order List
             Expanded(
-              child: pedidosActuales.isEmpty
+              child: adminProvider.isLoading && pedidosAsignados.isEmpty
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                  : adminProvider.error != null && pedidosAsignados.isEmpty
+                      ? _buildErrorState(context, adminProvider.error!)
+                      : pedidosActuales.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -271,6 +332,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
   Widget _buildOrderCard(BuildContext context, PedidoAdmin pedido) {
     final esRecoleccion = _selectedTab == 0;
     final esEntrega = _selectedTab == 1;
+    final entregaEnCamino = pedido.estado == PedidoEstado.enCamino;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -453,23 +515,28 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
                     _confirmarCambioEstado(
                       context: context,
                       pedido: pedido,
-                      nuevoEstado: PedidoEstado.entregado,
-                      titulo: 'Confirmar Entrega',
-                      mensaje: '¿Confirmas que entregaste las prendas al cliente "${pedido.clienteNombre}"?',
-                      textoBoton: 'Marcar como Entregado',
-                      colorBoton: Colors.green.shade700,
+                      nuevoEstado: entregaEnCamino ? PedidoEstado.entregado : PedidoEstado.enCamino,
+                      titulo: entregaEnCamino ? 'Confirmar Entrega' : 'Iniciar Entrega',
+                      mensaje: entregaEnCamino
+                          ? '¿Confirmas que entregaste las prendas al cliente "${pedido.clienteNombre}"?'
+                          : '¿Confirmas que vas en camino a entregar las prendas a "${pedido.clienteNombre}"?',
+                      textoBoton: entregaEnCamino ? 'Marcar como Entregado' : 'Iniciar Entrega',
+                      colorBoton: entregaEnCamino ? Colors.green.shade700 : AppColors.primary,
                     );
                   },
-                  icon: const Icon(Icons.check_circle_outline, size: 20),
+                  icon: Icon(
+                    entregaEnCamino ? Icons.check_circle_outline : Icons.local_shipping_outlined,
+                    size: 20,
+                  ),
                   label: Text(
-                    'MARCAR COMO ENTREGADO',
+                    entregaEnCamino ? 'MARCAR COMO ENTREGADO' : 'INICIAR ENTREGA',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
+                    backgroundColor: entregaEnCamino ? Colors.green.shade700 : AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),

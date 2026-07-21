@@ -233,6 +233,7 @@ class AdminProvider extends ChangeNotifier {
       totalConfirmado: totalConfirmado,
       metodoPago: json['metodoPago']?.toString(),
       repartidorNombre: (repartidor == null || repartidor.isEmpty) ? null : repartidor,
+      repartidorId: json['repartidorId']?.toString(),
       warningMessage: warningMessage,
       opcionAcabado: opcionAcabado,
       creadoEn: creadoEn,
@@ -283,6 +284,18 @@ class AdminProvider extends ChangeNotifier {
       NotaPedido(fecha: 'Justo ahora', texto: "Estado cambiado a '${estadoToString(nuevoEstado)}'", autor: 'Admin'),
     );
     notifyListeners();
+  }
+
+  Future<void> asignarRepartidor(String pedidoId, Usuario repartidor) async {
+    final actualizado = await _pedidoService.asignarRepartidor(
+      pedidoId,
+      repartidorId: repartidor.id,
+    );
+    final index = _pedidos.indexWhere((pedido) => pedido.id == pedidoId);
+    if (index != -1) {
+      _pedidos[index] = _mapPedido(actualizado);
+      notifyListeners();
+    }
   }
 
   /// Confirma el peso/cantidad real y el precio final tras pesar el pedido

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../models/pedido_admin.dart';
+import '../../../models/usuario.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../utils/app_colors.dart';
 
@@ -16,16 +17,52 @@ class ActualizarEstadoScreen extends StatefulWidget {
 
 class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
   late PedidoEstado _seleccionado = widget.pedido.estado;
+  String? _repartidorId;
   bool _isSaving = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _repartidorId = widget.pedido.repartidorId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AdminProvider>().cargarEmpleados();
+    });
+  }
+
   Future<void> _guardar(BuildContext context, PedidoAdmin currentPedido) async {
+    final admin = context.read<AdminProvider>();
+    Usuario? repartidor;
+    for (final usuario in admin.empleados) {
+      if (usuario.id == _repartidorId && usuario.rol == UserRole.repartidor && usuario.activo) {
+        repartidor = usuario;
+        break;
+      }
+    }
+    if (_seleccionado == PedidoEstado.asignado && repartidor == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona un repartidor activo antes de asignar el pedido.')),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
-      await context.read<AdminProvider>().updatePedidoEstado(currentPedido.id, _seleccionado);
+      final cambiaRepartidor = repartidor != null && repartidor.id != currentPedido.repartidorId;
+      if (cambiaRepartidor) {
+        await admin.asignarRepartidor(currentPedido.id, repartidor);
+      }
+
+      final estadoFinal = cambiaRepartidor && _seleccionado == PedidoEstado.recibido
+          ? PedidoEstado.asignado
+          : _seleccionado;
+      final estadoActual = cambiaRepartidor ? PedidoEstado.asignado : currentPedido.estado;
+      if (estadoFinal != estadoActual) {
+        await admin.updatePedidoEstado(currentPedido.id, estadoFinal);
+      }
       if (!context.mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Estado actualizado a: ${estadoToString(_seleccionado)}')),
+        SnackBar(content: Text('Estado actualizado a: ${estadoToString(estadoFinal)}')),
       );
     } catch (_) {
       if (!context.mounted) return;
@@ -39,10 +76,14 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentPedido = context.watch<AdminProvider>().pedidos.firstWhere(
+    final admin = context.watch<AdminProvider>();
+    final currentPedido = admin.pedidos.firstWhere(
           (p) => p.id == widget.pedido.id,
           orElse: () => widget.pedido,
         );
+    final repartidores = admin.empleados
+        .where((usuario) => usuario.rol == UserRole.repartidor && usuario.activo)
+        .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -114,6 +155,51 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+
+              Text(
+                'Asignación de Repartidor',
+                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'El repartidor asignado verá este pedido en su panel y podrá actualizar sus etapas de ruta.',
+                style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 12),
+              if (admin.isLoadingEmpleados && repartidores.isEmpty)
+                const Center(child: CircularProgressIndicator())
+              else if (repartidores.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'No hay repartidores activos. Registra uno desde Configuración de Repartidores.',
+                    style: GoogleFonts.inter(fontSize: 13, color: AppColors.onErrorContainer),
+                  ),
+                )
+              else
+                DropdownButtonFormField<String>(
+                  value: repartidores.any((usuario) => usuario.id == _repartidorId) ? _repartidorId : null,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Repartidor responsable',
+                    prefixIcon: Icon(Icons.two_wheeler_rounded),
+                  ),
+                  hint: const Text('Selecciona un repartidor'),
+                  items: repartidores
+                      .map(
+                        (usuario) => DropdownMenuItem(
+                          value: usuario.id,
+                          child: Text('${usuario.nombre} · ${usuario.correo}', overflow: TextOverflow.ellipsis),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _isSaving ? null : (id) => setState(() => _repartidorId = id),
+                ),
               const SizedBox(height: 24),
 
               Text(

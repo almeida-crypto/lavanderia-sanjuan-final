@@ -113,6 +113,7 @@ create table if not exists public.pedidos (
   opcion_acabado text,
   precio_acabado numeric(10,2),
   repartidor text,
+  repartidor_id text,
   peso_confirmado numeric(10,2),
   total numeric(10,2) not null default 0,
   total_confirmado numeric(10,2),
@@ -130,6 +131,7 @@ create table if not exists public.pedidos (
 -- (ej. "Doblado en Gancho" para Lavado, o el nivel de tarifa de Tintorería).
 alter table public.pedidos add column if not exists opcion_acabado text;
 alter table public.pedidos add column if not exists precio_acabado numeric(10,2);
+alter table public.pedidos add column if not exists repartidor_id text;
 
 -- Número de orden corto y legible (1, 2, 3...) en vez del uuid interno, que
 -- es horrible de mostrarle al cliente/admin. "bigserial" ya lo asigna solo
@@ -183,6 +185,7 @@ create unique index if not exists una_direccion_principal_por_usuario
 create unique index if not exists una_tarjeta_principal_por_usuario
   on public.metodos_pago(usuario_id) where principal;
 create index if not exists pedidos_por_cliente on public.pedidos(cliente_id);
+create index if not exists pedidos_por_repartidor on public.pedidos(repartidor_id);
 create index if not exists pedidos_recientes on public.pedidos(created_at desc);
 
 alter table public.direcciones enable row level security;
