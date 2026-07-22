@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/pedido.dart';
-import '../../../models/pedido_admin.dart';
 import '../../../models/promocion.dart';
 import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
@@ -587,7 +586,7 @@ class _ActiveOrderSection extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      estadoToString(pedido.estadoOperativo),
+                      pedido.estadoOperativoTexto,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -600,7 +599,7 @@ class _ActiveOrderSection extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    value: progresoParaEstado(pedido.estadoOperativo),
+                    value: pedido.progresoOperativo,
                     minHeight: 8,
                     backgroundColor: AppColors.surfaceVariant,
                     valueColor: AlwaysStoppedAnimation(

@@ -31,7 +31,20 @@ class _PasoPedido {
 }
 
 String _descripcionPaso(Pedido pedido, PedidoEstado estado) {
-  if (estado != PedidoEstado.recibido) return subtituloParaEstado(estado);
+  if (estado != PedidoEstado.recibido) {
+    return subtituloParaEstadoParaModalidad(
+      estado,
+      recoleccionEnSucursal: pedido.recoleccionEnSucursal,
+      entregaEnSucursal: pedido.entregaEnSucursal,
+    );
+  }
+
+  if (pedido.recoleccionEnSucursal) {
+    final cita = pedido.franjaHoraria.isEmpty
+        ? pedido.fechaFormateada
+        : '${pedido.franjaHoraria}, ${pedido.fechaFormateada}';
+    return 'Lleva tus prendas a la sucursal: $cita.';
+  }
 
   final cita = pedido.franjaHoraria.isEmpty
       ? pedido.fechaFormateada
@@ -41,19 +54,26 @@ String _descripcionPaso(Pedido pedido, PedidoEstado estado) {
 
 List<_PasoPedido> _pasosPara(Pedido pedido) {
   final actual = pedido.estadoOperativo;
-  const flujoNormal = estadosOperativos;
+  final flujoNormal = pedido.flujoOperativo;
   final indiceActual = flujoNormal.indexOf(actual);
+  final indiceActualGeneral = estadosOperativos.indexOf(actual);
 
   return flujoNormal.map((estado) {
     final indice = flujoNormal.indexOf(estado);
+    final indiceGeneral = estadosOperativos.indexOf(estado);
     final estadoVisual = estado == actual
         ? _PasoEstado.actual
-        : indiceActual >= 0 && indice >= 0 && indice < indiceActual
+        : (indiceActual >= 0 && indice < indiceActual) ||
+                (indiceActual < 0 && indiceGeneral < indiceActualGeneral)
             ? _PasoEstado.completado
             : _PasoEstado.pendiente;
 
     return _PasoPedido(
-      titulo: estadoToString(estado),
+      titulo: estadoToStringParaModalidad(
+        estado,
+        recoleccionEnSucursal: pedido.recoleccionEnSucursal,
+        entregaEnSucursal: pedido.entregaEnSucursal,
+      ),
       descripcion: _descripcionPaso(pedido, estado),
       estado: estadoVisual,
     );
@@ -140,7 +160,7 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
     final chipColor = necesitaAtencion || cancelado
         ? AppColors.error
         : AppColors.primary;
-    final chipTexto = estadoToString(pedido.estadoOperativo);
+    final chipTexto = pedido.estadoOperativoTexto;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -502,7 +522,7 @@ class _EstimacionCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: progresoParaEstado(pedido.estadoOperativo),
+              value: pedido.progresoOperativo,
               minHeight: 8,
               backgroundColor: AppColors.secondaryContainer,
               valueColor: const AlwaysStoppedAnimation(AppColors.primary),

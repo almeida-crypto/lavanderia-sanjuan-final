@@ -32,12 +32,17 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
   /// Etapa de recolección: si el cliente la lleva él mismo a la sucursal,
   /// no hace falta asignar repartidor para esta etapa.
   bool _asignacionRecoleccionBloqueada(PedidoAdmin pedido) =>
-      pedido.estado == PedidoEstado.recibido && pedido.recoleccionEnSucursal;
+      pedido.recoleccionEnSucursal &&
+      (_seleccionado == PedidoEstado.recibido ||
+          _seleccionado == PedidoEstado.asignado);
 
   /// Etapa de entrega: si el cliente la recoge él mismo en la sucursal, no
   /// hace falta asignar repartidor para esta etapa.
   bool _asignacionEntregaBloqueada(PedidoAdmin pedido) =>
-      pedido.estado == PedidoEstado.secandoDoblado && pedido.entregaEnSucursal;
+      pedido.entregaEnSucursal &&
+      (_seleccionado == PedidoEstado.secandoDoblado ||
+          _seleccionado == PedidoEstado.listo ||
+          _seleccionado == PedidoEstado.enCamino);
 
   Future<void> _guardar(BuildContext context, PedidoAdmin currentPedido) async {
     final admin = context.read<AdminProvider>();
@@ -111,6 +116,10 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
     final bloqueadaPorRecoleccion = _asignacionRecoleccionBloqueada(currentPedido);
     final bloqueadaPorEntrega = _asignacionEntregaBloqueada(currentPedido);
     final asignacionBloqueada = bloqueadaPorRecoleccion || bloqueadaPorEntrega;
+    final estadosDisponibles = estadosParaModalidad(
+      recoleccionEnSucursal: currentPedido.recoleccionEnSucursal,
+      entregaEnSucursal: currentPedido.entregaEnSucursal,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -275,9 +284,9 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
                   shrinkWrap: true,
                   padding: EdgeInsets.zero,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: estadosOperativos.length,
+                  itemCount: estadosDisponibles.length,
                   itemBuilder: (context, index) {
-                    final estado = estadosOperativos[index];
+                    final estado = estadosDisponibles[index];
                     final isSelected = _seleccionado == estado;
                     return Column(
                       children: [
@@ -302,18 +311,26 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
                             ),
                           ),
                           title: Text(
-                            estadoToString(estado),
+                            estadoToStringParaModalidad(
+                              estado,
+                              recoleccionEnSucursal: currentPedido.recoleccionEnSucursal,
+                              entregaEnSucursal: currentPedido.entregaEnSucursal,
+                            ),
                             style: GoogleFonts.inter(
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                               color: AppColors.onSurface,
                             ),
                           ),
                           subtitle: Text(
-                            subtituloParaEstado(estado),
+                            subtituloParaEstadoParaModalidad(
+                              estado,
+                              recoleccionEnSucursal: currentPedido.recoleccionEnSucursal,
+                              entregaEnSucursal: currentPedido.entregaEnSucursal,
+                            ),
                             style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
                           ),
                         ),
-                        if (index < estadosOperativos.length - 1)
+                        if (index < estadosDisponibles.length - 1)
                           const Divider(color: AppColors.surfaceVariant, height: 1),
                       ],
                     );

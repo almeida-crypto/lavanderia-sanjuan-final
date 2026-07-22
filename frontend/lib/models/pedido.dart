@@ -42,6 +42,8 @@ class Pedido {
     this.reporteDetalles,
     this.reporteEstado,
     this.reporteRespuesta,
+    this.recoleccionEnSucursal = false,
+    this.entregaEnSucursal = false,
     this.creadoEn,
   });
 
@@ -79,6 +81,8 @@ class Pedido {
       reporteDetalles: json['reporteDetalles']?.toString(),
       reporteEstado: json['reporteEstado']?.toString(),
       reporteRespuesta: json['reporteRespuesta']?.toString(),
+      recoleccionEnSucursal: json['recoleccionEnSucursal'] == true,
+      entregaEnSucursal: json['entregaEnSucursal'] == true,
     );
   }
 
@@ -117,6 +121,24 @@ class Pedido {
   final String? reporteDetalles;
   final String? reporteEstado;
   final String? reporteRespuesta;
+  final bool recoleccionEnSucursal;
+  final bool entregaEnSucursal;
+
+  List<PedidoEstado> get flujoOperativo => estadosParaModalidad(
+    recoleccionEnSucursal: recoleccionEnSucursal,
+    entregaEnSucursal: entregaEnSucursal,
+  );
+
+  String get estadoOperativoTexto => estadoToStringParaModalidad(
+    estadoOperativo,
+    recoleccionEnSucursal: recoleccionEnSucursal,
+    entregaEnSucursal: entregaEnSucursal,
+  );
+
+  double get progresoOperativo => progresoParaFlujo(
+    estadoOperativo,
+    flujoOperativo,
+  );
 
   bool get tieneReporte => reporteTipo != null && reporteTipo!.trim().isNotEmpty;
   bool get tieneReporteAbierto =>

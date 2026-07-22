@@ -24,6 +24,81 @@ const estadosOperativos = <PedidoEstado>[
   PedidoEstado.entregado,
 ];
 
+/// Construye el recorrido real del pedido según quién transporta las prendas
+/// en cada extremo. La etapa [PedidoEstado.listo] se conserva cuando el
+/// cliente recoge en sucursal, pero en la interfaz se presenta como
+/// "Listo para recoger" en vez de una asignación de repartidor.
+List<PedidoEstado> estadosParaModalidad({
+  required bool recoleccionEnSucursal,
+  required bool entregaEnSucursal,
+}) => <PedidoEstado>[
+  PedidoEstado.recibido,
+  if (!recoleccionEnSucursal) PedidoEstado.asignado,
+  PedidoEstado.enPlanta,
+  PedidoEstado.lavando,
+  PedidoEstado.secandoDoblado,
+  PedidoEstado.listo,
+  if (!entregaEnSucursal) PedidoEstado.enCamino,
+  PedidoEstado.entregado,
+];
+
+String estadoToStringParaModalidad(
+  PedidoEstado estado, {
+  required bool recoleccionEnSucursal,
+  required bool entregaEnSucursal,
+}) {
+  if (estado == PedidoEstado.asignado && recoleccionEnSucursal) {
+    return 'Pedido agendado';
+  }
+  if (estado == PedidoEstado.recibido && recoleccionEnSucursal) {
+    return 'Pedido agendado';
+  }
+  if (estado == PedidoEstado.listo && entregaEnSucursal) {
+    return 'Listo para recoger en sucursal';
+  }
+  if (estado == PedidoEstado.enCamino && entregaEnSucursal) {
+    return 'Listo para recoger en sucursal';
+  }
+  return estadoToString(estado);
+}
+
+String subtituloParaEstadoParaModalidad(
+  PedidoEstado estado, {
+  required bool recoleccionEnSucursal,
+  required bool entregaEnSucursal,
+}) {
+  if (estado == PedidoEstado.asignado && recoleccionEnSucursal) {
+    return 'Lleva tus prendas a la sucursal en la fecha acordada.';
+  }
+  if (estado == PedidoEstado.recibido && recoleccionEnSucursal) {
+    return 'Lleva tus prendas a la sucursal en la fecha acordada.';
+  }
+  if (estado == PedidoEstado.listo && entregaEnSucursal) {
+    return 'Tus prendas están listas; puedes recogerlas en la sucursal.';
+  }
+  if (estado == PedidoEstado.enCamino && entregaEnSucursal) {
+    return 'Tus prendas están listas; puedes recogerlas en la sucursal.';
+  }
+  return subtituloParaEstado(estado);
+}
+
+double progresoParaFlujo(PedidoEstado estado, List<PedidoEstado> flujo) {
+  if (estado == PedidoEstado.entregado) return 1;
+  if (estado == PedidoEstado.cancelado || estado == PedidoEstado.atencion) return 0;
+
+  final indice = flujo.indexOf(estado);
+  if (indice >= 0) return (indice + 1) / flujo.length;
+
+  // Compatibilidad con pedidos antiguos que pudieran conservar una etapa
+  // de transporte que hoy ya no corresponde a su modalidad.
+  final indiceGeneral = estadosOperativos.indexOf(estado);
+  if (indiceGeneral < 0) return 0;
+  final completadas = flujo.where(
+    (etapa) => estadosOperativos.indexOf(etapa) <= indiceGeneral,
+  ).length;
+  return completadas / flujo.length;
+}
+
 /// El backend guarda el estado como texto libre (el cliente solo distingue
 /// enProceso/entregado/cancelado, pero el admin necesita las etapas
 /// intermedias). Cualquier valor desconocido cae en "recibido".
