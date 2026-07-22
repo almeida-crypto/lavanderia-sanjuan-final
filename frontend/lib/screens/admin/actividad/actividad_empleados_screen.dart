@@ -56,10 +56,10 @@ class _ActividadEmpleadosScreenState extends State<ActividadEmpleadosScreen> {
         _eventos = eventos;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'No pudimos conectar con el servidor. Revisa tu internet o espera unos segundos mientras el servicio se activa.';
+        _error = e.toString().replaceFirst('Exception: ', '');
         _isLoading = false;
       });
     }
