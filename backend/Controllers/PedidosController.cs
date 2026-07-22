@@ -292,6 +292,7 @@ public class PedidosController : ControllerBase
             {
                 ["repartidor"] = repartidor.Nombre,
                 ["repartidor_id"] = repartidor.Id,
+                ["repartidor_telefono"] = repartidor.Telefono,
             };
             if (esRecoleccion)
                 payload["estado"] = "Recolector asignado";
@@ -370,7 +371,7 @@ public class PedidosController : ControllerBase
     {
         var bloqueado = await BloqueadoSiNoEsPropioAsync(id);
         if (bloqueado is not null) return bloqueado;
-        return await UpdatePedido(id, new JsonObject
+        var resultado = await UpdatePedido(id, new JsonObject
         {
             ["reporte_tipo"] = request.Tipo ?? "Otro problema",
             ["reporte_detalles"] = request.Detalles ?? string.Empty,
@@ -378,6 +379,11 @@ public class PedidosController : ControllerBase
             ["reporte_respuesta"] = null,
             ["reporte_actualizado_at"] = DateTime.UtcNow.ToString("O")
         }, "No se pudo guardar el reporte");
+        if (resultado is OkObjectResult)
+        {
+            await RegistrarEventoAsync(id, "reporte_creado", $"Cliente reportó: {request.Tipo ?? "Otro problema"}");
+        }
+        return resultado;
     }
 
     [HttpPut("{id}/reporte")]
@@ -390,12 +396,20 @@ public class PedidosController : ControllerBase
         if (estado == "Resuelto" && string.IsNullOrWhiteSpace(request.Respuesta))
             return BadRequest(new { message = "Escribe una respuesta para el cliente" });
 
-        return await UpdatePedido(id, new JsonObject
+        var resultado = await UpdatePedido(id, new JsonObject
         {
             ["reporte_estado"] = estado,
             ["reporte_respuesta"] = request.Respuesta?.Trim(),
             ["reporte_actualizado_at"] = DateTime.UtcNow.ToString("O")
         }, "No se pudo actualizar el reporte");
+        if (resultado is OkObjectResult)
+        {
+            await RegistrarEventoAsync(
+                id,
+                estado == "Resuelto" ? "reporte_resuelto" : "reporte_en_revision",
+                estado == "Resuelto" ? $"Respuesta al cliente: {request.Respuesta?.Trim()}" : "El equipo comenzó a revisar el reporte");
+        }
+        return resultado;
     }
 
     /// Un cliente solo puede cancelar/calificar/reportar SUS PROPIOS pedidos;
@@ -452,6 +466,7 @@ public class PedidosController : ControllerBase
         CodigoPromocion = S(row, "codigo_promocion"),
         Repartidor = S(row, "repartidor"),
         RepartidorId = S(row, "repartidor_id"),
+        RepartidorTelefono = S(row, "repartidor_telefono"),
         PesoConfirmado = N(row, "peso_confirmado"),
         TotalConfirmado = M(row, "total_confirmado"),
         Total = M(row, "total") ?? 0m,
@@ -533,6 +548,7 @@ public class PedidoDto
     public string? CodigoPromocion { get; set; }
     public string? Repartidor { get; set; }
     public string? RepartidorId { get; set; }
+    public string? RepartidorTelefono { get; set; }
     public double? PesoConfirmado { get; set; }
     public decimal? TotalConfirmado { get; set; }
     public decimal Total { get; set; }

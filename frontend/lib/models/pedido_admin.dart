@@ -182,6 +182,7 @@ class PedidoAdmin {
     this.reporteRespuesta,
     this.repartidorNombre,
     this.repartidorId,
+    this.repartidorTelefono,
     this.detallesAdicionales,
     this.opcionAcabado,
     this.creadoEn,
@@ -218,6 +219,7 @@ class PedidoAdmin {
   String? reporteRespuesta;
   String? repartidorNombre;
   String? repartidorId;
+  String? repartidorTelefono;
   String? detallesAdicionales;
   String? opcionAcabado;
 

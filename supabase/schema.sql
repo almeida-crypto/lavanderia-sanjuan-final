@@ -114,6 +114,7 @@ create table if not exists public.pedidos (
   precio_acabado numeric(10,2),
   repartidor text,
   repartidor_id text,
+  repartidor_telefono text,
   peso_confirmado numeric(10,2),
   total numeric(10,2) not null default 0,
   total_confirmado numeric(10,2),
@@ -135,6 +136,7 @@ create table if not exists public.pedidos (
 alter table public.pedidos add column if not exists opcion_acabado text;
 alter table public.pedidos add column if not exists precio_acabado numeric(10,2);
 alter table public.pedidos add column if not exists repartidor_id text;
+alter table public.pedidos add column if not exists repartidor_telefono text;
 alter table public.pedidos add column if not exists reporte_estado text;
 alter table public.pedidos add column if not exists reporte_respuesta text;
 alter table public.pedidos add column if not exists reporte_actualizado_at timestamptz;

@@ -1,29 +1,33 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/pedido.dart';
 import '../../../services/pedido_service.dart';
 import '../../../utils/app_colors.dart';
-import '../../../widgets/app_bottom_nav_bar.dart';
-import '../home_cliente/home_cliente_screen.dart';
-import '../mi_perfil/mi_perfil_screen.dart';
-import '../mis_pedidos/mis_pedidos_screen.dart';
-import '../servicios/servicios_screen.dart';
+import '../../../utils/telefono_launcher.dart';
 
+/// Seguimiento operativo del pedido.
+///
+/// La versión anterior dibujaba un mapa y una camioneta ficticios aunque la
+/// aplicación no recibe coordenadas GPS. Esta pantalla muestra únicamente
+/// información real del backend y permite llamar al repartidor asignado.
 class SeguimientoEnVivoScreen extends StatefulWidget {
   const SeguimientoEnVivoScreen({
     super.key,
     required this.pedidoId,
     required this.numeroPedido,
     this.repartidorNombre,
+    this.repartidorTelefono,
+    this.estado,
+    this.direccion,
   });
 
   final String pedidoId;
   final String numeroPedido;
   final String? repartidorNombre;
+  final String? repartidorTelefono;
+  final String? estado;
+  final String? direccion;
 
   @override
   State<SeguimientoEnVivoScreen> createState() => _SeguimientoEnVivoScreenState();
@@ -32,385 +36,220 @@ class SeguimientoEnVivoScreen extends StatefulWidget {
 class _SeguimientoEnVivoScreenState extends State<SeguimientoEnVivoScreen> {
   final _pedidoService = PedidoService();
   late String? _repartidorNombre = widget.repartidorNombre;
+  late String? _repartidorTelefono = widget.repartidorTelefono;
+  late String _estado = widget.estado ?? 'Pedido recibido';
+  late String _direccion = widget.direccion ?? 'Dirección por confirmar';
+  bool _actualizando = false;
 
   Future<void> _refrescar() async {
+    if (_actualizando) return;
+    setState(() => _actualizando = true);
     try {
       final actualizado = await _pedidoService.obtenerPedido(widget.pedidoId);
       final pedido = Pedido.fromJson(actualizado);
-      if (mounted) setState(() => _repartidorNombre = pedido.repartidorNombre);
+      if (!mounted) return;
+      setState(() {
+        _repartidorNombre = pedido.repartidorNombre;
+        _repartidorTelefono = pedido.repartidorTelefono;
+        _estado = pedido.estadoDetalle;
+        _direccion = pedido.direccion;
+      });
     } catch (_) {
-      // Sin conexión: se queda mostrando lo último que sí se cargó.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo actualizar el seguimiento.')),
+      );
+    } finally {
+      if (mounted) setState(() => _actualizando = false);
     }
   }
 
-  Future<void> _copiarContacto(BuildContext context, String numero) async {
-    await Clipboard.setData(ClipboardData(text: numero));
-    if (!context.mounted) return;
+  Future<void> _llamarRepartidor() async {
+    final abierto = await abrirLlamada(_repartidorTelefono);
+    if (!mounted || abierto) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Número $numero copiado')),
+      SnackBar(
+        content: Text(
+          _repartidorNombre == null
+              ? 'Todavía no hay un repartidor asignado.'
+              : 'El repartidor no tiene un teléfono registrado.',
+        ),
+      ),
     );
-  }
-
-  void _onTabSelected(BuildContext context, AppBottomTab tab) {
-    switch (tab) {
-      case AppBottomTab.home:
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeClienteScreen()),
-        );
-      case AppBottomTab.services:
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ServiciosScreen()),
-        );
-      case AppBottomTab.orders:
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MisPedidosScreen()),
-        );
-      case AppBottomTab.profile:
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MiPerfilScreen()),
-        );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final asignado = _repartidorNombre?.trim().isNotEmpty == true;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
         title: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Seguimiento en Vivo',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
+              'Seguimiento del pedido',
+              style: GoogleFonts.inter(fontSize: 19, fontWeight: FontWeight.w700),
             ),
-            Text(
-              widget.numeroPedido,
-              style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
-            ),
+            Text(widget.numeroPedido, style: GoogleFonts.inter(fontSize: 12)),
           ],
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Actualizar',
+            onPressed: _actualizando ? null : _refrescar,
+            icon: _actualizando
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded),
+          ),
+        ],
       ),
       body: RefreshIndicator(
-        color: AppColors.primary,
         onRefresh: _refrescar,
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: SizedBox(
-              height: constraints.maxHeight,
-              child: Stack(
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primaryFixed,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
                 children: [
-                  const Positioned.fill(child: _MapaSimulado()),
-                  Positioned(
-                    left: 20,
-                    right: 20,
-                    bottom: 16,
-                    child: _OverlayCard(
-                      repartidorNombre: _repartidorNombre,
-                      onSoporte: () => _copiarContacto(context, '+52 555 010 1010'),
+                  const CircleAvatar(
+                    radius: 26,
+                    backgroundColor: AppColors.primary,
+                    child: Icon(Icons.local_shipping_rounded, color: Colors.white),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _estado,
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onPrimaryFixed,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Desliza hacia abajo para consultar el estado más reciente.',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppColors.onPrimaryFixedVariant,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentTab: AppBottomTab.orders,
-        onTabSelected: (tab) => _onTabSelected(context, tab),
-      ),
-    );
-  }
-}
-
-class _MapaSimulado extends StatefulWidget {
-  const _MapaSimulado();
-
-  @override
-  State<_MapaSimulado> createState() => _MapaSimuladoState();
-}
-
-class _MapaSimuladoState extends State<_MapaSimulado> with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.surfaceVariant,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CustomPaint(painter: _RutaPainter()),
-          const Align(
-            alignment: Alignment(0.55, -0.6),
-            child: _MarcadorPlanta(),
-          ),
-          Align(
-            alignment: const Alignment(-0.6, 0.6),
-            child: AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, _) => _MarcadorHogar(progreso: _pulseController.value),
+            const SizedBox(height: 16),
+            _InfoCard(
+              icon: Icons.person_rounded,
+              title: asignado ? _repartidorNombre! : 'Personal por asignar',
+              subtitle: asignado
+                  ? 'Responsable de la recolección o entrega'
+                  : 'La lavandería asignará a una persona pronto.',
+              trailing: asignado
+                  ? IconButton.filled(
+                      tooltip: 'Llamar',
+                      onPressed: _llamarRepartidor,
+                      icon: const Icon(Icons.phone_rounded),
+                    )
+                  : null,
             ),
-          ),
-          const Align(
-            alignment: Alignment(0.1, -0.05),
-            child: _MarcadorVan(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RutaPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(size.width * 0.2, size.height * 0.8)
-      ..quadraticBezierTo(
-        size.width * 0.4,
-        size.height * 0.4,
-        size.width * 0.8,
-        size.height * 0.2,
-      );
-
-    final paint = Paint()
-      ..color = AppColors.primaryContainer
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-
-    final dashed = Path();
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        const dashLength = 10.0;
-        const gapLength = 8.0;
-        final next = math.min(distance + dashLength, metric.length);
-        dashed.addPath(metric.extractPath(distance, next), Offset.zero);
-        distance = next + gapLength;
-      }
-    }
-    canvas.drawPath(dashed, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _MarcadorPlanta extends StatelessWidget {
-  const _MarcadorPlanta();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary, width: 2),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6)],
-      ),
-      child: const Icon(Icons.local_laundry_service_rounded, color: AppColors.primary, size: 18),
-    );
-  }
-}
-
-class _MarcadorHogar extends StatelessWidget {
-  const _MarcadorHogar({required this.progreso});
-
-  final double progreso;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Opacity(
-            opacity: (1 - progreso).clamp(0.0, 1.0).toDouble(),
-            child: Container(
-              width: 24 + progreso * 24,
-              height: 24 + progreso * 24,
-              decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+            const SizedBox(height: 16),
+            _InfoCard(
+              icon: Icons.location_on_rounded,
+              title: 'Dirección del servicio',
+              subtitle: _direccion,
             ),
-          ),
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.surface, width: 4),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MarcadorVan extends StatelessWidget {
-  const _MarcadorVan();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.outlineVariant),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10)],
-      ),
-      child: const Icon(Icons.local_shipping_rounded, color: AppColors.primary),
-    );
-  }
-}
-
-class _OverlayCard extends StatelessWidget {
-  const _OverlayCard({required this.repartidorNombre, required this.onSoporte});
-
-  final String? repartidorNombre;
-  final VoidCallback onSoporte;
-
-  @override
-  Widget build(BuildContext context) {
-    final asignado = repartidorNombre != null;
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.outlineVariant),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -4)),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: AppColors.primaryFixed,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        asignado ? 'Repartidor en camino' : 'Buscando repartidor disponible',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.onPrimaryFixed,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'No contamos aún con ubicación GPS en tiempo real; esta pantalla refleja el estado real de tu pedido.',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: AppColors.onPrimaryFixedVariant,
-                        ),
-                      ),
-                    ],
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.outlineVariant),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: AppColors.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'La app todavía no recibe ubicación GPS en tiempo real. Por eso mostramos el estado confirmado y el contacto real, sin simular un mapa.',
+                      style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: const BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.person_rounded, color: AppColors.onSurfaceVariant, size: 28),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        repartidorNombre ?? 'Repartidor por asignar',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        asignado ? 'Asignado a tu pedido' : 'El admin aún no asigna repartidor',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.secondary),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: AppColors.outlineVariant),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onSoporte,
-                icon: const Icon(Icons.support_agent_rounded, size: 20),
-                label: Text(
-                  'Contactar Soporte',
-                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
+                ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceContainerLow,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.primary),
           ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(subtitle, style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          if (trailing != null) ...[const SizedBox(width: 10), trailing!],
         ],
       ),
     );

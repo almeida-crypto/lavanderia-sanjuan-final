@@ -51,7 +51,7 @@ class PedidoService {
       body: jsonEncode(pedido),
     ));
     if (response.statusCode != 201) {
-      throw Exception('No se pudo crear el pedido');
+      throw Exception(_mensajeError(response, 'No se pudo crear el pedido'));
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }

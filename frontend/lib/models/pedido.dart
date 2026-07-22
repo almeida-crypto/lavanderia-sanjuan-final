@@ -36,6 +36,7 @@ class Pedido {
     this.metodoPago,
     this.totalConfirmado,
     this.repartidorNombre,
+    this.repartidorTelefono,
     this.opcionAcabado,
     this.reporteTipo,
     this.reporteDetalles,
@@ -71,6 +72,7 @@ class Pedido {
       metodoPago: json['metodoPago']?.toString(),
       totalConfirmado: double.tryParse(json['totalConfirmado']?.toString() ?? ''),
       repartidorNombre: _cleanRepartidor(json['repartidor']?.toString()),
+      repartidorTelefono: _cleanRepartidor(json['repartidorTelefono']?.toString()),
       opcionAcabado: json['opcionAcabado']?.toString(),
       creadoEn: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
       reporteTipo: json['reporteTipo']?.toString(),
@@ -108,6 +110,7 @@ class Pedido {
   final String? metodoPago;
   final double? totalConfirmado;
   final String? repartidorNombre;
+  final String? repartidorTelefono;
   final String? opcionAcabado;
   final DateTime? creadoEn;
   final String? reporteTipo;

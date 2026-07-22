@@ -7,6 +7,7 @@ import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/notificaciones_store.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/telefono_launcher.dart';
 import '../../auth/login/bienvenida_screen.dart';
 import '../notificaciones/notificaciones_repartidor_screen.dart';
 
@@ -569,14 +570,30 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
               children: [
                 const Icon(Icons.phone_outlined, size: 18, color: AppColors.secondary),
                 const SizedBox(width: 8),
-                Text(
-                  pedido.clienteTelefono,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: AppColors.onSurfaceVariant,
+                Expanded(
+                  child: TextButton(
+                    onPressed: pedido.clienteTelefono == 'No especificado'
+                        ? null
+                        : () async {
+                            final abierto = await abrirLlamada(pedido.clienteTelefono);
+                            if (!context.mounted || abierto) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('No se pudo abrir la aplicación de llamadas.')),
+                            );
+                          },
+                    style: TextButton.styleFrom(
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 36),
+                    ),
+                    child: Text(
+                      pedido.clienteTelefono == 'No especificado'
+                          ? 'Teléfono no registrado'
+                          : 'Llamar a ${pedido.clienteTelefono}',
+                      style: GoogleFonts.inter(fontSize: 13),
+                    ),
                   ),
                 ),
-                const Spacer(),
                 if (pedido.metodoPago != null)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

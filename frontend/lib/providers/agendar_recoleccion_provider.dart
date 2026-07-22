@@ -164,6 +164,8 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
 
   ServicioLavanderiaInfo get servicioInfo =>
       serviciosDisponibles.firstWhere((s) => s.tipo == _servicio);
@@ -216,6 +218,7 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
     String? clienteTelefono,
   }) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
@@ -254,7 +257,11 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
         'entregaEnSucursal': _entregaEnSucursal,
       });
       return Pedido.fromJson(creado);
-    } catch (_) {
+    } catch (error) {
+      _errorMessage = error.toString().replaceFirst('Exception: ', '').trim();
+      if (_errorMessage!.isEmpty) {
+        _errorMessage = 'No se pudo agendar el pedido. Intenta de nuevo.';
+      }
       return null;
     } finally {
       _isLoading = false;

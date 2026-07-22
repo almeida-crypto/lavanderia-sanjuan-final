@@ -120,7 +120,10 @@ List<OpcionAcabado> resolverOpcionesAcabado(
         break;
       }
     }
-    if (opcion == null) continue;
+    // Una opción desactivada por el administrador no debe seguir apareciendo
+    // ni viajar en un pedido nuevo. El backend también la rechaza, por lo que
+    // mostrarla provocaba que "Agendar recolección" fallara sin explicación.
+    if (opcion == null || !opcion.activa) continue;
     resultado.add(OpcionAcabado(
       nombre: opcion.nombre,
       descripcion: opcion.descripcion,

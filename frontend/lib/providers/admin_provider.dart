@@ -247,6 +247,7 @@ class AdminProvider extends ChangeNotifier {
       metodoPago: json['metodoPago']?.toString(),
       repartidorNombre: (repartidor == null || repartidor.isEmpty) ? null : repartidor,
       repartidorId: json['repartidorId']?.toString(),
+      repartidorTelefono: json['repartidorTelefono']?.toString(),
       warningMessage: warningMessage,
       reporteTipo: reporteTipo,
       reporteDetalles: reporteDetalles,

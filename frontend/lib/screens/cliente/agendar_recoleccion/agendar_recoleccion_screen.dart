@@ -95,6 +95,10 @@ class AgendarRecoleccionScreen extends StatelessWidget {
     }
 
     final auth = context.read<AuthProvider>();
+    // Renueva el token justo antes de crear el pedido. En celulares que pasan
+    // un rato en segundo plano evita que el backend rechace la operación por
+    // una sesión vencida aunque la pantalla todavía muestre al usuario.
+    await auth.renovarSesion(silencioso: true);
     final pedido = await provider.agendarRecoleccion(
       clienteId: auth.currentUser?.id ?? '2',
       clienteNombre: auth.currentUser?.nombre ?? 'Cliente Demo',
@@ -105,7 +109,11 @@ class AgendarRecoleccionScreen extends StatelessWidget {
 
     if (pedido == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo agendar el pedido. Intenta de nuevo.')),
+        SnackBar(
+          content: Text(
+            provider.errorMessage ?? 'No se pudo agendar el pedido. Intenta de nuevo.',
+          ),
+        ),
       );
       return;
     }
