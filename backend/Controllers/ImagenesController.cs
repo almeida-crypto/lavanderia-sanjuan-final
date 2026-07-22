@@ -20,9 +20,10 @@ public class ImagenesController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "usuario";
         var rol = User.FindFirstValue(ClaimTypes.Role);
         carpeta = carpeta.Trim().ToLowerInvariant();
-        if (carpeta is not ("perfil" or "servicios" or "promociones"))
+        if (carpeta is not ("perfil" or "servicios" or "promociones" or "evidencias"))
             return BadRequest(new { message = "La carpeta de imagen no es válida" });
         if (carpeta is "servicios" or "promociones" && rol != "administrador") return Forbid();
+        if (carpeta is "evidencias" && rol is not ("repartidor" or "administrador" or "empleado")) return Forbid();
 
         try
         {

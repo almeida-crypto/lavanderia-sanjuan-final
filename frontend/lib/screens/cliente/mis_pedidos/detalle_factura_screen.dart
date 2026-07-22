@@ -8,6 +8,8 @@ import '../../../utils/app_colors.dart';
 import '../agendar_recoleccion/agendar_recoleccion_screen.dart';
 import '../mi_perfil/metodos_pago_screen.dart';
 import '../pedido/calificar_servicio_screen.dart';
+import '../pedido/reportar_problema_screen.dart';
+import '../../../widgets/app_image.dart';
 
 class DetalleFacturaScreen extends StatelessWidget {
   const DetalleFacturaScreen({super.key, required this.pedido});
@@ -68,6 +70,37 @@ class DetalleFacturaScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _ResumenCard(pedido: pedido),
+              if ((pedido.evidenciaEntregaUrl ?? '').isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    'Evidencia de entrega',
+                    style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.onSurface),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (_) => Dialog(
+                      insetPadding: const EdgeInsets.all(16),
+                      backgroundColor: Colors.black,
+                      child: InteractiveViewer(
+                        child: AppImage(url: pedido.evidenciaEntregaUrl, fit: BoxFit.contain),
+                      ),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 180,
+                      child: AppImage(url: pedido.evidenciaEntregaUrl, fit: BoxFit.cover),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).push(
@@ -156,6 +189,11 @@ class DetalleFacturaScreen extends StatelessWidget {
         onRepetir: () => Navigator.of(context).push(
           AgendarRecoleccionScreen.route(servicioInicial: pedido.tipoServicio),
         ),
+        onReportar: pedido.estado == EstadoPedido.cancelado || pedido.tieneReporteAbierto
+            ? null
+            : () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ReportarProblemaScreen(pedido: pedido)),
+                ),
       ),
     );
   }
@@ -600,10 +638,11 @@ class _RepetirPromoCard extends StatelessWidget {
 }
 
 class _BottomActionBar extends StatelessWidget {
-  const _BottomActionBar({required this.onDescargar, required this.onRepetir});
+  const _BottomActionBar({required this.onDescargar, required this.onRepetir, this.onReportar});
 
   final VoidCallback onDescargar;
   final VoidCallback onRepetir;
+  final VoidCallback? onReportar;
 
   @override
   Widget build(BuildContext context) {
@@ -617,41 +656,60 @@ class _BottomActionBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onDescargar,
-                icon: const Icon(Icons.copy_rounded, size: 20),
-                label: Text(
-                  'Copiar resumen',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onDescargar,
+                    icon: const Icon(Icons.copy_rounded, size: 20),
+                    label: Text(
+                      'Copiar resumen',
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary, width: 2),
+                      minimumSize: const Size.fromHeight(56),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
                 ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary, width: 2),
-                  minimumSize: const Size.fromHeight(56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onRepetir,
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                    label: Text(
+                      'Repetir Pedido',
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(56),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (onReportar != null) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  onPressed: onReportar,
+                  icon: const Icon(Icons.report_gmailerrorred_rounded, size: 18, color: AppColors.error),
+                  label: Text(
+                    'Reportar un Problema',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.error),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: onRepetir,
-                icon: const Icon(Icons.refresh_rounded, size: 20),
-                label: Text(
-                  'Repetir Pedido',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
-            ),
+            ],
           ],
         ),
       ),

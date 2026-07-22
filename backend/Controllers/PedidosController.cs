@@ -29,6 +29,7 @@ public class PedidosController : ControllerBase
     private string CallerNombre => User.FindFirstValue(ClaimTypes.Name) ?? "Usuario";
     private bool EsStaff => CallerRol is "administrador" or "empleado";
     private bool EsRepartidor => CallerRol == "repartidor";
+    private string EtiquetaCallerStaff => CallerRol == "administrador" ? "un administrador" : "un empleado";
 
     /// Registra en la bitácora quién hizo qué sobre un pedido (para la
     /// pantalla de actividad del admin). Si falla (ej. la tabla todavía no
@@ -211,10 +212,38 @@ public class PedidosController : ControllerBase
 
         if (!EsRepartidor)
         {
-            var resultadoStaff = await UpdatePedido(id, new JsonObject { ["estado"] = estado }, "No se pudo actualizar el estado");
+            var payloadStaff = new JsonObject { ["estado"] = estado };
+            if (estado == "Entregado")
+            {
+                // Si el cliente lo recoge en la sucursal, es el empleado/admin quien
+                // se lo entrega en mano; ahí sí se le exige foto igual que al
+                // repartidor. Si es entrega a domicilio, esta rama normalmente solo
+                // corrige/sincroniza un estado que ya manejó el repartidor, así que
+                // la foto queda opcional (se anota en la bitácora si falta).
+                var actualStaff = await _data.FindOneAsync("pedidos", $"id=eq.{E(id)}&limit=1");
+                var entregaEnSucursal = actualStaff is not null
+                    && bool.TryParse(actualStaff["entrega_en_sucursal"]?.ToString(), out var esSucursal)
+                    && esSucursal;
+                if (entregaEnSucursal && string.IsNullOrWhiteSpace(request.EvidenciaUrl))
+                {
+                    return BadRequest(new { message = "Sube una foto como evidencia antes de marcar el pedido como entregado" });
+                }
+                if (!string.IsNullOrWhiteSpace(request.EvidenciaUrl))
+                {
+                    payloadStaff["evidencia_entrega_url"] = request.EvidenciaUrl;
+                }
+            }
+
+            var resultadoStaff = await UpdatePedido(id, payloadStaff, "No se pudo actualizar el estado");
             if (resultadoStaff is OkObjectResult)
             {
-                await RegistrarEventoAsync(id, "estado_cambiado", $"Cambió el estado a \"{estado}\"");
+                var accion = estado == "Entregado" ? "pedido_entregado" : "estado_cambiado";
+                var detalle = estado == "Entregado"
+                    ? (string.IsNullOrWhiteSpace(request.EvidenciaUrl)
+                        ? $"Cambió el estado a \"{estado}\" (sin evidencia — lo marcó {EtiquetaCallerStaff}, no un repartidor)"
+                        : $"Cambió el estado a \"{estado}\" (con foto de evidencia, entrega en sucursal — lo marcó {EtiquetaCallerStaff})")
+                    : $"Cambió el estado a \"{estado}\"";
+                await RegistrarEventoAsync(id, accion, detalle);
             }
             return resultadoStaff;
         }
@@ -236,7 +265,17 @@ public class PedidosController : ControllerBase
                 return Conflict(new { message = "No puedes aplicar ese cambio de estado a este pedido" });
             }
 
-            var resultadoRepartidor = await UpdatePedido(id, new JsonObject { ["estado"] = estado }, "No se pudo actualizar el estado");
+            var payload = new JsonObject { ["estado"] = estado };
+            if (estado == "Entregado")
+            {
+                if (string.IsNullOrWhiteSpace(request.EvidenciaUrl))
+                {
+                    return BadRequest(new { message = "Sube una foto como evidencia antes de marcar el pedido como entregado" });
+                }
+                payload["evidencia_entrega_url"] = request.EvidenciaUrl;
+            }
+
+            var resultadoRepartidor = await UpdatePedido(id, payload, "No se pudo actualizar el estado");
             if (resultadoRepartidor is OkObjectResult)
             {
                 var accion = estado == "Entregado" ? "pedido_entregado"
@@ -490,6 +529,7 @@ public class PedidosController : ControllerBase
         ReporteRespuesta = S(row, "reporte_respuesta"),
         RecoleccionEnSucursal = B(row, "recoleccion_en_sucursal"),
         EntregaEnSucursal = B(row, "entrega_en_sucursal"),
+        EvidenciaEntregaUrl = S(row, "evidencia_entrega_url"),
         CreatedAt = S(row, "created_at")
     };
 
@@ -525,7 +565,7 @@ public class CrearPedidoRequest
     public bool? EntregaEnSucursal { get; set; }
 }
 
-public class ActualizarEstadoRequest { public string? Estado { get; set; } }
+public class ActualizarEstadoRequest { public string? Estado { get; set; } public string? EvidenciaUrl { get; set; } }
 public class AsignarRepartidorRequest { public string? RepartidorId { get; set; } }
 public class ConfirmarPrecioRequest { public double? PesoConfirmado { get; set; } public decimal TotalConfirmado { get; set; } }
 public class CancelarPedidoRequest { public string? Razon { get; set; } public string? Comentarios { get; set; } }
@@ -576,5 +616,6 @@ public class PedidoDto
     /// cuenta como "de hoy" en el panel del admin.
     public bool RecoleccionEnSucursal { get; set; }
     public bool EntregaEnSucursal { get; set; }
+    public string? EvidenciaEntregaUrl { get; set; }
     public string? CreatedAt { get; set; }
 }

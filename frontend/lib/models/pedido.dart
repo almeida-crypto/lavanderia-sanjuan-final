@@ -44,6 +44,7 @@ class Pedido {
     this.reporteRespuesta,
     this.recoleccionEnSucursal = false,
     this.entregaEnSucursal = false,
+    this.evidenciaEntregaUrl,
     this.creadoEn,
   });
 
@@ -83,6 +84,7 @@ class Pedido {
       reporteRespuesta: json['reporteRespuesta']?.toString(),
       recoleccionEnSucursal: json['recoleccionEnSucursal'] == true,
       entregaEnSucursal: json['entregaEnSucursal'] == true,
+      evidenciaEntregaUrl: json['evidenciaEntregaUrl']?.toString(),
     );
   }
 
@@ -123,6 +125,7 @@ class Pedido {
   final String? reporteRespuesta;
   final bool recoleccionEnSucursal;
   final bool entregaEnSucursal;
+  final String? evidenciaEntregaUrl;
 
   List<PedidoEstado> get flujoOperativo => estadosParaModalidad(
     recoleccionEnSucursal: recoleccionEnSucursal,

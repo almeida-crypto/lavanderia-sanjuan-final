@@ -7,6 +7,7 @@ import '../../../providers/admin_provider.dart';
 import '../../../services/pedido_evento_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/tiempo_relativo.dart';
+import '../../../widgets/app_image.dart';
 
 /// Bitácora de actividad: qué empleado/admin/repartidor cambió el estado de
 /// cada pedido, quién lo recibió en planta, quién lo entregó y quién asignó
@@ -266,6 +267,39 @@ class _EventoCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  ),
+                ],
+                if (evento.accion == 'pedido_entregado' && (evento.evidenciaUrl ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => showDialog(
+                      context: context,
+                      builder: (_) => Dialog(
+                        insetPadding: const EdgeInsets.all(16),
+                        backgroundColor: Colors.black,
+                        child: InteractiveViewer(
+                          child: AppImage(url: evento.evidenciaUrl, fit: BoxFit.contain),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: AppImage(url: evento.evidenciaUrl, fit: BoxFit.cover),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Ver foto de evidencia',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ],

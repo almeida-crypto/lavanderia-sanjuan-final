@@ -263,6 +263,7 @@ class AdminProvider extends ChangeNotifier {
       detallesAdicionales: (instrucciones == null || instrucciones.isEmpty) ? null : instrucciones,
       recoleccionEnSucursal: recoleccionEnSucursal,
       entregaEnSucursal: entregaEnSucursal,
+      evidenciaEntregaUrl: json['evidenciaEntregaUrl']?.toString(),
     );
   }
 
@@ -277,14 +278,15 @@ class AdminProvider extends ChangeNotifier {
 
   double _progresoParaEstado(PedidoEstado estado) => progresoParaEstado(estado);
 
-  Future<void> updatePedidoEstado(String id, PedidoEstado nuevoEstado) async {
+  Future<void> updatePedidoEstado(String id, PedidoEstado nuevoEstado, {String? evidenciaUrl}) async {
     final index = _pedidos.indexWhere((p) => p.id == id);
     if (index == -1) return;
 
-    await _pedidoService.actualizarEstado(id, estadoToString(nuevoEstado));
+    await _pedidoService.actualizarEstado(id, estadoToString(nuevoEstado), evidenciaUrl: evidenciaUrl);
 
     _pedidos[index].estado = nuevoEstado;
     _pedidos[index].progreso = _progresoParaEstado(nuevoEstado);
+    if (evidenciaUrl != null) _pedidos[index].evidenciaEntregaUrl = evidenciaUrl;
     _pedidos[index].notas.add(
       NotaPedido(fecha: 'Justo ahora', texto: "Estado cambiado a '${estadoToString(nuevoEstado)}'", autor: 'Admin'),
     );

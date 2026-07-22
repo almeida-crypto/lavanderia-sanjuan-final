@@ -8,6 +8,8 @@ import '../../../providers/admin_provider.dart';
 import '../../../services/ticket_pdf_generator.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/formatear_fecha.dart';
+import '../../../utils/maps_launcher.dart';
+import '../../../widgets/app_image.dart';
 import 'actualizar_estado_screen.dart';
 
 class OrderDetailScreen extends StatelessWidget {
@@ -114,7 +116,21 @@ class OrderDetailScreen extends StatelessWidget {
                             const SizedBox(height: 12),
                             _buildRowDetail('Teléfono', currentPedido.clienteTelefono),
                             const SizedBox(height: 12),
-                            _buildRowDetail('Dirección', currentPedido.clienteDireccion),
+                            _buildRowDetail(
+                              'Dirección',
+                              currentPedido.clienteDireccion,
+                              trailing: IconButton(
+                                tooltip: 'Abrir en Maps',
+                                onPressed: () async {
+                                  final abierto = await abrirEnMaps(currentPedido.clienteDireccion);
+                                  if (!context.mounted || abierto) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('No se pudo abrir el mapa.')),
+                                  );
+                                },
+                                icon: const Icon(Icons.directions_rounded, color: AppColors.primary),
+                              ),
+                            ),
                             const SizedBox(height: 12),
                             _buildRowDetail('Fecha de solicitud', currentPedido.fecha),
                             const Divider(color: AppColors.surfaceVariant, height: 24),
@@ -492,6 +508,28 @@ class OrderDetailScreen extends StatelessWidget {
                     _buildRowDetail('Tipo de entrega', currentPedido.tipoEntrega),
                     const Divider(color: AppColors.surfaceVariant, height: 24),
                     _buildRowDetail('Estado del envío', estadoToString(currentPedido.estado)),
+                    if ((currentPedido.evidenciaEntregaUrl ?? '').isNotEmpty) ...[
+                      const Divider(color: AppColors.surfaceVariant, height: 24),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Evidencia de entrega',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVariant),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => _verEvidencia(context, currentPedido.evidenciaEntregaUrl!),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 160,
+                            child: AppImage(url: currentPedido.evidenciaEntregaUrl, fit: BoxFit.cover),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -890,6 +928,19 @@ class OrderDetailScreen extends StatelessWidget {
         );
       }
     }
+  }
+
+  void _verEvidencia(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        backgroundColor: Colors.black,
+        child: InteractiveViewer(
+          child: AppImage(url: url, fit: BoxFit.contain),
+        ),
+      ),
+    );
   }
 
   Widget _buildRowDetail(String label, String value, {Widget? trailing}) {

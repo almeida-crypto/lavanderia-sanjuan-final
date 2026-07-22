@@ -27,7 +27,7 @@ public class PedidoEventosController : ControllerBase
         {
             var partes = new List<string>
             {
-                "select=*,pedidos(numero_orden,cliente_nombre)",
+                "select=*,pedidos(numero_orden,cliente_nombre,evidencia_entrega_url)",
                 "order=created_at.desc",
                 $"limit={Math.Clamp(limit ?? 200, 1, 500)}",
             };
@@ -54,6 +54,7 @@ public class PedidoEventosController : ControllerBase
             pedidoId = row["pedido_id"]?.ToString(),
             pedidoNumero = pedido?["numero_orden"]?.ToString(),
             clienteNombre = pedido?["cliente_nombre"]?.ToString(),
+            evidenciaUrl = pedido?["evidencia_entrega_url"]?.ToString(),
             actorId = row["actor_id"]?.ToString(),
             actorNombre = row["actor_nombre"]?.ToString(),
             actorRol = row["actor_rol"]?.ToString(),

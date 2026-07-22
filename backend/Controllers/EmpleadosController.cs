@@ -56,14 +56,16 @@ public class EmpleadosController : ControllerBase
             return BadRequest(new { message = "Rol inválido. Debe ser 'empleado', 'repartidor' o 'administrador'" });
         }
 
-        if (rol == "repartidor" && (string.IsNullOrWhiteSpace(request.Telefono) ||
-            request.Telefono.Count(char.IsDigit) < 10))
+        var telefonoLimpio = request.Telefono is null
+            ? null
+            : new string(request.Telefono.Where(char.IsDigit).ToArray());
+        if (rol == "repartidor" && (string.IsNullOrWhiteSpace(telefonoLimpio) || telefonoLimpio.Length < 10))
         {
             return BadRequest(new { message = "El repartidor necesita un número telefónico válido de 10 dígitos" });
         }
 
         var resultado = await _supabaseService.CreateUserAsync(
-            request.Nombre.Trim(), request.Correo.Trim(), request.Password, rol, request.Telefono?.Trim());
+            request.Nombre.Trim(), request.Correo.Trim(), request.Password, rol, telefonoLimpio);
         if (!resultado.Success)
         {
             return StatusCode(resultado.StatusCode, new { message = resultado.ErrorMessage ?? "No se pudo crear la cuenta" });
@@ -179,9 +181,12 @@ public class EmpleadosController : ControllerBase
     [Authorize(Roles = "administrador")]
     public async Task<IActionResult> CambiarTelefono(string id, [FromBody] CambiarTelefonoEmpleadoRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Telefono) || request.Telefono.Count(char.IsDigit) < 10)
+        var telefonoLimpio = request.Telefono is null
+            ? null
+            : new string(request.Telefono.Where(char.IsDigit).ToArray());
+        if (string.IsNullOrWhiteSpace(telefonoLimpio) || telefonoLimpio.Length < 10)
             return BadRequest(new { message = "Ingresa un número telefónico válido de 10 dígitos" });
-        var resultado = await _supabaseService.UpdateProfileAsync(id, null, null, request.Telefono.Trim());
+        var resultado = await _supabaseService.UpdateProfileAsync(id, null, null, telefonoLimpio);
         if (!resultado.Success)
             return StatusCode(resultado.StatusCode, new { message = resultado.ErrorMessage ?? "No se pudo actualizar el teléfono" });
         return Ok(resultado.Usuario);

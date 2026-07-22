@@ -7,7 +7,7 @@ import '../../../models/pedido.dart';
 import '../../../models/pedido_admin.dart';
 import '../../../services/pedido_service.dart';
 import '../../../utils/app_colors.dart';
-import '../../../utils/telefono_launcher.dart';
+import '../../../utils/whatsapp_launcher.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../home_cliente/home_cliente_screen.dart';
 import '../mi_perfil/mi_perfil_screen.dart';
@@ -256,7 +256,10 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
                   _RepartidorCard(
                     nombre: pedido.repartidorNombre!,
                     onCall: () async {
-                      final abierto = await abrirLlamada(pedido.repartidorTelefono);
+                      final abierto = await abrirWhatsApp(
+                        pedido.repartidorTelefono,
+                        mensaje: 'Hola, te escribo por el pedido ${pedido.numero} de FreshClean.',
+                      );
                       if (!abierto && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este repartidor todavía no tiene teléfono registrado.')));
                       }
@@ -765,8 +768,8 @@ class _RepartidorCard extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: onCall,
-                  icon: const Icon(Icons.call_rounded, size: 20),
-                  label: const Text('Llamar'),
+                  icon: const Icon(Icons.chat_rounded, size: 20),
+                  label: const Text('WhatsApp'),
                   style: OutlinedButton.styleFrom(
                     backgroundColor: AppColors.surfaceContainerLow,
                     foregroundColor: AppColors.primary,

@@ -147,6 +147,10 @@ alter table public.pedidos add column if not exists reporte_actualizado_at times
 alter table public.pedidos add column if not exists recoleccion_en_sucursal boolean not null default false;
 alter table public.pedidos add column if not exists entrega_en_sucursal boolean not null default false;
 
+-- Foto que el repartidor sube como evidencia al marcar el pedido como
+-- entregado (evita disputas de "nunca me llegó" sin prueba alguna).
+alter table public.pedidos add column if not exists evidencia_entrega_url text;
+
 -- Los reportes son incidencias separadas del avance del pedido. Versiones
 -- anteriores reemplazaban la etapa por "Atención" y el pedido parecía quedar
 -- sin terminar; se recuperan como solicitudes abiertas sin bloquear el flujo.

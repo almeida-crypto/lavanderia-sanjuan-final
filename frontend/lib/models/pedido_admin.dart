@@ -263,6 +263,7 @@ class PedidoAdmin {
     this.creadoEn,
     this.recoleccionEnSucursal = false,
     this.entregaEnSucursal = false,
+    this.evidenciaEntregaUrl,
   });
 
   final String id;
@@ -306,6 +307,11 @@ class PedidoAdmin {
   /// El cliente recoge su ropa en la sucursal en vez de que un repartidor
   /// se la lleve a domicilio.
   final bool entregaEnSucursal;
+
+  /// Foto que subió el repartidor como evidencia al marcar el pedido como
+  /// entregado. Null si aún no se ha entregado o el pedido es de antes de
+  /// que existiera este requisito.
+  String? evidenciaEntregaUrl;
 
   /// Folio corto y legible en vez del uuid interno.
   String get numero => numeroOrden > 0

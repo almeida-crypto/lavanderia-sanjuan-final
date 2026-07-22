@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../models/pedido.dart';
 import '../../../services/pedido_service.dart';
 import '../../../utils/app_colors.dart';
-import '../../../utils/telefono_launcher.dart';
+import '../../../utils/whatsapp_launcher.dart';
 
 /// Seguimiento operativo del pedido.
 ///
@@ -64,8 +64,11 @@ class _SeguimientoEnVivoScreenState extends State<SeguimientoEnVivoScreen> {
     }
   }
 
-  Future<void> _llamarRepartidor() async {
-    final abierto = await abrirLlamada(_repartidorTelefono);
+  Future<void> _contactarRepartidor() async {
+    final abierto = await abrirWhatsApp(
+      _repartidorTelefono,
+      mensaje: 'Hola, te escribo por el pedido ${widget.numeroPedido} de FreshClean.',
+    );
     if (!mounted || abierto) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -164,9 +167,9 @@ class _SeguimientoEnVivoScreenState extends State<SeguimientoEnVivoScreen> {
                   : 'La lavandería asignará a una persona pronto.',
               trailing: asignado
                   ? IconButton.filled(
-                      tooltip: 'Llamar',
-                      onPressed: _llamarRepartidor,
-                      icon: const Icon(Icons.phone_rounded),
+                      tooltip: 'WhatsApp',
+                      onPressed: _contactarRepartidor,
+                      icon: const Icon(Icons.chat_rounded),
                     )
                   : null,
             ),

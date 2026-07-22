@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../services/imagen_service.dart';
 import '../../../services/notificaciones_store.dart';
 import '../../../utils/app_colors.dart';
-import '../../../utils/telefono_launcher.dart';
+import '../../../utils/maps_launcher.dart';
+import '../../../utils/whatsapp_launcher.dart';
 import '../../auth/login/bienvenida_screen.dart';
 import '../notificaciones/notificaciones_repartidor_screen.dart';
 
@@ -21,6 +24,7 @@ class HomeRepartidorScreen extends StatefulWidget {
 class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
   int _selectedTab = 0; // 0: Recolecciones, 1: Entregas, 2: Completados
   int _notificacionesNoLeidas = 0;
+  final _imagenService = ImagenService();
 
   String _claveDe(PedidoAdmin pedido) => 'pedido_${pedido.id}_${pedido.estado.name}';
 
@@ -84,9 +88,9 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
     });
   }
 
-  Future<void> _actualizarEstado(PedidoAdmin pedido, PedidoEstado nuevoEstado) async {
+  Future<void> _actualizarEstado(PedidoAdmin pedido, PedidoEstado nuevoEstado, {String? evidenciaUrl}) async {
     try {
-      await context.read<AdminProvider>().updatePedidoEstado(pedido.id, nuevoEstado);
+      await context.read<AdminProvider>().updatePedidoEstado(pedido.id, nuevoEstado, evidenciaUrl: evidenciaUrl);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -94,10 +98,10 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
           backgroundColor: AppColors.primary,
         ),
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo actualizar el pedido. Intenta de nuevo.')),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     }
   }
@@ -110,6 +114,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
     required String mensaje,
     required String textoBoton,
     required Color colorBoton,
+    String? evidenciaUrl,
   }) {
     showDialog(
       context: context,
@@ -135,7 +140,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(dialogContext);
-                await _actualizarEstado(pedido, nuevoEstado);
+                await _actualizarEstado(pedido, nuevoEstado, evidenciaUrl: evidenciaUrl);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorBoton,
@@ -150,6 +155,101 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
           ],
         );
       },
+    );
+  }
+
+  /// El repartidor debe subir una foto de las prendas entregadas antes de
+  /// poder marcar el pedido como "Entregado" (evita disputas de "nunca me
+  /// llegó" sin ninguna prueba).
+  Future<void> _marcarComoEntregado(PedidoAdmin pedido) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Text('Foto de evidencia', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                'Toma una foto de las prendas entregadas para confirmar la entrega.',
+                style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tomar foto'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Elegir de la galería'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    XFile? archivo;
+    try {
+      archivo = await ImagePicker().pickImage(source: source, imageQuality: 82, maxWidth: 1200, maxHeight: 1200);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir la cámara o la galería. Revisa los permisos de la aplicación.')),
+        );
+      }
+      return;
+    }
+    if (archivo == null || !mounted) return;
+
+    await _subirEvidenciaConReintento(pedido, archivo);
+  }
+
+  /// Si la subida falla (ej. se cortó la señal), la foto ya tomada no se
+  /// pierde: se ofrece "Reintentar" con el mismo archivo en vez de obligar
+  /// al repartidor a volver a tomarla desde cero.
+  Future<void> _subirEvidenciaConReintento(PedidoAdmin pedido, XFile archivo) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+    );
+    String url;
+    try {
+      url = await _imagenService.subir(archivo, carpeta: 'evidencias');
+    } catch (e) {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'Reintentar',
+            onPressed: () => _subirEvidenciaConReintento(pedido, archivo),
+          ),
+        ),
+      );
+      return;
+    }
+    if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    if (!mounted) return;
+
+    _confirmarCambioEstado(
+      context: context,
+      pedido: pedido,
+      nuevoEstado: PedidoEstado.entregado,
+      titulo: 'Confirmar Entrega',
+      mensaje: '¿Confirmas que entregaste las prendas al cliente "${pedido.clienteNombre}"? Se guardará la foto como evidencia.',
+      textoBoton: 'Marcar como Entregado',
+      colorBoton: Colors.green.shade700,
+      evidenciaUrl: url,
     );
   }
 
@@ -531,33 +631,63 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.surfaceVariant),
               ),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.location_on, color: AppColors.error, size: 22),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ubicación de ${esRecoleccion ? 'Recolección' : 'Entrega'}:',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.onSurfaceVariant,
-                          ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.location_on, color: AppColors.error, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Ubicación de ${esRecoleccion ? 'Recolección' : 'Entrega'}:',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              pedido.clienteDireccion,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.onSurface,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          pedido.clienteDireccion,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.onSurface,
-                          ),
-                        ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 38,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final abierto = await abrirEnMaps(pedido.clienteDireccion);
+                        if (!context.mounted || abierto) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('No se pudo abrir el mapa.')),
+                        );
+                      },
+                      icon: const Icon(Icons.directions_rounded, size: 18),
+                      label: Text(
+                        'Cómo llegar',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
                   ),
                 ],
@@ -568,17 +698,20 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
             // Phone & Payment method
             Row(
               children: [
-                const Icon(Icons.phone_outlined, size: 18, color: AppColors.secondary),
+                const Icon(Icons.chat_outlined, size: 18, color: AppColors.secondary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextButton(
                     onPressed: pedido.clienteTelefono == 'No especificado'
                         ? null
                         : () async {
-                            final abierto = await abrirLlamada(pedido.clienteTelefono);
+                            final abierto = await abrirWhatsApp(
+                              pedido.clienteTelefono,
+                              mensaje: 'Hola, soy tu repartidor de FreshClean para el pedido ${pedido.numero}.',
+                            );
                             if (!context.mounted || abierto) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('No se pudo abrir la aplicación de llamadas.')),
+                              const SnackBar(content: Text('No se pudo abrir WhatsApp.')),
                             );
                           },
                     style: TextButton.styleFrom(
@@ -589,7 +722,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
                     child: Text(
                       pedido.clienteTelefono == 'No especificado'
                           ? 'Teléfono no registrado'
-                          : 'Llamar a ${pedido.clienteTelefono}',
+                          : 'WhatsApp a ${pedido.clienteTelefono}',
                       style: GoogleFonts.inter(fontSize: 13),
                     ),
                   ),
@@ -683,16 +816,18 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
                 height: 48,
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    if (entregaEnCamino) {
+                      _marcarComoEntregado(pedido);
+                      return;
+                    }
                     _confirmarCambioEstado(
                       context: context,
                       pedido: pedido,
-                      nuevoEstado: entregaEnCamino ? PedidoEstado.entregado : PedidoEstado.enCamino,
-                      titulo: entregaEnCamino ? 'Confirmar Entrega' : 'Iniciar Entrega',
-                      mensaje: entregaEnCamino
-                          ? '¿Confirmas que entregaste las prendas al cliente "${pedido.clienteNombre}"?'
-                          : '¿Confirmas que vas en camino a entregar las prendas a "${pedido.clienteNombre}"?',
-                      textoBoton: entregaEnCamino ? 'Marcar como Entregado' : 'Iniciar Entrega',
-                      colorBoton: entregaEnCamino ? Colors.green.shade700 : AppColors.primary,
+                      nuevoEstado: PedidoEstado.enCamino,
+                      titulo: 'Iniciar Entrega',
+                      mensaje: '¿Confirmas que vas en camino a entregar las prendas a "${pedido.clienteNombre}"?',
+                      textoBoton: 'Iniciar Entrega',
+                      colorBoton: AppColors.primary,
                     );
                   },
                   icon: Icon(

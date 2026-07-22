@@ -6,7 +6,7 @@ import '../../../models/usuario.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
-import '../../../utils/telefono_launcher.dart';
+import '../../../utils/whatsapp_launcher.dart';
 
 /// Pantalla de administración dedicada a la Configuración de Repartidores.
 class RepartidoresConfigScreen extends StatefulWidget {
@@ -145,7 +145,7 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
                                   correo: emailController.text.trim(),
                                   password: passwordController.text.trim(),
                                   rol: UserRole.repartidor,
-                                  telefono: phoneController.text.trim(),
+                                  telefono: phoneController.text.replaceAll(RegExp(r'[^0-9]'), ''),
                                 );
                             if (!dialogContext.mounted) return;
                             Navigator.pop(dialogContext);
@@ -350,7 +350,8 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresa un número de 10 dígitos')));
       return;
     }
-    try { await context.read<AdminProvider>().cambiarTelefonoEmpleado(repartidor.id, telefono); }
+    final telefonoLimpio = telefono.replaceAll(RegExp(r'[^0-9]'), '');
+    try { await context.read<AdminProvider>().cambiarTelefonoEmpleado(repartidor.id, telefonoLimpio); }
     catch (e) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); }
   }
 
@@ -597,10 +598,10 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
                             if (rep.telefono?.isNotEmpty == true) ...[
                               const SizedBox(height: 4),
                               InkWell(
-                                onTap: () => abrirLlamada(rep.telefono),
+                                onTap: () => abrirWhatsApp(rep.telefono),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.phone_outlined, size: 14, color: AppColors.primary),
+                                    const Icon(Icons.chat_outlined, size: 14, color: AppColors.primary),
                                     const SizedBox(width: 4),
                                     Text(rep.telefono!, style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary)),
                                   ],

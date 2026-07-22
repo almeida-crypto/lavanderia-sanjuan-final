@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../models/pedido_admin.dart';
 import '../../../models/usuario.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../services/imagen_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../widgets/app_image.dart';
 
 class ActualizarEstadoScreen extends StatefulWidget {
   const ActualizarEstadoScreen({super.key, required this.pedido});
@@ -19,6 +22,71 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
   late PedidoEstado _seleccionado = widget.pedido.estado;
   String? _repartidorId;
   bool _isSaving = false;
+  final _imagenService = ImagenService();
+  XFile? _fotoEvidencia;
+  String? _evidenciaUrl;
+  bool _subiendoEvidencia = false;
+
+  /// El cliente recoge en sucursal: quien lo entrega en mano es este
+  /// empleado/admin (no un repartidor), así que aquí sí se le pide la misma
+  /// foto de evidencia que al repartidor en una entrega a domicilio.
+  bool get _requiereEvidencia =>
+      _seleccionado == PedidoEstado.entregado && widget.pedido.entregaEnSucursal;
+
+  Future<void> _elegirFotoEvidencia() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tomar foto'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Elegir de la galería'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    XFile? archivo;
+    try {
+      archivo = await ImagePicker().pickImage(source: source, imageQuality: 82, maxWidth: 1200, maxHeight: 1200);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir la cámara o la galería. Revisa los permisos de la aplicación.')),
+        );
+      }
+      return;
+    }
+    if (archivo == null || !mounted) return;
+
+    setState(() {
+      _fotoEvidencia = archivo;
+      _subiendoEvidencia = true;
+      _evidenciaUrl = null;
+    });
+    try {
+      final url = await _imagenService.subir(archivo, carpeta: 'evidencias');
+      if (mounted) setState(() => _evidenciaUrl = url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _subiendoEvidencia = false);
+    }
+  }
 
   @override
   void initState() {
@@ -45,6 +113,13 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
           _seleccionado == PedidoEstado.enCamino);
 
   Future<void> _guardar(BuildContext context, PedidoAdmin currentPedido) async {
+    if (_requiereEvidencia && _evidenciaUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sube una foto como evidencia antes de marcar el pedido como entregado.')),
+      );
+      return;
+    }
+
     final admin = context.read<AdminProvider>();
     final asignacionBloqueada = _asignacionRecoleccionBloqueada(currentPedido) ||
         _asignacionEntregaBloqueada(currentPedido);
@@ -76,7 +151,11 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
           : _seleccionado;
       final estadoActual = cambiaRepartidor ? PedidoEstado.asignado : currentPedido.estado;
       if (estadoFinal != estadoActual) {
-        await admin.updatePedidoEstado(currentPedido.id, estadoFinal);
+        await admin.updatePedidoEstado(
+          currentPedido.id,
+          estadoFinal,
+          evidenciaUrl: estadoFinal == PedidoEstado.entregado ? _evidenciaUrl : null,
+        );
       }
       if (!context.mounted) return;
       Navigator.pop(context);
@@ -337,12 +416,60 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
                   },
                 ),
               ),
+              if (_requiereEvidencia) ...[
+                const SizedBox(height: 24),
+                Text(
+                  'Foto de Evidencia',
+                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'El cliente recoge en sucursal: toma una foto al entregarle sus prendas.',
+                  style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
+                ),
+                const SizedBox(height: 12),
+                if (_fotoEvidencia != null)
+                  Container(
+                    height: 160,
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.surfaceVariant),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _evidenciaUrl != null
+                            ? AppImage(url: _evidenciaUrl, fit: BoxFit.cover)
+                            : const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                        if (_subiendoEvidencia)
+                          Container(
+                            color: Colors.black.withValues(alpha: 0.35),
+                            child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+                          ),
+                      ],
+                    ),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: _subiendoEvidencia ? null : _elegirFotoEvidencia,
+                  icon: const Icon(Icons.photo_camera_outlined, size: 20),
+                  label: Text(_fotoEvidencia == null ? 'Tomar o elegir foto' : 'Cambiar foto'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
 
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _isSaving ? null : () => _guardar(context, currentPedido),
+                  onPressed: _isSaving || _subiendoEvidencia ? null : () => _guardar(context, currentPedido),
                   icon: _isSaving
                       ? const SizedBox(
                           width: 18,

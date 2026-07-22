@@ -56,14 +56,17 @@ class PedidoService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> actualizarEstado(String id, String estado) async {
+  Future<Map<String, dynamic>> actualizarEstado(String id, String estado, {String? evidenciaUrl}) async {
     final response = await withTimeout(http.put(
       Uri.parse('$_baseUrl/pedidos/$id/estado'),
       headers: ApiConfig.jsonHeaders,
-      body: jsonEncode({'estado': estado}),
+      body: jsonEncode({
+        'estado': estado,
+        if (evidenciaUrl != null) 'evidenciaUrl': evidenciaUrl,
+      }),
     ));
     if (response.statusCode != 200) {
-      throw Exception('No se pudo actualizar el estado');
+      throw Exception(_mensajeError(response, 'No se pudo actualizar el estado'));
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
