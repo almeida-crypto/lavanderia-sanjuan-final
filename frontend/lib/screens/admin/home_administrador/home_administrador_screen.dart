@@ -10,7 +10,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../services/notificaciones_store.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/doble_back_para_salir.dart';
-import '../clientes/customers_view.dart';
+import '../cortes/corte_caja_screen.dart';
 import '../notificaciones/notificaciones_admin_screen.dart';
 import '../pedidos/orders_view.dart';
 import '../servicios/services_view.dart';
@@ -37,7 +37,7 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
     _views = [
       DashboardView(onViewOrdersTap: () => _onItemTapped(1)),
       const OrdersView(),
-      const CustomersView(),
+      const CorteCajaScreen(),
       const ServicesView(),
     ];
     context.read<AdminProvider>().cargarPedidos().whenComplete(_actualizarNotificaciones);
@@ -81,7 +81,6 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
     // Recargar al cambiar de pestaña resuelve eso sin salir de la app.
     final admin = context.read<AdminProvider>();
     admin.cargarPedidos().whenComplete(_actualizarNotificaciones);
-    if (index == 2) admin.cargarEmpleados();
     if (index == 3) {
       admin.cargarPromociones();
       admin.cargarOpcionesCatalogo();
@@ -229,9 +228,9 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
               label: 'Pedidos',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline),
-              activeIcon: Icon(Icons.people),
-              label: 'Directorio',
+              icon: Icon(Icons.point_of_sale_outlined),
+              activeIcon: Icon(Icons.point_of_sale),
+              label: 'Cortes',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings_outlined),

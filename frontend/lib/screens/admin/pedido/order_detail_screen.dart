@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
+import '../../../services/ticket_pdf_generator.dart';
 import '../../../utils/app_colors.dart';
 import 'actualizar_estado_screen.dart';
 
@@ -580,30 +582,52 @@ class OrderDetailScreen extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          await Clipboard.setData(ClipboardData(
-                            text: 'Pedido ${currentPedido.numero}\n'
-                                'Cliente: ${currentPedido.clienteNombre}\n'
-                                'Servicio: ${currentPedido.servicioNombre}\n'
-                                'Total: \$${currentPedido.precioFinal.toStringAsFixed(2)}',
-                          ));
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Ticket copiado para compartir o imprimir')),
-                          );
-                        },
-                        icon: const Icon(Icons.copy_outlined),
-                        label: const Text('Copiar Ticket'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              await Clipboard.setData(ClipboardData(
+                                text: 'Pedido ${currentPedido.numero}\n'
+                                    'Cliente: ${currentPedido.clienteNombre}\n'
+                                    'Servicio: ${currentPedido.servicioNombre}\n'
+                                    'Total: \$${currentPedido.precioFinal.toStringAsFixed(2)}',
+                              ));
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Ticket copiado para compartir')),
+                              );
+                            },
+                            icon: const Icon(Icons.copy_outlined),
+                            label: const Text('Copiar', maxLines: 1, overflow: TextOverflow.ellipsis),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              await Printing.layoutPdf(
+                                onLayout: (_) => generarTicketPdf(currentPedido),
+                                name: 'Ticket ${currentPedido.numero}',
+                              );
+                            },
+                            icon: const Icon(Icons.print_outlined),
+                            label: const Text('Imprimir', maxLines: 1, overflow: TextOverflow.ellipsis),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

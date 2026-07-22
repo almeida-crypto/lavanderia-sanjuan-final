@@ -7,6 +7,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../models/usuario.dart';
 import '../../../utils/app_colors.dart';
 import '../../auth/login/bienvenida_screen.dart';
+import '../clientes/customers_view.dart';
 import '../repartidores/repartidores_config_screen.dart';
 
 class PerfilAdministradorScreen extends StatelessWidget {
@@ -150,38 +151,71 @@ class PerfilAdministradorScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              if (usuario?.rol == UserRole.administrador) ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: AppColors.surfaceVariant),
-                ),
-                tileColor: AppColors.surfaceContainerLowest,
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryFixed,
-                    borderRadius: BorderRadius.circular(10),
+              if (usuario?.rol == UserRole.administrador) ...[
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: AppColors.surfaceVariant),
                   ),
-                  child: const Icon(Icons.two_wheeler_rounded, color: AppColors.primary),
-                ),
-                title: Text(
-                  'Configuración de Repartidores',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.onSurface),
-                ),
-                subtitle: Text(
-                  'Gestiona el personal de entregas y recolecciones',
-                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
-                ),
-                trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const RepartidoresConfigScreen(),
+                  tileColor: AppColors.surfaceContainerLowest,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryFixed,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  );
-                },
-              ),
+                    child: const Icon(Icons.people_outline_rounded, color: AppColors.primary),
+                  ),
+                  title: Text(
+                    'Directorio',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.onSurface),
+                  ),
+                  subtitle: Text(
+                    'Clientes y empleados registrados',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const _DirectorioStandaloneScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: AppColors.surfaceVariant),
+                  ),
+                  tileColor: AppColors.surfaceContainerLowest,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryFixed,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.two_wheeler_rounded, color: AppColors.primary),
+                  ),
+                  title: Text(
+                    'Configuración de Repartidores',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.onSurface),
+                  ),
+                  subtitle: Text(
+                    'Gestiona el personal de entregas y recolecciones',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const RepartidoresConfigScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () => _cerrarSesion(context),
@@ -202,6 +236,33 @@ class PerfilAdministradorScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// CustomersView se diseñó para vivir dentro del IndexedStack del panel
+/// (sin su propio Scaffold/AppBar). Este envoltorio le da un AppBar con
+/// botón de regreso para poder abrirla como pantalla aparte desde el perfil.
+class _DirectorioStandaloneScreen extends StatelessWidget {
+  const _DirectorioStandaloneScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: Text(
+          'Directorio',
+          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+        ),
+      ),
+      body: const SafeArea(child: CustomersView()),
     );
   }
 }
