@@ -33,8 +33,18 @@ public class UsuariosController : ControllerBase
             return Forbid();
         }
 
+        string? telefono = null;
+        if (!string.IsNullOrWhiteSpace(request.Telefono))
+        {
+            telefono = new string(request.Telefono.Where(char.IsDigit).ToArray());
+            if (telefono.Length != 10)
+            {
+                return BadRequest(new { message = "Ingresa un número telefónico válido de 10 dígitos" });
+            }
+        }
+
         var update = await _supabaseService.UpdateProfileAsync(
-            id, request.Nombre, request.Correo, request.Telefono, request.FotoUrl);
+            id, request.Nombre, request.Correo, telefono, request.FotoUrl);
         if (!update.Success)
         {
             return StatusCode(update.StatusCode, new { message = update.ErrorMessage ?? "No se pudo actualizar el perfil" });

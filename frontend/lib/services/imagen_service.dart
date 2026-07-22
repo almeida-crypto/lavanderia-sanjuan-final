@@ -22,7 +22,15 @@ class ImagenService {
       request.headers['Authorization'] = 'Bearer ${ApiConfig.authToken}';
     }
     request.fields['carpeta'] = carpeta;
-    request.files.add(await http.MultipartFile.fromPath('archivo', archivo.path));
+    // XFile.path puede ser una URL blob en Flutter Web. Los bytes funcionan
+    // tanto allí como en Android/iOS.
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'archivo',
+        await archivo.readAsBytes(),
+        filename: archivo.name,
+      ),
+    );
 
     final streamed = await request.send().timeout(const Duration(seconds: 45));
     final body = await streamed.stream.bytesToString();

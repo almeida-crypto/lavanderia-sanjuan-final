@@ -135,24 +135,28 @@ public class SupabaseService
         }
 
         var currentRoot = await ReadJsonAsync(currentUserResponse);
-        var currentUser = currentRoot?["user"];
+        // GoTrue puede devolver el usuario directamente o dentro de { user }.
+        // Aceptamos ambas formas para no convertir una respuesta válida en 502.
+        var currentUser = currentRoot?["user"] ?? (currentRoot?["id"] is not null ? currentRoot : null);
         if (currentUser is null)
         {
             return new UsuarioOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null);
         }
 
-        var metadata = currentUser["user_metadata"] as JsonObject ?? new JsonObject();
+        // Este nodo pertenece al JSON de la respuesta. Hay que clonarlo antes
+        // de insertarlo en otro árbol o JsonNode lanza "already has a parent".
+        var metadata = currentUser["user_metadata"]?.DeepClone() as JsonObject ?? new JsonObject();
         if (!string.IsNullOrWhiteSpace(nombre))
         {
-            metadata["nombre"] = nombre;
+            metadata["nombre"] = nombre.Trim();
         }
         if (!string.IsNullOrWhiteSpace(telefono))
         {
-            metadata["telefono"] = telefono;
+            metadata["telefono"] = telefono.Trim();
         }
         if (!string.IsNullOrWhiteSpace(fotoUrl))
         {
-            metadata["foto_url"] = fotoUrl;
+            metadata["foto_url"] = fotoUrl.Trim();
         }
 
         var payload = new JsonObject
@@ -168,7 +172,7 @@ public class SupabaseService
         if (!string.IsNullOrWhiteSpace(correo) &&
             !string.Equals(correo.Trim(), correoActual?.Trim(), StringComparison.OrdinalIgnoreCase))
         {
-            payload["email"] = correo;
+            payload["email"] = correo.Trim();
         }
 
         var updateResponse = await SendAsync(HttpMethod.Put, $"/auth/v1/admin/users/{id}", payload, useServiceRole: true);
@@ -183,7 +187,7 @@ public class SupabaseService
         }
 
         var updatedRoot = await ReadJsonAsync(updateResponse);
-        var updatedUser = updatedRoot?["user"];
+        var updatedUser = updatedRoot?["user"] ?? (updatedRoot?["id"] is not null ? updatedRoot : null);
         if (updatedUser is null)
         {
             return new UsuarioOperationResult(false, StatusCodes.Status502BadGateway, "Respuesta inválida de Supabase", null);

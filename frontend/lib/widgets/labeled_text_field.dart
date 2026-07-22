@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../utils/app_colors.dart';
 
@@ -13,6 +14,8 @@ class LabeledTextField extends StatelessWidget {
     this.suffixIcon,
     this.keyboardType,
     this.validator,
+    this.inputFormatters,
+    this.maxLength,
   });
 
   final String label;
@@ -23,6 +26,8 @@ class LabeledTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +50,8 @@ class LabeledTextField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           validator: validator,
+          inputFormatters: inputFormatters,
+          maxLength: maxLength,
           style: const TextStyle(fontSize: 14, color: AppColors.onSurface),
           decoration: InputDecoration(
             filled: true,

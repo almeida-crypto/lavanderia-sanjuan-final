@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -56,11 +57,18 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
     return null;
   }
 
+  String? _validarTelefono(String? value) {
+    final telefono = (value ?? '').replaceAll(RegExp(r'\D'), '');
+    if (telefono.isEmpty) return null;
+    if (telefono.length != 10) return 'Ingresa un teléfono de 10 dígitos';
+    return null;
+  }
+
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
-    final telefono = _telefonoController.text.trim();
+    final telefono = _telefonoController.text.replaceAll(RegExp(r'\D'), '');
     final exito = await auth.actualizarPerfil(
       nombre: _nombreController.text.trim(),
       correo: _correoController.text.trim(),
@@ -74,7 +82,9 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       Navigator.of(context).maybePop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(auth.errorMessage ?? 'No se pudo actualizar el perfil')),
+        SnackBar(
+          content: Text(auth.errorMessage ?? 'No se pudo actualizar el perfil'),
+        ),
       );
     }
   }
@@ -112,7 +122,11 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo abrir la cámara o la galería. Revisa los permisos de la aplicación.')),
+          const SnackBar(
+            content: Text(
+              'No se pudo abrir la cámara o la galería. Revisa los permisos de la aplicación.',
+            ),
+          ),
         );
       }
       return;
@@ -174,7 +188,13 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                         onPressed: _subiendoFoto ? null : _elegirFoto,
                         tooltip: 'Cambiar foto',
                         icon: _subiendoFoto
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
                             : const Icon(Icons.camera_alt_outlined),
                       ),
                     ),
@@ -189,7 +209,10 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.surfaceContainerLow),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 24),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 24,
+                    ),
                   ],
                 ),
                 child: Form(
@@ -219,6 +242,11 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                         icon: Icons.call_outlined,
                         hintText: 'Tu número de teléfono',
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        maxLength: 10,
+                        validator: _validarTelefono,
                       ),
                     ],
                   ),
@@ -231,13 +259,18 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
                 child: isLoading
                     ? const SizedBox(
                         width: 22,
                         height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -246,7 +279,10 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'Guardar Cambios',
-                            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
