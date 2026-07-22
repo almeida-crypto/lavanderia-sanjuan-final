@@ -330,7 +330,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
                   children: [
                     _buildTabItem(0, 'Recoger (${recolecciones.length})', Icons.assignment_return_outlined),
                     _buildTabItem(1, 'Entregar (${entregas.length})', Icons.local_shipping_outlined),
-                    _buildTabItem(2, 'Completados (${completados.length})', Icons.check_circle_outline),
+                    _buildTabItem(2, 'Listos (${completados.length})', Icons.check_circle_outline),
                   ],
                 ),
               ),
@@ -394,7 +394,7 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
       child: GestureDetector(
         onTap: () => setState(() => _selectedTab = index),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
           decoration: BoxDecoration(
             color: selected ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
@@ -407,17 +407,20 @@ class _HomeRepartidorScreenState extends State<HomeRepartidorScreen> {
                 size: 16,
                 color: selected ? Colors.white : AppColors.onSurfaceVariant,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               Flexible(
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: selected ? Colors.white : AppColors.onSurfaceVariant,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: selected ? Colors.white : AppColors.onSurfaceVariant,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

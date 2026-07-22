@@ -11,6 +11,7 @@ import '../../../models/servicio_display.dart';
 import '../../../models/servicio_lavanderia.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/servicios_provider.dart';
+import '../../../services/notificaciones_store.dart';
 import '../../../services/pedido_service.dart';
 import '../../../services/promocion_service.dart';
 import '../../../utils/app_colors.dart';
@@ -42,6 +43,7 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> with WidgetsBindi
   bool _isLoading = true;
   Pedido? _pedidoActivo;
   List<Promocion> _promocionesVigentes = [];
+  int _notificacionesNoLeidas = 0;
   Timer? _actualizador;
 
   @override
@@ -49,12 +51,61 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> with WidgetsBindi
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _cargarTodo();
-    _actualizador = Timer.periodic(const Duration(seconds: 30), (_) => _cargarTodo(silencioso: true));
+    _actualizarNotificaciones();
+    _actualizador = Timer.periodic(const Duration(seconds: 30), (_) {
+      _cargarTodo(silencioso: true);
+      _actualizarNotificaciones();
+    });
+  }
+
+  /// Cuenta cuántas notificaciones (pedidos con novedades + promociones
+  /// vigentes) todavía no se han leído, usando las mismas claves que arma
+  /// NotificacionesScreen, para que el número de la campanita siempre
+  /// coincida con lo que en verdad hay sin leer allá.
+  Future<void> _actualizarNotificaciones() async {
+    final auth = context.read<AuthProvider>();
+    final usuarioId = auth.currentUser?.id;
+    final store = NotificacionesStore(namespace: 'cliente', usuarioId: usuarioId);
+    await store.cargar();
+
+    final claves = <String>{};
+    try {
+      final promociones = await _promocionService.listar();
+      for (final promo in promociones) {
+        if (promo.vigente) claves.add('promo_${promo.id}');
+      }
+    } catch (_) {
+      // Sin promociones disponibles por ahora; no bloquea el conteo.
+    }
+    try {
+      final data = await _pedidoService.listarPedidos(clienteId: usuarioId);
+      for (final json in data) {
+        final pedido = Pedido.fromJson(json);
+        if (pedido.estado == EstadoPedido.entregado ||
+            pedido.estado == EstadoPedido.cancelado ||
+            pedido.estado == EstadoPedido.atencion ||
+            pedido.estado == EstadoPedido.enProceso) {
+          claves.add('pedido_${pedido.id}_${pedido.estado.name}');
+        }
+      }
+    } catch (_) {
+      // Sin pedidos disponibles por ahora; no bloquea el conteo.
+    }
+
+    final cantidad = claves.where((clave) {
+      return !store.leidas.contains(clave) &&
+          !store.archivadas.contains(clave) &&
+          !store.eliminadas.contains(clave);
+    }).length;
+    if (mounted) setState(() => _notificacionesNoLeidas = cantidad);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _cargarTodo(silencioso: true);
+    if (state == AppLifecycleState.resumed) {
+      _cargarTodo(silencioso: true);
+      _actualizarNotificaciones();
+    }
   }
 
   @override
@@ -175,11 +226,41 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> with WidgetsBindi
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              icon: const Icon(Icons.notifications_outlined, color: AppColors.secondary),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
-              ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined, color: AppColors.secondary),
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const NotificacionesScreen()),
+                    );
+                    await _actualizarNotificaciones();
+                  },
+                ),
+                if (_notificacionesNoLeidas > 0)
+                  Positioned(
+                    right: 5,
+                    top: 4,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 17),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: const BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        _notificacionesNoLeidas > 9 ? '9+' : '$_notificacionesNoLeidas',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
@@ -187,7 +268,7 @@ class _HomeClienteScreenState extends State<HomeClienteScreen> with WidgetsBindi
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
-          onRefresh: _cargarTodo,
+          onRefresh: () => Future.wait([_cargarTodo(), _actualizarNotificaciones()]),
           child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),

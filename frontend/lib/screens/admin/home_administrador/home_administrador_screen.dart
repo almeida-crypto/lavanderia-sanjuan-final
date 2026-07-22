@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +27,7 @@ class HomeAdministradorScreen extends StatefulWidget {
 class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
   int _selectedIndex = 0;
   int _notificacionesNoLeidas = 0;
+  Timer? _actualizadorNotificaciones;
 
   late final List<Widget> _views;
 
@@ -38,6 +41,16 @@ class _HomeAdministradorScreenState extends State<HomeAdministradorScreen> {
       const ServicesView(),
     ];
     context.read<AdminProvider>().cargarPedidos().whenComplete(_actualizarNotificaciones);
+    _actualizadorNotificaciones = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => context.read<AdminProvider>().cargarPedidos().whenComplete(_actualizarNotificaciones),
+    );
+  }
+
+  @override
+  void dispose() {
+    _actualizadorNotificaciones?.cancel();
+    super.dispose();
   }
 
   String _claveDe(PedidoAdmin pedido) => 'pedido_${pedido.id}_${pedido.estado.name}';

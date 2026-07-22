@@ -659,7 +659,12 @@ class _CustomersViewState extends State<CustomersView> {
                       child: ElevatedButton.icon(
                         onPressed: () => _showAddEmpleadoDialog(context),
                         icon: const Icon(Icons.add_rounded, size: 18),
-                        label: Text('Agregar Cuenta', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                        label: Text(
+                          'Agregar Cuenta',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -669,18 +674,25 @@ class _CustomersViewState extends State<CustomersView> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const RepartidoresConfigScreen()),
-                        );
-                      },
-                      icon: const Icon(Icons.two_wheeler_rounded, size: 18, color: AppColors.primary),
-                      label: Text('Configurar Repartidores', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const RepartidoresConfigScreen()),
+                          );
+                        },
+                        icon: const Icon(Icons.two_wheeler_rounded, size: 18, color: AppColors.primary),
+                        label: Text(
+                          'Repartidores',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                        ),
                       ),
                     ),
                   ],

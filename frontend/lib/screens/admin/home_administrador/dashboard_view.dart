@@ -6,8 +6,8 @@ import '../../../models/usuario.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../actividad/actividad_empleados_screen.dart';
 import '../pedido/order_detail_screen.dart';
-import '../repartidores/repartidores_config_screen.dart';
 
 class DashboardView extends StatelessWidget {
   const DashboardView({super.key, this.onViewOrdersTap});
@@ -198,59 +198,61 @@ class DashboardView extends StatelessWidget {
                     );
             },
           ),
-          // Shortcut Banner: Configuración de Repartidores
-          if (!isEmpleado) InkWell(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const RepartidoresConfigScreen()),
-              );
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primaryFixed,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(12),
+          if (!isEmpleado) ...[
+            const SizedBox(height: 20),
+            InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ActividadEmpleadosScreen()),
+                );
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.surfaceVariant),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.history_rounded, color: AppColors.onSecondaryContainer, size: 24),
                     ),
-                    child: const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Configuración de Repartidores',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Actividad de Empleados',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.onSurface,
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Gestiona tu equipo de recolecciones y entregas',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: AppColors.onSurfaceVariant,
+                          Text(
+                            'Quién cambió, recibió o entregó cada pedido',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppColors.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.primary),
-                ],
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.onSurfaceVariant),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
           const SizedBox(height: 28),
 
           // Recent Orders Header
@@ -462,44 +464,53 @@ class DashboardView extends StatelessWidget {
             children: [
               // Card Top: Client & Tag
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: AppColors.surfaceContainer,
-                        child: Text(
-                          pedido.clienteNombre.substring(0, 1),
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppColors.surfaceContainer,
+                          child: Text(
+                            pedido.clienteNombre.substring(0, 1),
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pedido.clienteNombre,
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.onSurface,
-                            ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                pedido.clienteNombre,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.onSurface,
+                                ),
+                              ),
+                              Text(
+                                pedido.servicioNombre,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppColors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            pedido.servicioNombre,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
@@ -508,6 +519,8 @@ class DashboardView extends StatelessWidget {
                     ),
                     child: Text(
                       tagLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,

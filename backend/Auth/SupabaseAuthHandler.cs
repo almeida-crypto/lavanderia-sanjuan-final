@@ -60,6 +60,7 @@ public class SupabaseAuthHandler : AuthenticationHandler<AuthenticationSchemeOpt
             new Claim(ClaimTypes.NameIdentifier, usuario.Id),
             new Claim(ClaimTypes.Email, usuario.Correo ?? string.Empty),
             new Claim(ClaimTypes.Role, usuario.Rol ?? "cliente"),
+            new Claim(ClaimTypes.Name, usuario.Nombre ?? usuario.Correo ?? "Usuario"),
         };
         var identity = new ClaimsIdentity(claims, Scheme.Name);
         var principal = new ClaimsPrincipal(identity);

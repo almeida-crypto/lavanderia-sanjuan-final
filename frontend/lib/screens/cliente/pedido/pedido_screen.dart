@@ -217,6 +217,7 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
                   onVerMapa: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => SeguimientoEnVivoScreen(
+                        pedidoId: pedido.id,
                         numeroPedido: pedido.numero,
                         repartidorNombre: pedido.repartidorNombre,
                       ),
@@ -232,6 +233,7 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => SeguimientoEnVivoScreen(
+                          pedidoId: pedido.id,
                           numeroPedido: pedido.numero,
                           repartidorNombre: pedido.repartidorNombre,
                         ),

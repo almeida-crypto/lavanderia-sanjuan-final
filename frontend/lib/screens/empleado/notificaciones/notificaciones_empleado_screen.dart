@@ -29,6 +29,7 @@ class _NotificacionesEmpleadoScreenState
   Timer? _actualizador;
   NotificacionesStore? _store;
   VistaNotificaciones _vista = VistaNotificaciones.activas;
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -87,7 +88,7 @@ class _NotificacionesEmpleadoScreenState
     final clave = _claveDe(pedido);
     store.archivar(clave);
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    _messengerKey.currentState?.showSnackBar(SnackBar(
       content: const Text('Notificación archivada'),
       action: SnackBarAction(
         label: 'Deshacer',
@@ -105,7 +106,7 @@ class _NotificacionesEmpleadoScreenState
     final clave = _claveDe(pedido);
     store.eliminar(clave);
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    _messengerKey.currentState?.showSnackBar(SnackBar(
       content: const Text('Notificación eliminada'),
       action: SnackBarAction(
         label: 'Deshacer',
@@ -151,7 +152,9 @@ class _NotificacionesEmpleadoScreenState
     final hayNoLeidas = store != null && activos.any((p) => !store.leidas.contains(_claveDe(p)));
     final esVistaArchivadas = _vista == VistaNotificaciones.archivadas;
 
-    return Scaffold(
+    return ScaffoldMessenger(
+      key: _messengerKey,
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
@@ -239,6 +242,7 @@ class _NotificacionesEmpleadoScreenState
                       );
                     },
                   ),
+      ),
       ),
     );
   }

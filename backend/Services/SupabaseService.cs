@@ -157,9 +157,19 @@ public class SupabaseService
 
         var payload = new JsonObject
         {
-            ["email"] = string.IsNullOrWhiteSpace(correo) ? currentUser["email"]?.GetValue<string>() : correo,
             ["user_metadata"] = metadata
         };
+
+        // Reenviar el mismo correo que ya tiene la cuenta (sin cambios) hace
+        // que el API de administración de Supabase lo trate como un intento
+        // de cambiar a un correo "ya registrado" (por esa misma cuenta) y
+        // responda 409. Por eso solo se manda "email" cuando de verdad cambió.
+        var correoActual = currentUser["email"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(correo) &&
+            !string.Equals(correo.Trim(), correoActual?.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            payload["email"] = correo;
+        }
 
         var updateResponse = await SendAsync(HttpMethod.Put, $"/auth/v1/admin/users/{id}", payload, useServiceRole: true);
         if (!updateResponse.IsSuccessStatusCode)

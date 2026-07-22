@@ -178,7 +178,11 @@ class OrderDetailScreen extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () => context.read<AdminProvider>().cargarPedidos(),
+          child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,6 +555,7 @@ class OrderDetailScreen extends StatelessWidget {
                     if (currentPedido.metodoPago != null) ...[
                       const SizedBox(height: 12),
                       Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainer,
@@ -561,9 +566,14 @@ class OrderDetailScreen extends StatelessWidget {
                           children: [
                             const Icon(Icons.check_circle, color: AppColors.primary, size: 18),
                             const SizedBox(width: 8),
-                            Text(
-                              'Pagado con ${currentPedido.metodoPago}',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+                            Flexible(
+                              child: Text(
+                                'Pagado con ${currentPedido.metodoPago}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+                              ),
                             ),
                           ],
                         ),
@@ -639,7 +649,7 @@ class OrderDetailScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  nota.fecha,
+                                  _formatearFecha(nota.fecha),
                                   style: GoogleFonts.inter(fontSize: 11, color: AppColors.onSurfaceVariant),
                                 ),
                                 Text(
@@ -710,6 +720,8 @@ class OrderDetailScreen extends StatelessWidget {
                     Expanded(
                       child: Text(
                         estadoToString(currentPedido.estado),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -717,6 +729,7 @@ class OrderDetailScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: esFinal
                           ? null
@@ -730,14 +743,17 @@ class OrderDetailScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: esFinal ? AppColors.surfaceContainer : AppColors.primary,
                         foregroundColor: esFinal ? AppColors.onSurfaceVariant.withValues(alpha: 0.5) : Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        textStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
-                      child: const Text('Actualizar Estado'),
+                      child: const Text('Actualizar', maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                   ],
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
@@ -963,4 +979,15 @@ class OrderDetailScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Algunas notas guardan la fecha como texto libre (ej. "20/07/2026") y
+/// otras como una marca de tiempo ISO completa (ej. "2026-07-20T00:00...").
+/// Esto la muestra siempre en un formato corto y legible; si no se puede
+/// interpretar como fecha, se deja el texto tal cual llegó.
+String _formatearFecha(String valor) {
+  final fecha = DateTime.tryParse(valor);
+  if (fecha == null) return valor;
+  const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year}';
 }

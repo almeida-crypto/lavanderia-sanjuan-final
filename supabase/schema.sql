@@ -197,6 +197,20 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+-- Bitácora de qué empleado/admin/repartidor hizo qué sobre cada pedido
+-- (cambios de estado, asignación de repartidor, confirmación de precio),
+-- para que el admin pueda ver quién modificó, entregó o recibió cada uno.
+create table if not exists public.pedido_eventos (
+  id uuid primary key default gen_random_uuid(),
+  pedido_id uuid not null references public.pedidos(id) on delete cascade,
+  actor_id text,
+  actor_nombre text not null default 'Usuario',
+  actor_rol text,
+  accion text not null,
+  detalle text,
+  created_at timestamptz not null default now()
+);
+
 create unique index if not exists una_direccion_principal_por_usuario
   on public.direcciones(usuario_id) where predeterminada;
 create unique index if not exists una_tarjeta_principal_por_usuario
@@ -204,6 +218,9 @@ create unique index if not exists una_tarjeta_principal_por_usuario
 create index if not exists pedidos_por_cliente on public.pedidos(cliente_id);
 create index if not exists pedidos_por_repartidor on public.pedidos(repartidor_id);
 create index if not exists pedidos_recientes on public.pedidos(created_at desc);
+create index if not exists pedido_eventos_por_pedido on public.pedido_eventos(pedido_id);
+create index if not exists pedido_eventos_por_actor on public.pedido_eventos(actor_id);
+create index if not exists pedido_eventos_recientes on public.pedido_eventos(created_at desc);
 
 alter table public.direcciones enable row level security;
 alter table public.metodos_pago enable row level security;
@@ -212,6 +229,7 @@ alter table public.pedidos enable row level security;
 alter table public.promociones enable row level security;
 alter table public.opciones enable row level security;
 alter table public.codigos_postales enable row level security;
+alter table public.pedido_eventos enable row level security;
 
 insert into public.opciones (nombre, descripcion) values
   ('Doblado Estándar', 'Perfecto para el uso diario, doblado y apilado con cuidado.'),

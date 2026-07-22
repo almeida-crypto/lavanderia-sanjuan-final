@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../models/pedido.dart';
+import '../../../services/pedido_service.dart';
 import '../../../utils/app_colors.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../home_cliente/home_cliente_screen.dart';
@@ -11,11 +13,35 @@ import '../mi_perfil/mi_perfil_screen.dart';
 import '../mis_pedidos/mis_pedidos_screen.dart';
 import '../servicios/servicios_screen.dart';
 
-class SeguimientoEnVivoScreen extends StatelessWidget {
-  const SeguimientoEnVivoScreen({super.key, required this.numeroPedido, this.repartidorNombre});
+class SeguimientoEnVivoScreen extends StatefulWidget {
+  const SeguimientoEnVivoScreen({
+    super.key,
+    required this.pedidoId,
+    required this.numeroPedido,
+    this.repartidorNombre,
+  });
 
+  final String pedidoId;
   final String numeroPedido;
   final String? repartidorNombre;
+
+  @override
+  State<SeguimientoEnVivoScreen> createState() => _SeguimientoEnVivoScreenState();
+}
+
+class _SeguimientoEnVivoScreenState extends State<SeguimientoEnVivoScreen> {
+  final _pedidoService = PedidoService();
+  late String? _repartidorNombre = widget.repartidorNombre;
+
+  Future<void> _refrescar() async {
+    try {
+      final actualizado = await _pedidoService.obtenerPedido(widget.pedidoId);
+      final pedido = Pedido.fromJson(actualizado);
+      if (mounted) setState(() => _repartidorNombre = pedido.repartidorNombre);
+    } catch (_) {
+      // Sin conexión: se queda mostrando lo último que sí se cargó.
+    }
+  }
 
   Future<void> _copiarContacto(BuildContext context, String numero) async {
     await Clipboard.setData(ClipboardData(text: numero));
@@ -70,25 +96,37 @@ class SeguimientoEnVivoScreen extends StatelessWidget {
               ),
             ),
             Text(
-              numeroPedido,
+              widget.numeroPedido,
               style: GoogleFonts.inter(fontSize: 12, color: AppColors.onSurfaceVariant),
             ),
           ],
         ),
       ),
-      body: Stack(
-        children: [
-          const Positioned.fill(child: _MapaSimulado()),
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 16,
-            child: _OverlayCard(
-              repartidorNombre: repartidorNombre,
-              onSoporte: () => _copiarContacto(context, '+52 555 010 1010'),
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _refrescar,
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SizedBox(
+              height: constraints.maxHeight,
+              child: Stack(
+                children: [
+                  const Positioned.fill(child: _MapaSimulado()),
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: 16,
+                    child: _OverlayCard(
+                      repartidorNombre: _repartidorNombre,
+                      onSoporte: () => _copiarContacto(context, '+52 555 010 1010'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
+        ),
       ),
       bottomNavigationBar: AppBottomNavBar(
         currentTab: AppBottomTab.orders,

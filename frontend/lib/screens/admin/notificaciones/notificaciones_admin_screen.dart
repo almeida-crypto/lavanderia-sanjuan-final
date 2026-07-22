@@ -26,6 +26,7 @@ class _NotificacionesAdminScreenState
   Timer? _actualizador;
   NotificacionesStore? _store;
   VistaNotificaciones _vista = VistaNotificaciones.activas;
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -84,7 +85,7 @@ class _NotificacionesAdminScreenState
     final clave = _claveDe(pedido);
     store.archivar(clave);
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    _messengerKey.currentState?.showSnackBar(SnackBar(
       content: const Text('Notificación archivada'),
       action: SnackBarAction(
         label: 'Deshacer',
@@ -102,7 +103,7 @@ class _NotificacionesAdminScreenState
     final clave = _claveDe(pedido);
     store.eliminar(clave);
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    _messengerKey.currentState?.showSnackBar(SnackBar(
       content: const Text('Notificación eliminada'),
       action: SnackBarAction(
         label: 'Deshacer',
@@ -148,7 +149,14 @@ class _NotificacionesAdminScreenState
     final hayNoLeidas = store != null && activos.any((p) => !store.leidas.contains(_claveDe(p)));
     final esVistaArchivadas = _vista == VistaNotificaciones.archivadas;
 
-    return Scaffold(
+    // ScaffoldMessenger propio: sin esto, el snackbar de "Deshacer" (con su
+    // botón activo) se queda visible sobre la pantalla anterior al volver
+    // atrás, porque por defecto toda la app comparte un único
+    // ScaffoldMessenger. Un toque ahí podía deshacer una eliminación sin
+    // querer, dando la sensación de que "no funciona".
+    return ScaffoldMessenger(
+      key: _messengerKey,
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
@@ -236,6 +244,7 @@ class _NotificacionesAdminScreenState
                       );
                     },
                   ),
+      ),
       ),
     );
   }

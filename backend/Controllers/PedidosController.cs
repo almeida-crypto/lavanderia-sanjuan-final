@@ -26,8 +26,33 @@ public class PedidosController : ControllerBase
 
     private string? CallerId => User.FindFirstValue(ClaimTypes.NameIdentifier);
     private string? CallerRol => User.FindFirstValue(ClaimTypes.Role);
+    private string CallerNombre => User.FindFirstValue(ClaimTypes.Name) ?? "Usuario";
     private bool EsStaff => CallerRol is "administrador" or "empleado";
     private bool EsRepartidor => CallerRol == "repartidor";
+
+    /// Registra en la bitácora quién hizo qué sobre un pedido (para la
+    /// pantalla de actividad del admin). Si falla (ej. la tabla todavía no
+    /// se creó en Supabase), no debe tumbar la acción principal que sí se
+    /// guardó correctamente.
+    private async Task RegistrarEventoAsync(string pedidoId, string accion, string? detalle = null)
+    {
+        try
+        {
+            await _data.InsertAsync("pedido_eventos", new JsonObject
+            {
+                ["pedido_id"] = pedidoId,
+                ["actor_id"] = CallerId,
+                ["actor_nombre"] = CallerNombre,
+                ["actor_rol"] = CallerRol,
+                ["accion"] = accion,
+                ["detalle"] = detalle,
+            });
+        }
+        catch (SupabaseDataException)
+        {
+            // No bloquear la acción principal si falla el registro de actividad.
+        }
+    }
 
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery] string? clienteId)
@@ -184,7 +209,12 @@ public class PedidosController : ControllerBase
 
         if (!EsRepartidor)
         {
-            return await UpdatePedido(id, new JsonObject { ["estado"] = estado }, "No se pudo actualizar el estado");
+            var resultadoStaff = await UpdatePedido(id, new JsonObject { ["estado"] = estado }, "No se pudo actualizar el estado");
+            if (resultadoStaff is OkObjectResult)
+            {
+                await RegistrarEventoAsync(id, "estado_cambiado", $"Cambió el estado a \"{estado}\"");
+            }
+            return resultadoStaff;
         }
 
         try
@@ -204,7 +234,15 @@ public class PedidosController : ControllerBase
                 return Conflict(new { message = "No puedes aplicar ese cambio de estado a este pedido" });
             }
 
-            return await UpdatePedido(id, new JsonObject { ["estado"] = estado }, "No se pudo actualizar el estado");
+            var resultadoRepartidor = await UpdatePedido(id, new JsonObject { ["estado"] = estado }, "No se pudo actualizar el estado");
+            if (resultadoRepartidor is OkObjectResult)
+            {
+                var accion = estado == "Entregado" ? "pedido_entregado"
+                    : estado == "En Planta" ? "pedido_recibido_en_planta"
+                    : "estado_cambiado";
+                await RegistrarEventoAsync(id, accion, $"Cambió el estado a \"{estado}\"");
+            }
+            return resultadoRepartidor;
         }
         catch (SupabaseDataException ex) { return DataError(ex); }
     }
@@ -244,6 +282,7 @@ public class PedidosController : ControllerBase
             else if (estadoActual == "Secando y Doblado")
                 payload["estado"] = "Repartidor asignado";
             var row = await _data.UpdateAsync("pedidos", $"id=eq.{E(id)}", payload);
+            await RegistrarEventoAsync(id, "repartidor_asignado", $"Asignó a {repartidor.Nombre} como repartidor");
             return Ok(Map(row!));
         }
         catch (SupabaseDataException ex) { return DataError(ex); }
@@ -251,12 +290,19 @@ public class PedidosController : ControllerBase
 
     [HttpPut("{id}/confirmar-precio")]
     [Authorize(Roles = "administrador,empleado")]
-    public Task<IActionResult> ConfirmarPrecio(string id, [FromBody] ConfirmarPrecioRequest request) =>
-        UpdatePedido(id, new JsonObject
+    public async Task<IActionResult> ConfirmarPrecio(string id, [FromBody] ConfirmarPrecioRequest request)
+    {
+        var resultado = await UpdatePedido(id, new JsonObject
         {
             ["peso_confirmado"] = request.PesoConfirmado,
             ["total_confirmado"] = request.TotalConfirmado
         }, "No se pudo confirmar el precio");
+        if (resultado is OkObjectResult)
+        {
+            await RegistrarEventoAsync(id, "precio_confirmado", $"Confirmó el precio final: ${request.TotalConfirmado:0.00}");
+        }
+        return resultado;
+    }
 
     [HttpPost("{id}/cancelar")]
     public async Task<IActionResult> Cancelar(string id, [FromBody] CancelarPedidoRequest request)
