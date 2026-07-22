@@ -41,6 +41,7 @@ class EmpleadoService {
     required String correo,
     required String password,
     required UserRole rol,
+    String? telefono,
   }) async {
     final response = await withTimeout(http.post(
       Uri.parse('$_baseUrl/empleados'),
@@ -50,6 +51,7 @@ class EmpleadoService {
         'correo': correo,
         'password': password,
         'rol': rol.name,
+        'telefono': telefono,
       }),
     ));
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -111,5 +113,15 @@ class EmpleadoService {
     if (response.statusCode != 200) {
       throw EmpleadoException(_extraerMensaje(response, 'No se pudo eliminar la cuenta'));
     }
+  }
+
+  Future<Usuario> cambiarTelefono(String id, String telefono) async {
+    final response = await withTimeout(http.put(
+      Uri.parse('$_baseUrl/empleados/$id/telefono'),
+      headers: ApiConfig.jsonHeaders,
+      body: jsonEncode({'telefono': telefono}),
+    ));
+    if (response.statusCode != 200) throw EmpleadoException(_extraerMensaje(response, 'No se pudo actualizar el teléfono'));
+    return Usuario.fromJson(jsonDecode(response.body));
   }
 }

@@ -9,6 +9,7 @@ import '../../../utils/app_colors.dart';
 import '../../auth/login/bienvenida_screen.dart';
 import '../clientes/customers_view.dart';
 import '../repartidores/repartidores_config_screen.dart';
+import '../../soporte/admin_soporte_screen.dart';
 
 class PerfilAdministradorScreen extends StatelessWidget {
   const PerfilAdministradorScreen({super.key});
@@ -148,6 +149,22 @@ class PerfilAdministradorScreen extends StatelessWidget {
                       style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.surfaceVariant),
+                ),
+                tileColor: AppColors.surfaceContainerLowest,
+                leading: const Icon(Icons.support_agent_rounded, color: AppColors.primary),
+                title: Text('Soporte a clientes', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                subtitle: const Text('Lee y responde mensajes de clientes'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AdminSoporteScreen()),
                 ),
               ),
               const SizedBox(height: 16),

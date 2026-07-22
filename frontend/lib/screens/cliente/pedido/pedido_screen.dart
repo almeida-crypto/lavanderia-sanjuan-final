@@ -7,6 +7,7 @@ import '../../../models/pedido.dart';
 import '../../../models/pedido_admin.dart';
 import '../../../services/pedido_service.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/telefono_launcher.dart';
 import '../../../widgets/app_bottom_nav_bar.dart';
 import '../home_cliente/home_cliente_screen.dart';
 import '../mi_perfil/mi_perfil_screen.dart';
@@ -15,6 +16,7 @@ import '../servicios/servicios_screen.dart';
 import 'cancelar_pedido_screen.dart';
 import 'reportar_problema_screen.dart';
 import 'seguimiento_en_vivo_screen.dart';
+import '../../soporte/soporte_chat_screen.dart';
 
 enum _PasoEstado { completado, actual, pendiente }
 
@@ -253,17 +255,14 @@ class _PedidoScreenState extends State<PedidoScreen> with WidgetsBindingObserver
                   const SizedBox(height: 16),
                   _RepartidorCard(
                     nombre: pedido.repartidorNombre!,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SeguimientoEnVivoScreen(
-                          pedidoId: pedido.id,
-                          numeroPedido: pedido.numero,
-                          repartidorNombre: pedido.repartidorNombre,
-                          repartidorTelefono: pedido.repartidorTelefono,
-                          estado: pedido.estadoDetalle,
-                          direccion: pedido.direccion,
-                        ),
-                      ),
+                    onCall: () async {
+                      final abierto = await abrirLlamada(pedido.repartidorTelefono);
+                      if (!abierto && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este repartidor todavía no tiene teléfono registrado.')));
+                      }
+                    },
+                    onSupport: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SoporteChatScreen()),
                     ),
                   ),
                 ],
@@ -698,10 +697,11 @@ class _TimelineStep extends StatelessWidget {
 }
 
 class _RepartidorCard extends StatelessWidget {
-  const _RepartidorCard({required this.nombre, required this.onTap});
+  const _RepartidorCard({required this.nombre, required this.onCall, required this.onSupport});
 
   final String nombre;
-  final VoidCallback onTap;
+  final VoidCallback onCall;
+  final VoidCallback onSupport;
 
   @override
   Widget build(BuildContext context) {
@@ -764,7 +764,7 @@ class _RepartidorCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: onTap,
+                  onPressed: onCall,
                   icon: const Icon(Icons.call_rounded, size: 20),
                   label: const Text('Llamar'),
                   style: OutlinedButton.styleFrom(
@@ -780,7 +780,7 @@ class _RepartidorCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: onTap,
+                  onPressed: onSupport,
                   icon: const Icon(Icons.support_agent_rounded, size: 20),
                   label: const Text('Soporte'),
                   style: OutlinedButton.styleFrom(

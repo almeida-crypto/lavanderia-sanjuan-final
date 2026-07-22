@@ -7,6 +7,7 @@ import '../models/usuario.dart';
 import '../services/empleado_service.dart';
 import '../services/opcion_catalogo_service.dart';
 import '../services/pedido_service.dart';
+import '../services/pedido_ops_service.dart';
 import '../services/promocion_service.dart';
 import '../services/servicio_service.dart';
 import '../utils/formatear_fecha.dart';
@@ -17,6 +18,7 @@ class AdminProvider extends ChangeNotifier {
   final _promocionService = PromocionService();
   final _opcionCatalogoService = OpcionCatalogoService();
   final _empleadoService = EmpleadoService();
+  final _pedidoOpsService = PedidoOpsService();
 
   final List<PedidoAdmin> _pedidos = [];
 
@@ -62,8 +64,11 @@ class AdminProvider extends ChangeNotifier {
     required String correo,
     required String password,
     required UserRole rol,
+    String? telefono,
   }) async {
-    final creado = await _empleadoService.crear(nombre: nombre, correo: correo, password: password, rol: rol);
+    final creado = await _empleadoService.crear(
+      nombre: nombre, correo: correo, password: password, rol: rol, telefono: telefono,
+    );
     _empleados.add(creado);
     notifyListeners();
   }
@@ -284,6 +289,21 @@ class AdminProvider extends ChangeNotifier {
       NotaPedido(fecha: 'Justo ahora', texto: "Estado cambiado a '${estadoToString(nuevoEstado)}'", autor: 'Admin'),
     );
     notifyListeners();
+  }
+
+  Future<void> cambiarTelefonoEmpleado(String id, String telefono) async {
+    final actualizado = await _empleadoService.cambiarTelefono(id, telefono);
+    final index = _empleados.indexWhere((e) => e.id == id);
+    if (index != -1) { _empleados[index] = actualizado; notifyListeners(); }
+  }
+
+  Future<void> cancelarPedido(String id, {required String razon, String? comentarios}) async {
+    final actualizado = await _pedidoOpsService.cancelarPedido(id, razon: razon, comentarios: comentarios);
+    final index = _pedidos.indexWhere((p) => p.id == id);
+    if (index != -1) {
+      _pedidos[index] = _mapPedido(actualizado);
+      notifyListeners();
+    }
   }
 
   Future<void> asignarRepartidor(String pedidoId, Usuario repartidor) async {

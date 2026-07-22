@@ -336,22 +336,31 @@ public class PedidosController : ControllerBase
             {
                 "Recibido", "Pedido recibido", "Asignado", "Repartidor Asignado", "Recolector asignado"
             };
-            if (!cancelables.Contains(estado))
+            if (!EsStaff && !cancelables.Contains(estado))
             {
                 return Conflict(new
                 {
                     message = "Este pedido ya está en una etapa avanzada y no puede cancelarse desde la app. Comunícate con la lavandería."
                 });
             }
+            if (EsStaff && estado.Equals("Entregado", StringComparison.OrdinalIgnoreCase))
+            {
+                return Conflict(new { message = "Un pedido ya entregado no puede cancelarse" });
+            }
         }
         catch (SupabaseDataException ex) { return DataError(ex); }
 
-        return await UpdatePedido(id, new JsonObject
+        var resultado = await UpdatePedido(id, new JsonObject
         {
             ["estado"] = "Cancelado",
             ["razon_cancelacion"] = request.Razon ?? "Otro",
             ["comentarios_cancelacion"] = request.Comentarios ?? string.Empty
         }, "No se pudo cancelar el pedido");
+        if (resultado is OkObjectResult)
+        {
+            await RegistrarEventoAsync(id, "pedido_cancelado", $"Canceló el pedido: {request.Razon ?? "Otro"}");
+        }
+        return resultado;
     }
 
     [HttpPost("{id}/calificar")]

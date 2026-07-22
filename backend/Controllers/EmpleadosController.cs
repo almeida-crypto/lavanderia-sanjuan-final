@@ -56,7 +56,14 @@ public class EmpleadosController : ControllerBase
             return BadRequest(new { message = "Rol inválido. Debe ser 'empleado', 'repartidor' o 'administrador'" });
         }
 
-        var resultado = await _supabaseService.CreateUserAsync(request.Nombre.Trim(), request.Correo.Trim(), request.Password, rol);
+        if (rol == "repartidor" && (string.IsNullOrWhiteSpace(request.Telefono) ||
+            request.Telefono.Count(char.IsDigit) < 10))
+        {
+            return BadRequest(new { message = "El repartidor necesita un número telefónico válido de 10 dígitos" });
+        }
+
+        var resultado = await _supabaseService.CreateUserAsync(
+            request.Nombre.Trim(), request.Correo.Trim(), request.Password, rol, request.Telefono?.Trim());
         if (!resultado.Success)
         {
             return StatusCode(resultado.StatusCode, new { message = resultado.ErrorMessage ?? "No se pudo crear la cuenta" });
@@ -168,6 +175,18 @@ public class EmpleadosController : ControllerBase
         return Ok(resultado.Usuario);
     }
 
+    [HttpPut("{id}/telefono")]
+    [Authorize(Roles = "administrador")]
+    public async Task<IActionResult> CambiarTelefono(string id, [FromBody] CambiarTelefonoEmpleadoRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Telefono) || request.Telefono.Count(char.IsDigit) < 10)
+            return BadRequest(new { message = "Ingresa un número telefónico válido de 10 dígitos" });
+        var resultado = await _supabaseService.UpdateProfileAsync(id, null, null, request.Telefono.Trim());
+        if (!resultado.Success)
+            return StatusCode(resultado.StatusCode, new { message = resultado.ErrorMessage ?? "No se pudo actualizar el teléfono" });
+        return Ok(resultado.Usuario);
+    }
+
     [HttpDelete("{id}")]
     [Authorize(Roles = "administrador")]
     public async Task<IActionResult> Eliminar(string id, [FromQuery] string? actorId)
@@ -219,6 +238,7 @@ public class CrearEmpleadoRequest
     public string? Correo { get; set; }
     public string? Password { get; set; }
     public string? Rol { get; set; }
+    public string? Telefono { get; set; }
 }
 
 public class CambiarRolRequest
@@ -239,3 +259,5 @@ public class CambiarPasswordEmpleadoRequest
     public string? ActorCorreo { get; set; }
     public string? ActorPassword { get; set; }
 }
+
+public class CambiarTelefonoEmpleadoRequest { public string? Telefono { get; set; } }

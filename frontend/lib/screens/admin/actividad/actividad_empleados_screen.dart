@@ -41,16 +41,24 @@ class _ActividadEmpleadosScreenState extends State<ActividadEmpleadosScreen> {
       _error = null;
     });
     try {
-      final eventos = await _service.listar(actorId: _actorIdFiltro);
+      List<PedidoEvento> eventos;
+      try {
+        eventos = await _service.listar(actorId: _actorIdFiltro);
+      } catch (_) {
+        // Render gratuito puede tardar unos segundos en despertar. Un segundo
+        // intento evita mostrar un error técnico apenas se abre la pantalla.
+        await Future<void>.delayed(const Duration(seconds: 3));
+        eventos = await _service.listar(actorId: _actorIdFiltro);
+      }
       if (!mounted) return;
       setState(() {
         _eventos = eventos;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = '${e.toString().replaceFirst('Exception: ', '')}\nDesliza hacia abajo para reintentar.';
+        _error = 'No pudimos conectar con el servidor. Revisa tu internet o espera unos segundos mientras el servicio se activa.';
         _isLoading = false;
       });
     }
@@ -136,9 +144,20 @@ class _ActividadEmpleadosScreenState extends State<ActividadEmpleadosScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       children: [
                         if (_error != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Text(_error!, style: GoogleFonts.inter(color: AppColors.error, fontSize: 13)),
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerLowest,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.surfaceVariant),
+                            ),
+                            child: Column(children: [
+                              const Icon(Icons.cloud_off_rounded, size: 48, color: AppColors.onSurfaceVariant),
+                              const SizedBox(height: 12),
+                              Text(_error!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: AppColors.onSurfaceVariant, fontSize: 13)),
+                              const SizedBox(height: 14),
+                              FilledButton.icon(onPressed: _cargar, icon: const Icon(Icons.refresh), label: const Text('Reintentar')),
+                            ]),
                           ),
                         if (_eventos.isEmpty && _error == null)
                           Padding(

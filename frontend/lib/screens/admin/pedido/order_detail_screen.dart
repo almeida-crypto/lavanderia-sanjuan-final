@@ -777,6 +777,19 @@ class OrderDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (!esFinal) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _confirmarCancelacion(context, currentPedido),
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancelar pedido'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+              ],
             ],
           ),
           ),
@@ -829,6 +842,51 @@ class OrderDetailScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se pudo resolver el reporte.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmarCancelacion(BuildContext context, PedidoAdmin pedido) async {
+    final controller = TextEditingController();
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancelar pedido'),
+        content: TextField(
+          controller: controller,
+          minLines: 2,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'Motivo de cancelación',
+            hintText: 'Escribe por qué se cancela el pedido.',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Volver')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            child: const Text('Confirmar cancelación'),
+          ),
+        ],
+      ),
+    );
+    final motivo = controller.text.trim();
+    controller.dispose();
+    if (confirmado != true || !context.mounted) return;
+    try {
+      await context.read<AdminProvider>().cancelarPedido(
+        pedido.id,
+        razon: motivo.isEmpty ? 'Cancelado por la lavandería' : motivo,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pedido cancelado.')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
       }
     }

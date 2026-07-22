@@ -235,7 +235,7 @@ public class SupabaseService
         return new OperationResult(true, StatusCodes.Status200OK, null);
     }
 
-    public async Task<AuthOperationResult> CreateUserAsync(string nombre, string correo, string password, string rol)
+    public async Task<AuthOperationResult> CreateUserAsync(string nombre, string correo, string password, string rol, string? telefono = null)
     {
         var payload = new JsonObject
         {
@@ -245,7 +245,8 @@ public class SupabaseService
             ["user_metadata"] = new JsonObject
             {
                 ["nombre"] = nombre,
-                ["rol"] = rol
+                ["rol"] = rol,
+                ["telefono"] = telefono
             }
         };
 

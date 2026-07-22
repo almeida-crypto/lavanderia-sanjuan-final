@@ -219,6 +219,21 @@ create table if not exists public.pedido_eventos (
   created_at timestamptz not null default now()
 );
 
+-- Conversación de soporte entre cada cliente y el personal. El celular nunca
+-- accede directamente a esta tabla: todas las lecturas/escrituras pasan por
+-- el backend autenticado, que evita que un cliente vea conversaciones ajenas.
+create table if not exists public.soporte_mensajes (
+  id uuid primary key default gen_random_uuid(),
+  cliente_id text not null,
+  cliente_nombre text not null default 'Cliente',
+  autor_id text not null,
+  autor_nombre text not null default 'Usuario',
+  autor_rol text not null,
+  mensaje text not null check (char_length(mensaje) between 1 and 1500),
+  leido boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
 create unique index if not exists una_direccion_principal_por_usuario
   on public.direcciones(usuario_id) where predeterminada;
 create unique index if not exists una_tarjeta_principal_por_usuario
@@ -229,6 +244,7 @@ create index if not exists pedidos_recientes on public.pedidos(created_at desc);
 create index if not exists pedido_eventos_por_pedido on public.pedido_eventos(pedido_id);
 create index if not exists pedido_eventos_por_actor on public.pedido_eventos(actor_id);
 create index if not exists pedido_eventos_recientes on public.pedido_eventos(created_at desc);
+create index if not exists soporte_por_cliente on public.soporte_mensajes(cliente_id, created_at);
 
 alter table public.direcciones enable row level security;
 alter table public.metodos_pago enable row level security;
@@ -238,6 +254,7 @@ alter table public.promociones enable row level security;
 alter table public.opciones enable row level security;
 alter table public.codigos_postales enable row level security;
 alter table public.pedido_eventos enable row level security;
+alter table public.soporte_mensajes enable row level security;
 
 insert into public.opciones (nombre, descripcion) values
   ('Doblado Estándar', 'Perfecto para el uso diario, doblado y apilado con cuidado.'),

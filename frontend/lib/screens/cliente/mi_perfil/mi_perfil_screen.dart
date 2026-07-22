@@ -19,6 +19,7 @@ import '../notificaciones/notificaciones_screen.dart';
 import '../servicios/servicios_screen.dart';
 import 'cambiar_contrasena_screen.dart';
 import 'centro_ayuda_screen.dart';
+import '../../soporte/soporte_chat_screen.dart';
 import 'editar_perfil_screen.dart';
 import 'metodos_pago_screen.dart';
 import 'mis_direcciones_screen.dart';
@@ -239,6 +240,13 @@ class _MiPerfilScreenState extends State<MiPerfilScreen> {
               _MenuGroup(
                 titulo: 'Soporte y Legal',
                 children: [
+                  _MenuItem(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    label: 'Chat con Soporte',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SoporteChatScreen()),
+                    ),
+                  ),
                   _MenuItem(
                     icon: Icons.help_center_outlined,
                     label: 'Centro de Ayuda',

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/pedido.dart';
 import '../../../services/pedido_ops_service.dart';
+import '../../../services/soporte_service.dart';
 import '../../../utils/app_colors.dart';
 
 class _TipoProblema {
@@ -49,10 +50,17 @@ class _ReportarProblemaScreenState extends State<ReportarProblemaScreen> {
         tipo: _tipoSeleccionado ?? 'Otro problema',
         detalles: _detallesController.text.trim(),
       );
+      try {
+        await SoporteService().enviar(
+          'Reporte del pedido ${widget.pedido.numero}: ${_tipoSeleccionado ?? 'Otro problema'}\n${_detallesController.text.trim()}',
+        );
+      } catch (_) {
+        // El reporte ya quedó guardado aunque el chat esté temporalmente sin conexión.
+      }
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reporte enviado. Nuestro equipo te contactará pronto.')),
+        const SnackBar(content: Text('Reporte enviado. Puedes dar seguimiento desde el chat de soporte.')),
       );
       Navigator.of(context).maybePop();
     } catch (_) {

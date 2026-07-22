@@ -6,6 +6,7 @@ import '../../../models/usuario.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/telefono_launcher.dart';
 
 /// Pantalla de administración dedicada a la Configuración de Repartidores.
 class RepartidoresConfigScreen extends StatefulWidget {
@@ -38,6 +39,7 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
+    final phoneController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     bool guardando = false;
 
@@ -89,6 +91,17 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
+                        controller: phoneController,
+                        decoration: const InputDecoration(
+                          labelText: 'Número telefónico',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                        keyboardType: TextInputType.phone,
+                        validator: (v) => (v ?? '').replaceAll(RegExp(r'[^0-9]'), '').length < 10
+                            ? 'Ingresa 10 dígitos' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
                         controller: emailController,
                         decoration: const InputDecoration(
                           labelText: 'Correo Electrónico',
@@ -132,6 +145,7 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
                                   correo: emailController.text.trim(),
                                   password: passwordController.text.trim(),
                                   rol: UserRole.repartidor,
+                                  telefono: phoneController.text.trim(),
                                 );
                             if (!dialogContext.mounted) return;
                             Navigator.pop(dialogContext);
@@ -321,6 +335,23 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _editarTelefono(BuildContext context, Usuario repartidor) async {
+    final controller = TextEditingController(text: repartidor.telefono);
+    final telefono = await showDialog<String>(context: context, builder: (c) => AlertDialog(
+      title: const Text('Teléfono del repartidor'),
+      content: TextField(controller: controller, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Número telefónico')),
+      actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancelar')), FilledButton(onPressed: () => Navigator.pop(c, controller.text.trim()), child: const Text('Guardar'))],
+    ));
+    controller.dispose();
+    if (telefono == null || !context.mounted) return;
+    if (telefono.replaceAll(RegExp(r'[^0-9]'), '').length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresa un número de 10 dígitos')));
+      return;
+    }
+    try { await context.read<AdminProvider>().cambiarTelefonoEmpleado(repartidor.id, telefono); }
+    catch (e) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); }
   }
 
   @override
@@ -563,6 +594,19 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
                               rep.correo,
                               style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
                             ),
+                            if (rep.telefono?.isNotEmpty == true) ...[
+                              const SizedBox(height: 4),
+                              InkWell(
+                                onTap: () => abrirLlamada(rep.telefono),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.phone_outlined, size: 14, color: AppColors.primary),
+                                    const SizedBox(width: 4),
+                                    Text(rep.telefono!, style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary)),
+                                  ],
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 4),
                             Row(
                               children: [
@@ -604,11 +648,17 @@ class _RepartidoresConfigScreenState extends State<RepartidoresConfigScreen> {
                               }
                             } else if (value == 'password') {
                               _abrirDialogoCambiarPassword(context, rep);
+                            } else if (value == 'telefono') {
+                              _editarTelefono(context, rep);
                             } else if (value == 'eliminar') {
                               _confirmarEliminarRepartidor(context, rep);
                             }
                           },
                           itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'telefono',
+                              child: Row(children: [Icon(Icons.phone_outlined, size: 18, color: AppColors.primary), SizedBox(width: 8), Text('Editar Teléfono')]),
+                            ),
                             PopupMenuItem(
                               value: 'estado',
                               child: Row(
