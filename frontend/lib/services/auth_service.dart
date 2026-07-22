@@ -17,6 +17,19 @@ class AuthException implements Exception {
 class AuthService {
   String get _baseUrl => ApiConfig.baseUrl;
 
+  String _mensajeError(http.Response response, String fallback) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message']?.toString().trim();
+        if (message != null && message.isNotEmpty) return message;
+      }
+    } catch (_) {
+      // Algunas respuestas de infraestructura no contienen JSON.
+    }
+    return fallback;
+  }
+
   /// El backend gratuito de Render se "duerme" tras un rato sin tráfico y
   /// tarda hasta medio minuto en despertar en la siguiente petición. Sin un
   /// límite de tiempo, http.post/put se queda esperando indefinidamente y la
@@ -130,7 +143,7 @@ class AuthService {
     ));
 
     if (response.statusCode != 200) {
-      throw AuthException('No se pudo actualizar el perfil, intenta de nuevo');
+      throw AuthException(_mensajeError(response, 'No se pudo actualizar el perfil, intenta de nuevo'));
     }
 
     return Usuario.fromJson(jsonDecode(response.body));
