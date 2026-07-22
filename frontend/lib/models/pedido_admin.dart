@@ -185,6 +185,8 @@ class PedidoAdmin {
     this.detallesAdicionales,
     this.opcionAcabado,
     this.creadoEn,
+    this.recoleccionEnSucursal = false,
+    this.entregaEnSucursal = false,
   });
 
   final String id;
@@ -218,6 +220,15 @@ class PedidoAdmin {
   String? repartidorId;
   String? detallesAdicionales;
   String? opcionAcabado;
+
+  /// El cliente lleva/recoge su ropa en la sucursal en vez de que un
+  /// repartidor la recolecte/entregue a domicilio. Son independientes entre
+  /// sí (ver [entregaEnSucursal]).
+  final bool recoleccionEnSucursal;
+
+  /// El cliente recoge su ropa en la sucursal en vez de que un repartidor
+  /// se la lleve a domicilio.
+  final bool entregaEnSucursal;
 
   /// Folio corto y legible en vez del uuid interno.
   String get numero => numeroOrden > 0

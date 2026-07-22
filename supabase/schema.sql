@@ -139,6 +139,12 @@ alter table public.pedidos add column if not exists reporte_estado text;
 alter table public.pedidos add column if not exists reporte_respuesta text;
 alter table public.pedidos add column if not exists reporte_actualizado_at timestamptz;
 
+-- El cliente puede llevar/recoger su ropa en la sucursal en vez de que un
+-- repartidor la recolecte/entregue a domicilio. Son independientes: puede
+-- llevarla él mismo pero pedir que se la entreguen a domicilio, o viceversa.
+alter table public.pedidos add column if not exists recoleccion_en_sucursal boolean not null default false;
+alter table public.pedidos add column if not exists entrega_en_sucursal boolean not null default false;
+
 -- Los reportes son incidencias separadas del avance del pedido. Versiones
 -- anteriores reemplazaban la etapa por "Atención" y el pedido parecía quedar
 -- sin terminar; se recuperan como solicitudes abiertas sin bloquear el flujo.

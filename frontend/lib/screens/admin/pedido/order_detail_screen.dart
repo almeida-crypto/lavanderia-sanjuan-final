@@ -7,6 +7,7 @@ import '../../../models/pedido_admin.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../services/ticket_pdf_generator.dart';
 import '../../../utils/app_colors.dart';
+import '../../../utils/formatear_fecha.dart';
 import 'actualizar_estado_screen.dart';
 
 class OrderDetailScreen extends StatelessWidget {
@@ -673,7 +674,7 @@ class OrderDetailScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _formatearFecha(nota.fecha),
+                                  formatearFecha(nota.fecha),
                                   style: GoogleFonts.inter(fontSize: 11, color: AppColors.onSurfaceVariant),
                                 ),
                                 Text(
@@ -1003,15 +1004,4 @@ class OrderDetailScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Algunas notas guardan la fecha como texto libre (ej. "20/07/2026") y
-/// otras como una marca de tiempo ISO completa (ej. "2026-07-20T00:00...").
-/// Esto la muestra siempre en un formato corto y legible; si no se puede
-/// interpretar como fecha, se deja el texto tal cual llegó.
-String _formatearFecha(String valor) {
-  final fecha = DateTime.tryParse(valor);
-  if (fecha == null) return valor;
-  const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-  return '${fecha.day} ${meses[fecha.month - 1]} ${fecha.year}';
 }

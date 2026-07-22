@@ -87,7 +87,7 @@ class AgendarRecoleccionScreen extends StatelessWidget {
     AgendarRecoleccionProvider provider,
     Direccion? direccionActual,
   ) async {
-    if (direccionActual == null) {
+    if (provider.necesitaDireccion && direccionActual == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Agrega una dirección de recolección primero.')),
       );
@@ -117,8 +117,9 @@ class AgendarRecoleccionScreen extends StatelessWidget {
       MaterialPageRoute(
         builder: (_) => PedidoRecibidoScreen(
           pedido: pedido,
-          direccionTitulo: direccionActual.titulo,
-          direccionLinea: direccionActual.lineas.join(', '),
+          direccionTitulo: direccionActual?.titulo ?? 'Entrega en sucursal',
+          direccionLinea: direccionActual?.lineas.join(', ') ??
+              'Vas a llevar y/o recoger tu pedido en la sucursal FreshClean.',
           horarioTexto: '${franjaInfo.etiqueta} (${franjaInfo.horario})',
         ),
       ),
@@ -233,7 +234,18 @@ class AgendarRecoleccionScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const _SectionTitle('Recolección y Entrega'),
+              const SizedBox(height: 16),
+              _EntregaRecoleccionCard(provider: provider),
+              const SizedBox(height: 32),
               const _SectionTitle('Dirección'),
+              const SizedBox(height: 4),
+              Text(
+                provider.necesitaDireccion
+                    ? 'La usaremos para la recolección y/o entrega a domicilio.'
+                    : 'Opcional: vas a llevar y recoger tu pedido en la sucursal.',
+                style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
+              ),
               const SizedBox(height: 16),
               _AddressCard(
                 direccion: direccionActual,
@@ -306,6 +318,121 @@ class _SectionTitle extends StatelessWidget {
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: AppColors.onSurface,
+      ),
+    );
+  }
+}
+
+class _EntregaRecoleccionCard extends StatelessWidget {
+  const _EntregaRecoleccionCard({required this.provider});
+
+  final AgendarRecoleccionProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '¿Cómo nos entregarás tu ropa?',
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.onSurface),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _OpcionSucursalChip(
+                icono: Icons.local_shipping_outlined,
+                label: 'A domicilio',
+                seleccionada: !provider.recoleccionEnSucursal,
+                onTap: () => provider.seleccionarRecoleccionEnSucursal(false),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _OpcionSucursalChip(
+                icono: Icons.storefront_outlined,
+                label: 'Yo la llevo a la sucursal',
+                seleccionada: provider.recoleccionEnSucursal,
+                onTap: () => provider.seleccionarRecoleccionEnSucursal(true),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Text(
+          '¿Cómo quieres recibirla?',
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.onSurface),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _OpcionSucursalChip(
+                icono: Icons.local_shipping_outlined,
+                label: 'A domicilio',
+                seleccionada: !provider.entregaEnSucursal,
+                onTap: () => provider.seleccionarEntregaEnSucursal(false),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _OpcionSucursalChip(
+                icono: Icons.storefront_outlined,
+                label: 'Yo la recojo en la sucursal',
+                seleccionada: provider.entregaEnSucursal,
+                onTap: () => provider.seleccionarEntregaEnSucursal(true),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _OpcionSucursalChip extends StatelessWidget {
+  const _OpcionSucursalChip({
+    required this.icono,
+    required this.label,
+    required this.seleccionada,
+    required this.onTap,
+  });
+
+  final IconData icono;
+  final String label;
+  final bool seleccionada;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: seleccionada ? AppColors.primary : AppColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: seleccionada ? AppColors.primary : Colors.transparent),
+        ),
+        child: Column(
+          children: [
+            Icon(icono, size: 20, color: seleccionada ? Colors.white : AppColors.secondary),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: seleccionada ? Colors.white : AppColors.onSurface,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

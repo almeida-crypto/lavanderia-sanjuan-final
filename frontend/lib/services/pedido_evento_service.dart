@@ -14,7 +14,14 @@ class PedidoEventoService {
     );
     final response = await withTimeout(http.get(uri, headers: ApiConfig.authHeaders));
     if (response.statusCode != 200) {
-      throw Exception('No se pudo cargar la actividad');
+      String mensaje = 'No se pudo cargar la actividad (código ${response.statusCode})';
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map && body['message'] is String) {
+          mensaje = '$mensaje: ${body['message']}';
+        }
+      } catch (_) {}
+      throw Exception(mensaje);
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! List) return [];

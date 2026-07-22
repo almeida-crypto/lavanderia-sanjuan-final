@@ -29,20 +29,34 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
     });
   }
 
+  /// Etapa de recolección: si el cliente la lleva él mismo a la sucursal,
+  /// no hace falta asignar repartidor para esta etapa.
+  bool _asignacionRecoleccionBloqueada(PedidoAdmin pedido) =>
+      pedido.estado == PedidoEstado.recibido && pedido.recoleccionEnSucursal;
+
+  /// Etapa de entrega: si el cliente la recoge él mismo en la sucursal, no
+  /// hace falta asignar repartidor para esta etapa.
+  bool _asignacionEntregaBloqueada(PedidoAdmin pedido) =>
+      pedido.estado == PedidoEstado.secandoDoblado && pedido.entregaEnSucursal;
+
   Future<void> _guardar(BuildContext context, PedidoAdmin currentPedido) async {
     final admin = context.read<AdminProvider>();
+    final asignacionBloqueada = _asignacionRecoleccionBloqueada(currentPedido) ||
+        _asignacionEntregaBloqueada(currentPedido);
     Usuario? repartidor;
-    for (final usuario in admin.empleados) {
-      if (usuario.id == _repartidorId && usuario.rol == UserRole.repartidor && usuario.activo) {
-        repartidor = usuario;
-        break;
+    if (!asignacionBloqueada) {
+      for (final usuario in admin.empleados) {
+        if (usuario.id == _repartidorId && usuario.rol == UserRole.repartidor && usuario.activo) {
+          repartidor = usuario;
+          break;
+        }
       }
-    }
-    if ((_seleccionado == PedidoEstado.asignado || _seleccionado == PedidoEstado.listo) && repartidor == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona un repartidor activo antes de asignar el pedido.')),
-      );
-      return;
+      if ((_seleccionado == PedidoEstado.asignado || _seleccionado == PedidoEstado.listo) && repartidor == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecciona un repartidor activo antes de asignar el pedido.')),
+        );
+        return;
+      }
     }
 
     setState(() => _isSaving = true);
@@ -94,6 +108,9 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
     final repartidores = admin.empleados
         .where((usuario) => usuario.rol == UserRole.repartidor && usuario.activo)
         .toList();
+    final bloqueadaPorRecoleccion = _asignacionRecoleccionBloqueada(currentPedido);
+    final bloqueadaPorEntrega = _asignacionEntregaBloqueada(currentPedido);
+    final asignacionBloqueada = bloqueadaPorRecoleccion || bloqueadaPorEntrega;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -173,11 +190,36 @@ class _ActualizarEstadoScreenState extends State<ActualizarEstadoScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'El repartidor asignado verá este pedido en su panel y podrá actualizar sus etapas de ruta.',
+                asignacionBloqueada
+                    ? 'Esta etapa no necesita repartidor.'
+                    : 'El repartidor asignado verá este pedido en su panel y podrá actualizar sus etapas de ruta.',
                 style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSurfaceVariant),
               ),
               const SizedBox(height: 12),
-              if (admin.isLoadingEmpleados && repartidores.isEmpty)
+              if (asignacionBloqueada)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.storefront_outlined, size: 20, color: AppColors.onSecondaryContainer),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          bloqueadaPorRecoleccion
+                              ? 'El cliente lleva este pedido a la sucursal él mismo; no necesita recolector.'
+                              : 'El cliente recoge este pedido en la sucursal él mismo; no necesita repartidor para la entrega.',
+                          style: GoogleFonts.inter(fontSize: 13, color: AppColors.onSecondaryContainer),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (admin.isLoadingEmpleados && repartidores.isEmpty)
                 const Center(child: CircularProgressIndicator())
               else if (repartidores.isEmpty)
                 Container(

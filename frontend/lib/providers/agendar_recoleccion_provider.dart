@@ -77,6 +77,30 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// El cliente lleva su ropa a la sucursal él mismo, en vez de que un
+  /// repartidor pase a recogerla a domicilio.
+  bool _recoleccionEnSucursal = false;
+  bool get recoleccionEnSucursal => _recoleccionEnSucursal;
+
+  void seleccionarRecoleccionEnSucursal(bool valor) {
+    _recoleccionEnSucursal = valor;
+    notifyListeners();
+  }
+
+  /// El cliente recoge su ropa en la sucursal él mismo, en vez de que un
+  /// repartidor se la lleve a domicilio.
+  bool _entregaEnSucursal = false;
+  bool get entregaEnSucursal => _entregaEnSucursal;
+
+  void seleccionarEntregaEnSucursal(bool valor) {
+    _entregaEnSucursal = valor;
+    notifyListeners();
+  }
+
+  /// Si el cliente va a llevar y recoger todo en la sucursal, no hace falta
+  /// que tenga una dirección guardada solo para este pedido.
+  bool get necesitaDireccion => !(_recoleccionEnSucursal && _entregaEnSucursal);
+
   TarjetaGuardada? _tarjetaSeleccionada;
   TarjetaGuardada? get tarjetaSeleccionada => _tarjetaSeleccionada;
 
@@ -204,6 +228,11 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
           ? 'Efectivo contra entrega'
           : '${tarjeta.marca == MarcaTarjeta.mastercard ? 'Mastercard' : 'Visa'} •••• ${tarjeta.ultimosDigitos}';
 
+      final direccionTexto = direccionSeleccionada?.titulo ??
+          (_recoleccionEnSucursal && _entregaEnSucursal
+              ? 'Recolección y entrega en sucursal'
+              : 'Dirección no definida');
+
       final creado = await pedidoService.crearPedido({
         'clienteId': clienteId ?? '2',
         'clienteNombre': clienteNombre ?? 'Cliente Demo',
@@ -212,7 +241,7 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
         'servicio': nombreServicio,
         'fecha': _fechaSeleccionada.toIso8601String(),
         'franjaHoraria': franjaEtiqueta,
-        'direccion': direccionSeleccionada?.titulo ?? 'Dirección no definida',
+        'direccion': direccionTexto,
         'instrucciones': instruccionesController.text.trim(),
         'fragancia': _fragancia,
         'cantidadAproximada': _cantidad,
@@ -221,6 +250,8 @@ class AgendarRecoleccionProvider extends ChangeNotifier {
         'precioAcabado': _opcionAcabado == null ? null : montoOpcionAcabado,
         'codigoPromocion': _promoAplicada?.codigo,
         'total': totalConDescuento,
+        'recoleccionEnSucursal': _recoleccionEnSucursal,
+        'entregaEnSucursal': _entregaEnSucursal,
       });
       return Pedido.fromJson(creado);
     } catch (_) {

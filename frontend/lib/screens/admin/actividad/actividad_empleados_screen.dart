@@ -47,10 +47,10 @@ class _ActividadEmpleadosScreenState extends State<ActividadEmpleadosScreen> {
         _eventos = eventos;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'No se pudo cargar la actividad. Desliza hacia abajo para reintentar.';
+        _error = '${e.toString().replaceFirst('Exception: ', '')}\nDesliza hacia abajo para reintentar.';
         _isLoading = false;
       });
     }

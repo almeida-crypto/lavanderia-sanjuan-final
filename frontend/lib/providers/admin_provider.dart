@@ -9,6 +9,7 @@ import '../services/opcion_catalogo_service.dart';
 import '../services/pedido_service.dart';
 import '../services/promocion_service.dart';
 import '../services/servicio_service.dart';
+import '../utils/formatear_fecha.dart';
 
 class AdminProvider extends ChangeNotifier {
   final _pedidoService = PedidoService();
@@ -161,7 +162,8 @@ class AdminProvider extends ChangeNotifier {
     final total = double.tryParse(json['total']?.toString() ?? '0') ?? 0;
     final totalConfirmado = double.tryParse(json['totalConfirmado']?.toString() ?? '');
     final repartidor = json['repartidor']?.toString();
-    final fecha = json['fecha']?.toString() ?? 'Sin fecha';
+    final fechaCruda = json['fecha']?.toString();
+    final fecha = fechaCruda == null || fechaCruda.isEmpty ? 'Sin fecha' : formatearFecha(fechaCruda);
     final estado = pedidoEstadoFromString(json['estado']?.toString());
 
     final reporteTipo = json['reporteTipo']?.toString();
@@ -180,6 +182,14 @@ class AdminProvider extends ChangeNotifier {
     final precioAcabado = double.tryParse(json['precioAcabado']?.toString() ?? '');
     final creadoEn = DateTime.tryParse(json['createdAt']?.toString() ?? '');
     final instrucciones = json['instrucciones']?.toString().trim();
+    final recoleccionEnSucursal = json['recoleccionEnSucursal'] == true;
+    final entregaEnSucursal = json['entregaEnSucursal'] == true;
+    final tipoEntrega = switch ((recoleccionEnSucursal, entregaEnSucursal)) {
+      (true, true) => 'Sucursal (lleva y recoge el cliente)',
+      (true, false) => 'Lleva el cliente · entrega a domicilio',
+      (false, true) => 'Recolección a domicilio · recoge en sucursal',
+      (false, false) => 'Domicilio',
+    };
 
     final notas = [NotaPedido(fecha: fecha, texto: 'Pedido recibido')];
     if (estado == PedidoEstado.cancelado && (razonCancelacion?.isNotEmpty ?? false)) {
@@ -217,7 +227,7 @@ class AdminProvider extends ChangeNotifier {
       clienteDireccion: json['direccion']?.toString() ?? 'Sin dirección',
       servicioNombre: servicioNombre,
       servicioIcono: _iconoParaServicio(servicioNombre),
-      tipoEntrega: 'Domicilio',
+      tipoEntrega: tipoEntrega,
       estado: estado,
       progreso: _progresoParaEstado(estado),
       fecha: fecha,
@@ -245,6 +255,8 @@ class AdminProvider extends ChangeNotifier {
       opcionAcabado: opcionAcabado,
       creadoEn: creadoEn,
       detallesAdicionales: (instrucciones == null || instrucciones.isEmpty) ? null : instrucciones,
+      recoleccionEnSucursal: recoleccionEnSucursal,
+      entregaEnSucursal: entregaEnSucursal,
     );
   }
 

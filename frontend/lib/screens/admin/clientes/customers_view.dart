@@ -602,7 +602,9 @@ class _CustomersViewState extends State<CustomersView> {
     final adminProvider = context.watch<AdminProvider>();
     final actorId = context.watch<AuthProvider>().currentUser?.id ?? '';
     final pedidos = adminProvider.pedidos;
-    final empleados = adminProvider.empleados;
+    // Los repartidores tienen su propia pantalla (Configuración de
+    // Repartidores); no deben aparecer duplicados aquí también.
+    final empleados = adminProvider.empleados.where((e) => e.rol != UserRole.repartidor).toList();
 
     final porCorreo = <String, Customer>{};
     for (final pedido in pedidos) {

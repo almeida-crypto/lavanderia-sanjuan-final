@@ -189,7 +189,9 @@ public class PedidosController : ControllerBase
                 ["precio_acabado"] = precioAcabado,
                 ["codigo_promocion"] = codigoPromocion,
                 ["total"] = totalCalculado,
-                ["estado"] = "Pedido recibido"
+                ["estado"] = "Pedido recibido",
+                ["recoleccion_en_sucursal"] = request.RecoleccionEnSucursal ?? false,
+                ["entrega_en_sucursal"] = request.EntregaEnSucursal ?? false,
             });
             var dto = Map(row);
             return CreatedAtAction(nameof(Obtener), new { id = dto.Id }, dto);
@@ -264,6 +266,21 @@ public class PedidosController : ControllerBase
         {
             var current = await _data.FindOneAsync("pedidos", $"id=eq.{E(id)}&limit=1");
             if (current is null) return NotFound(new { message = "Pedido no encontrado" });
+
+            var estadoActual = current["estado"]?.ToString();
+            var esRecoleccion = estadoActual is "Recibido" or "Pedido recibido";
+            var esEntrega = estadoActual == "Secando y Doblado";
+            var recoleccionEnSucursal = B(current, "recoleccion_en_sucursal");
+            var entregaEnSucursal = B(current, "entrega_en_sucursal");
+            if (esRecoleccion && recoleccionEnSucursal)
+            {
+                return Conflict(new { message = "El cliente lleva este pedido a la sucursal él mismo; no necesita un recolector." });
+            }
+            if (esEntrega && entregaEnSucursal)
+            {
+                return Conflict(new { message = "El cliente recoge este pedido en la sucursal él mismo; no necesita un repartidor." });
+            }
+
             var repartidor = (await _supabaseService.ListStaffUsersAsync()).FirstOrDefault(usuario =>
                 usuario.Id == request.RepartidorId && usuario.Rol == "repartidor" && usuario.Activa);
             if (repartidor is null)
@@ -276,10 +293,9 @@ public class PedidosController : ControllerBase
                 ["repartidor"] = repartidor.Nombre,
                 ["repartidor_id"] = repartidor.Id,
             };
-            var estadoActual = current["estado"]?.ToString();
-            if (estadoActual is "Recibido" or "Pedido recibido")
+            if (esRecoleccion)
                 payload["estado"] = "Recolector asignado";
-            else if (estadoActual == "Secando y Doblado")
+            else if (esEntrega)
                 payload["estado"] = "Repartidor asignado";
             var row = await _data.UpdateAsync("pedidos", $"id=eq.{E(id)}", payload);
             await RegistrarEventoAsync(id, "repartidor_asignado", $"Asignó a {repartidor.Nombre} como repartidor");
@@ -448,6 +464,8 @@ public class PedidosController : ControllerBase
         ReporteDetalles = S(row, "reporte_detalles"),
         ReporteEstado = S(row, "reporte_estado"),
         ReporteRespuesta = S(row, "reporte_respuesta"),
+        RecoleccionEnSucursal = B(row, "recoleccion_en_sucursal"),
+        EntregaEnSucursal = B(row, "entrega_en_sucursal"),
         CreatedAt = S(row, "created_at")
     };
 
@@ -479,6 +497,8 @@ public class CrearPedidoRequest
     public decimal? PrecioAcabado { get; set; }
     public string? CodigoPromocion { get; set; }
     public decimal? Total { get; set; }
+    public bool? RecoleccionEnSucursal { get; set; }
+    public bool? EntregaEnSucursal { get; set; }
 }
 
 public class ActualizarEstadoRequest { public string? Estado { get; set; } }
@@ -529,5 +549,7 @@ public class PedidoDto
     /// Cuándo se creó el pedido (distinto de [Fecha], que es la fecha de
     /// recolección que eligió el cliente). Es lo que define si un pedido
     /// cuenta como "de hoy" en el panel del admin.
+    public bool RecoleccionEnSucursal { get; set; }
+    public bool EntregaEnSucursal { get; set; }
     public string? CreatedAt { get; set; }
 }
